@@ -323,6 +323,54 @@
       font-size: 0.9375rem;
     }
 
+    /* ── Digest card ── */
+    .digest-card {
+      background: #fff;
+      border-left: 4px solid #0c4a3e;
+      padding: 24px 32px;
+      margin: 24px 40px 0;
+      max-width: 1200px;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    @media (min-width: 1280px) {
+      .digest-card { margin-left: auto; margin-right: auto; }
+    }
+
+    .digest-card h2 {
+      margin: 0 0 4px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #0c4a3e;
+      font-weight: 600;
+    }
+
+    .digest-headline {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 12px 0 16px;
+      color: #1a1a1a;
+      line-height: 1.3;
+    }
+
+    .digest-body { font-size: 0.9375rem; line-height: 1.7; color: #2a2a2a; }
+    .digest-body h3 { font-size: 1rem; font-weight: 600; color: #0c4a3e; margin: 20px 0 8px; }
+    .digest-body p { margin: 8px 0; }
+    .digest-body strong { color: #0c4a3e; }
+
+    .digest-meta { font-size: 0.75rem; color: #888; margin: 4px 0; }
+
+    .digest-empty {
+      background: #f5f5f5;
+      border-left-color: #ccc;
+      text-align: center;
+      font-style: italic;
+      color: #999;
+      padding: 20px 32px;
+    }
+
     /* ── Footer ── */
     footer {
       background: #fff;
@@ -381,6 +429,23 @@
   <div class="error-banner">
     <strong>Kunne ikke hente artikler:</strong> {{ error }}
   </div>
+  {% endif %}
+
+  {% if digest %}
+  <section class="digest-card">
+    <h2>{{ ui_text.digest_title }}</h2>
+    <p class="digest-meta">
+      {{ ui_text.based_on }} {{ digest.article_count }} {{ ui_text.articles }}
+      {% if digest.cermaq_count > 0 %} · {{ digest.cermaq_count }} Cermaq{% endif %}
+    </p>
+    <h3 class="digest-headline">{{ digest.headline }}</h3>
+    <div class="digest-body">{{ digest.body | safe }}</div>
+    <p class="digest-meta">{{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}</p>
+  </section>
+  {% else %}
+  <section class="digest-card digest-empty">
+    <p>{{ ui_text.digest_pending }}</p>
+  </section>
   {% endif %}
 
   <main>
@@ -489,7 +554,9 @@
         sort_relevance: "Relevans", sort_newest: "Nyeste først",
         cermaq_only: "Kun Cermaq", scope_cermaq: "Cermaq", scope_industry: "Bransje",
         classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv",
-        all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk"
+        all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk",
+        digest_title: "Dagens oppsummering", digest_pending: "Dagens oppsummering genereres…",
+        based_on: "Basert på", articles: "artikler", generated_at: "Generert"
       },
       en: {
         all: "All", norway: "Norway", chile: "Chile", canada: "Canada", global: "Global",
@@ -497,7 +564,9 @@
         sort_relevance: "Relevance", sort_newest: "Newest first",
         cermaq_only: "Cermaq only", scope_cermaq: "Cermaq", scope_industry: "Industry",
         classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive",
-        all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical"
+        all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical",
+        digest_title: "Daily summary", digest_pending: "Daily summary being generated…",
+        based_on: "Based on", articles: "articles", generated_at: "Generated"
       },
       es: {
         all: "Todos", norway: "Noruega", chile: "Chile", canada: "Canadá", global: "Global",
@@ -505,7 +574,9 @@
         sort_relevance: "Relevancia", sort_newest: "Más recientes",
         cermaq_only: "Solo Cermaq", scope_cermaq: "Cermaq", scope_industry: "Industria",
         classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo",
-        all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico"
+        all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico",
+        digest_title: "Resumen del día", digest_pending: "Resumen del día generándose…",
+        based_on: "Basado en", articles: "artículos", generated_at: "Generado"
       },
       ja: {
         all: "すべて", norway: "ノルウェー", chile: "チリ", canada: "カナダ", global: "グローバル",
@@ -513,13 +584,22 @@
         sort_relevance: "関連性", sort_newest: "最新順",
         cermaq_only: "Cermaqのみ", scope_cermaq: "Cermaq", scope_industry: "業界",
         classifying: "分類中…", tone_critical: "批判的", tone_positive: "ポジティブ",
-        all_tones: "すべてのトーン", positive: "ポジティブ", neutral: "中立", critical: "批判的"
+        all_tones: "すべてのトーン", positive: "ポジティブ", neutral: "中立", critical: "批判的",
+        digest_title: "本日のまとめ", digest_pending: "本日のまとめを生成中…",
+        based_on: "対象記事", articles: "件", generated_at: "生成日時"
       }
     };
 
     const DATE_MS = { today: 86400000, week: 604800000, month: 2592000000 };
 
-    let activeLang = localStorage.getItem("cermaq_lang") || "no";
+    var _urlLang = new URLSearchParams(window.location.search).get("lang");
+    var _savedLang = localStorage.getItem("cermaq_lang");
+    if (!_urlLang && _savedLang && _savedLang !== "no") {
+      var _u = new URL(window.location);
+      _u.searchParams.set("lang", _savedLang);
+      window.location.replace(_u.toString());
+    }
+    let activeLang = _urlLang || _savedLang || "no";
     let activeRegion = "all";
     let activeDateRange = "today";
     let activeTone = "all";
@@ -602,8 +682,15 @@
       document.getElementById("stat-kritisk").textContent = toneCounts.kritisk;
     }
 
+    function switchLanguage(newLang) {
+      localStorage.setItem("cermaq_lang", newLang);
+      var u = new URL(window.location);
+      u.searchParams.set("lang", newLang);
+      window.location.href = u.toString();
+    }
+
     document.querySelectorAll(".lang-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() { applyLang(btn.dataset.lang); });
+      btn.addEventListener("click", function() { switchLanguage(btn.dataset.lang); });
     });
 
     document.querySelectorAll(".filter-btn").forEach(function(btn) {

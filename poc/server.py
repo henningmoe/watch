@@ -6,9 +6,10 @@ import queue
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 
 from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
@@ -33,6 +34,50 @@ _total_count = 0
 _counters_lock = threading.Lock()
 
 _CLASSIFY_RATE = 1.0  # minimum seconds between classify calls
+
+# Digest cache
+_digest_cache: dict = {}  # lang -> digest dict
+_digest_lock = threading.Lock()
+
+_UI_TEXTS: dict = {
+    "no": {
+        "digest_title": "Dagens oppsummering",
+        "digest_pending": "Dagens oppsummering genereres…",
+        "based_on": "Basert på",
+        "articles": "artikler",
+        "generated_at": "Generert",
+    },
+    "en": {
+        "digest_title": "Daily summary",
+        "digest_pending": "Daily summary being generated…",
+        "based_on": "Based on",
+        "articles": "articles",
+        "generated_at": "Generated",
+    },
+    "es": {
+        "digest_title": "Resumen del día",
+        "digest_pending": "Resumen del día generándose…",
+        "based_on": "Basado en",
+        "articles": "artículos",
+        "generated_at": "Generado",
+    },
+    "ja": {
+        "digest_title": "本日のまとめ",
+        "digest_pending": "本日のまとめを生成中…",
+        "based_on": "対象記事",
+        "articles": "件",
+        "generated_at": "生成日時",
+    },
+}
+
+
+def _parse_dt(iso: str | None) -> datetime:
+    if not iso:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    try:
+        return datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except Exception:
+        return datetime.min.replace(tzinfo=timezone.utc)
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +171,84 @@ def _classify_loop() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Digest helpers
+# ---------------------------------------------------------------------------
+
+def _generate_all_digests() -> None:
+    """Generate digest for all four languages from the last 24 hours of articles."""
+    with _articles_lock:
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        recent = [
+            a for a in _articles.values()
+            if a.get("scope") in ("cermaq", "industry")
+            and _parse_dt(a.get("published_at")) >= cutoff
+        ]
+
+    cermaq_count = sum(1 for a in recent if a.get("scope") == "cermaq")
+    log.info("Genererer digest for %d artikler (%d Cermaq)", len(recent), cermaq_count)
+
+    if len(recent) < 5:
+        log.info("For få artikler (%d) — setter stille-melding", len(recent))
+        _minimal = {
+            "no": ("Stille mediedøgn", "<p>Få relevante artikler siste 24 timer.</p>"),
+            "en": ("Quiet news cycle", "<p>Few relevant articles in the last 24 hours.</p>"),
+            "es": ("Ciclo de noticias tranquilo", "<p>Pocos artículos relevantes en las últimas 24 horas.</p>"),
+            "ja": ("静かなニュースサイクル", "<p>過去24時間の関連記事は少数です。</p>"),
+        }
+        now_iso = datetime.now(timezone.utc).isoformat()
+        with _digest_lock:
+            for lang, (headline, body) in _minimal.items():
+                _digest_cache[lang] = {
+                    "headline": headline,
+                    "body": body,
+                    "generated_at": now_iso,
+                    "lang": lang,
+                    "article_count": len(recent),
+                    "cermaq_count": cermaq_count,
+                }
+        return
+
+    from poc.digest import generate_digest
+    for lang in ("no", "en", "es", "ja"):
+        try:
+            digest = generate_digest(recent, lang=lang)
+            if digest:
+                with _digest_lock:
+                    _digest_cache[lang] = digest
+                log.info("Digest klar lang=%s: %s", lang, digest["headline"][:60])
+        except Exception as exc:
+            log.error("Digest feilet for lang=%s: %s", lang, exc)
+
+
+def _digest_scheduler() -> None:
+    """Regenerate digest every day at 06:00 Oslo time."""
+    while True:
+        try:
+            now = datetime.now(ZoneInfo("Europe/Oslo"))
+            target = now.replace(hour=6, minute=0, second=0, microsecond=0)
+            if target <= now:
+                target += timedelta(days=1)
+            wait = (target - now).total_seconds()
+            log.info("Neste digest-generering: %s (om %.1f timer)", target.isoformat(), wait / 3600)
+            time.sleep(wait)
+            _generate_all_digests()
+        except Exception as exc:
+            log.error("Digest-scheduler-feil: %s", exc)
+            time.sleep(3600)
+
+
+def _initial_digest() -> None:
+    """Generate digest once at startup, after fetch+classify have had time to run."""
+    time.sleep(60)
+    _generate_all_digests()
+
+
+def get_digest(lang: str = "no") -> dict | None:
+    with _digest_lock:
+        return _digest_cache.get(lang)
+
+
+# ---------------------------------------------------------------------------
 # Background thread 3 — OG-image backfill (runs once at startup)
 # ---------------------------------------------------------------------------
 
@@ -172,6 +295,8 @@ def _start_background_threads() -> None:
         (_fetch_loop, "fetch-thread"),
         (_classify_loop, "classify-thread"),
         (_backfill_og_images, "og-backfill-thread"),
+        (_digest_scheduler, "digest-scheduler-thread"),
+        (_initial_digest, "digest-initial-thread"),
     ]:
         t = threading.Thread(target=target, name=name, daemon=True)
         t.start()
@@ -230,7 +355,6 @@ def _sort_key(article: dict):
 
 @app.before_request
 def _log_request():
-    from flask import request
     log.info("%s %s", request.method, request.path)
 
 
@@ -245,8 +369,34 @@ def _today_no() -> str:
     return f"{days[dt.weekday()]} {dt.day}. {months[dt.month - 1]} {dt.year}"
 
 
+@app.template_filter("fmt_dt_friendly")
+def fmt_dt_friendly(iso_str: str | None, lang: str = "no") -> str:
+    if not iso_str:
+        return ""
+    try:
+        dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+        oslo = dt.astimezone(ZoneInfo("Europe/Oslo"))
+        if lang == "ja":
+            return oslo.strftime("%Y年%m月%d日 %H:%M")
+        elif lang == "es":
+            return oslo.strftime("%d/%m/%Y %H:%M")
+        elif lang == "en":
+            return oslo.strftime("%b %d, %Y %H:%M")
+        else:
+            return oslo.strftime("%d. %b %Y %H:%M")
+    except Exception:
+        return iso_str or ""
+
+
 @app.route("/")
 def index():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+
+    digest = get_digest(lang)
+    ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
+
     articles, error = _get_articles()
     articles_sorted = sorted(articles, key=_sort_key)
     formatted = [
@@ -298,6 +448,9 @@ def index():
         queue_size=_classify_queue.qsize(),
         cermaq_count=cermaq_count,
         region_counts=region_counts,
+        digest=digest,
+        lang=lang,
+        ui_text=ui_text,
     )
 
 
