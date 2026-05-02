@@ -25,7 +25,10 @@ _PROMPT = (
     '- scope: "cermaq" hvis Cermaq omtales direkte, "industry" ellers\n'
     '- category: "regulatorisk" | "marked" | "fiskehelse" | "miljo" | "drift" | "ma" | "politikk" | "annet"\n'
     "- relevance: heltall 1-5 hvor 5 er mest relevant for Cermaq\n"
-    "- summary_no: 2 setninger på norsk som oppsummerer artikkelen"
+    '- summaries: objekt med tre nøkler:\n'
+    '    "no": 2 setninger på norsk som oppsummerer artikkelen\n'
+    '    "en": 2 sentences in English summarizing the article\n'
+    '    "es": 2 oraciones en español que resumen el artículo'
 )
 
 _DEFAULT = {
@@ -58,13 +61,20 @@ def classify(article: dict) -> dict:
     plain_text = BeautifulSoup(raw_html, "html.parser").get_text()
     content_truncated = plain_text[:1500]
 
-    default = {**_DEFAULT, "summary_no": plain_text[:200]}
+    default = {
+        **_DEFAULT,
+        "summaries": {
+            "no": plain_text[:200],
+            "en": plain_text[:200],
+            "es": plain_text[:200],
+        },
+    }
 
     try:
         client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         response = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=400,
+            max_tokens=700,
             temperature=0,
             messages=[
                 {

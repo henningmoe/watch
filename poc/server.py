@@ -210,7 +210,7 @@ def index():
     articles, error = _get_articles()
     articles_sorted = sorted(articles, key=_sort_key)
     formatted = [
-        {**a, "published_at": _fmt_dt(a.get("published_at"))}
+        {**a, "published_at_iso": a.get("published_at") or "", "published_at": _fmt_dt(a.get("published_at"))}
         for a in articles_sorted
     ]
     generated_at = _fmt_dt(datetime.utcnow().isoformat() + "Z")
