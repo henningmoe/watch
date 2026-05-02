@@ -192,6 +192,35 @@
       border-color: #0c4a3e;
     }
 
+    /* ── Tone filter pills ── */
+    .tone-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .tone-btn {
+      padding: 0.375rem 1rem;
+      border-radius: 20px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .tone-btn[data-tone="all"]     { border: 1.5px solid #0c4a3e; color: #0c4a3e; }
+    .tone-btn[data-tone="positiv"] { border: 1px solid #15803d;  color: #15803d; }
+    .tone-btn[data-tone="noytral"] { border: 1px solid #737373;  color: #737373; }
+    .tone-btn[data-tone="kritisk"] { border: 1px solid #b91c1c;  color: #b91c1c; }
+
+    .tone-btn[data-tone="all"].active     { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
+    .tone-btn[data-tone="positiv"].active { background: #15803d; color: #fff; border-color: #15803d; }
+    .tone-btn[data-tone="noytral"].active { background: #737373; color: #fff; border-color: #737373; }
+    .tone-btn[data-tone="kritisk"].active { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+
     /* ── Article grid ── */
     .story-cards {
       display: grid;
@@ -334,6 +363,12 @@
     </span>
     <span class="stat-sep">·</span>
     <span class="stat-item">
+      ↑ <strong id="stat-positiv">{{ articles | selectattr('tone', 'equalto', 'positiv') | list | length }}</strong> ·
+      — <strong id="stat-noytral">{{ articles | selectattr('tone', 'equalto', 'noytral') | list | length }}</strong> ·
+      ↓ <strong id="stat-kritisk">{{ articles | selectattr('tone', 'equalto', 'kritisk') | list | length }}</strong>
+    </span>
+    <span class="stat-sep">·</span>
+    <span class="stat-item">
       {% if total_count > 0 %}
         <strong>{{ classified_count }}</strong> av <strong>{{ total_count }}</strong> klassifisert
         {% if queue_size > 0 %}&nbsp;({{ queue_size }} i kø){% endif %}
@@ -356,6 +391,13 @@
       <button class="filter-btn" data-region="chile" data-key="chile">Chile</button>
       <button class="filter-btn" data-region="canada" data-key="canada">Canada</button>
       <button class="filter-btn" data-region="global" data-key="global">Global</button>
+    </div>
+
+    <div class="tone-filters">
+      <button class="tone-btn active" data-tone="all"     data-key="all_tones">Alle toner</button>
+      <button class="tone-btn"        data-tone="positiv" data-key="positive">Positiv</button>
+      <button class="tone-btn"        data-tone="noytral" data-key="neutral">Nøytral</button>
+      <button class="tone-btn"        data-tone="kritisk" data-key="critical">Kritisk</button>
     </div>
 
     <div class="toolbar">
@@ -386,7 +428,8 @@
                data-region="{{ r }}"
                data-published-at="{{ a.published_at_iso }}"
                data-relevance="{{ a.relevance or 1 }}"
-               data-scope="{{ a.scope or '' }}">
+               data-scope="{{ a.scope or '' }}"
+               data-tone="{{ a.tone or '' }}">
             {% if a.image_url %}
             <img class="card-image" src="{{ a.image_url }}" alt="" loading="lazy" />
             {% endif %}
@@ -444,21 +487,24 @@
         today: "I dag", week: "Siste 7 dager", month: "Siste 30 dager",
         sort_relevance: "Relevans", sort_newest: "Nyeste først",
         cermaq_only: "Kun Cermaq", scope_cermaq: "Cermaq", scope_industry: "Bransje",
-        classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv"
+        classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv",
+        all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk"
       },
       en: {
         all: "All", norway: "Norway", chile: "Chile", canada: "Canada", global: "Global",
         today: "Today", week: "Last 7 days", month: "Last 30 days",
         sort_relevance: "Relevance", sort_newest: "Newest first",
         cermaq_only: "Cermaq only", scope_cermaq: "Cermaq", scope_industry: "Industry",
-        classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive"
+        classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive",
+        all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical"
       },
       es: {
         all: "Todos", norway: "Noruega", chile: "Chile", canada: "Canadá", global: "Global",
         today: "Hoy", week: "Últimos 7 días", month: "Últimos 30 días",
         sort_relevance: "Relevancia", sort_newest: "Más recientes",
         cermaq_only: "Solo Cermaq", scope_cermaq: "Cermaq", scope_industry: "Industria",
-        classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo"
+        classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo",
+        all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico"
       }
     };
 
@@ -467,6 +513,7 @@
     let activeLang = localStorage.getItem("cermaq_lang") || "no";
     let activeRegion = "all";
     let activeDateRange = "today";
+    let activeTone = "all";
     let cermaqActive = false;
 
     function applyLang(lang) {
@@ -502,6 +549,8 @@
           if (age < 0 || age > maxAge) return false;
         }
 
+        if (activeTone !== "all" && card.dataset.tone !== activeTone) return false;
+
         if (cermaqActive && card.dataset.scope !== "cermaq") return false;
 
         return true;
@@ -522,12 +571,15 @@
       });
 
       var regionCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
+      var toneCounts = { positiv: 0, noytral: 0, kritisk: 0 };
       var cermaqCount = 0;
       visibleCards.forEach(function(c) {
         var r = c.dataset.region;
         if (r in regionCounts) regionCounts[r]++;
         else regionCounts.global++;
         if (c.dataset.scope === "cermaq") cermaqCount++;
+        var t = c.dataset.tone;
+        if (t in toneCounts) toneCounts[t]++;
       });
 
       document.getElementById("stat-total").textContent = visibleCards.length;
@@ -536,6 +588,9 @@
       document.getElementById("stat-chile").textContent = regionCounts.chile;
       document.getElementById("stat-canada").textContent = regionCounts.canada;
       document.getElementById("stat-global").textContent = regionCounts.global;
+      document.getElementById("stat-positiv").textContent = toneCounts.positiv;
+      document.getElementById("stat-noytral").textContent = toneCounts.noytral;
+      document.getElementById("stat-kritisk").textContent = toneCounts.kritisk;
     }
 
     document.querySelectorAll(".lang-btn").forEach(function(btn) {
@@ -556,6 +611,15 @@
         document.querySelectorAll(".date-btn").forEach(function(b) { b.classList.remove("active"); });
         btn.classList.add("active");
         activeDateRange = btn.dataset.range;
+        applyFilters();
+      });
+    });
+
+    document.querySelectorAll(".tone-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.querySelectorAll(".tone-btn").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        activeTone = btn.dataset.tone;
         applyFilters();
       });
     });
