@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #fafaf7;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #0c4a3e;
+      color: #fff;
+      padding: 2rem 2.5rem;
+    }
+
+    header h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.01em; }
+    header p  { margin-top: 0.25rem; font-size: 0.875rem; opacity: 0.75; }
+
+    .stats {
+      background: #e8f0ef;
+      border-bottom: 1px solid #d0dedd;
+      padding: 0.75rem 2.5rem;
+      font-size: 0.875rem;
+      color: #0c4a3e;
+      font-weight: 500;
+    }
+
+    .error-banner {
+      background: #fff0f0;
+      border-left: 4px solid #c0392b;
+      margin: 1.5rem 2rem;
+      padding: 1rem 1.25rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      color: #7b2318;
+    }
+
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+      flex: 1;
+    }
+
+    .story-cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 640px) {
+      .story-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 1024px) {
+      .story-cards { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.15s ease;
+    }
+
+    .card:hover { box-shadow: 0 4px 16px rgba(12, 74, 62, 0.12); }
+
+    .card-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .card-body {
+      padding: 1.25rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .card-source {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #0c4a3e;
+    }
+
+    .card-title {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .card-title a { color: inherit; text-decoration: none; }
+    .card-title a:hover { color: #0c4a3e; text-decoration: underline; }
+
+    .card-excerpt {
+      font-size: 0.8125rem;
+      color: #555;
+      line-height: 1.5;
+    }
+
+    .card-date { font-size: 0.8125rem; color: #888; margin-top: auto; padding-top: 0.5rem; }
+
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 0;
+      color: #999;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.8125rem;
+      color: #aaa;
+      border-top: 1px solid #e5e5e0;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Cermaq Media Watch</h1>
+    <p>{{ articles | length }} artikler · {{ generated_at }}</p>
+  </header>
+
+  <div class="stats">{{ articles | length }} artikler hentet</div>
+
+  {% if error %}
+  <div class="error-banner">
+    <strong>Kunne ikke hente artikler:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <main>
+    <div class="story-cards">
+      {% if articles %}
+        {% for a in articles %}
+        <div class="card">
+          {% if a.image_url %}
+          <img class="card-image" src="{{ a.image_url }}" alt="" loading="lazy" />
+          {% endif %}
+          <div class="card-body">
+            <span class="card-source">{{ a.source_name or "Ukjent kilde" }}</span>
+            <p class="card-title">
+              <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+            </p>
+            {% set excerpt = a.content | striptags | truncate(200, True, '…') %}
+            {% if excerpt %}
+            <p class="card-excerpt">{{ excerpt }}</p>
+            {% endif %}
+            <span class="card-date">{{ a.published_at }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty">Ingen artikler funnet.</p>
+      {% endif %}
+    </div>
+  </main>
+
+  <footer>Generert {{ generated_at }} fra Miniflux</footer>
+</body>
+</html>
