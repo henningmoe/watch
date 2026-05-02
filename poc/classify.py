@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 
 import anthropic
 from bs4 import BeautifulSoup
@@ -36,6 +37,21 @@ _DEFAULT = {
 }
 
 
+def _extract_json(text: str) -> str:
+    """Strip markdown fences and extract the first JSON object from *text*."""
+    cleaned = text.strip()
+    if cleaned.startswith("```json"):
+        cleaned = cleaned[len("```json"):]
+    elif cleaned.startswith("```"):
+        cleaned = cleaned[len("```"):]
+    if cleaned.endswith("```"):
+        cleaned = cleaned[:-3]
+    match = re.search(r"\{.*\}", cleaned, re.DOTALL)
+    if match:
+        return match.group(0)
+    raise ValueError(f"No JSON object found in response: {text[:200]!r}")
+
+
 def classify(article: dict) -> dict:
     """Classify a single article; return enrichment dict with classification fields."""
     raw_html = article.get("content", "") or ""
@@ -65,7 +81,8 @@ def classify(article: dict) -> dict:
         if text_block is None:
             raise ValueError("No text block in response")
 
-        result = json.loads(text_block.text)
+        raw_text = text_block.text
+        result = json.loads(_extract_json(raw_text))
         log.info(
             "Klassifiserte artikkel-id=%s: scope=%s, region=%s, tone=%s",
             article.get("id"),
@@ -75,7 +92,13 @@ def classify(article: dict) -> dict:
         )
         return result
     except Exception as exc:
-        log.error("Klassifisering feilet for id=%s: %s", article.get("id"), exc)
+        raw_text = locals().get("raw_text", "")
+        log.error(
+            "Klassifisering feilet for id=%s: %s. Raw response: %s",
+            article.get("id"),
+            exc,
+            raw_text[:500],
+        )
         return default
 
 
