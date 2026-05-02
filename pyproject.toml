@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "cermaq-watch"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=0.39",
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "python-dateutil>=2.8",
+    "msal>=1.26",
+    "jinja2>=3.1",
+    "mjml-python>=0.4",
+    "boto3>=1.34",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.1",
+    "ipython>=8.18",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["poc*"]
