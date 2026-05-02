@@ -185,6 +185,17 @@ def _log_request():
     log.info("%s %s", request.method, request.path)
 
 
+def _today_no() -> str:
+    """Return today's date in Norwegian, e.g. 'lørdag 3. mai 2026'."""
+    dt = datetime.now()
+    days = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"]
+    months = [
+        "januar", "februar", "mars", "april", "mai", "juni",
+        "juli", "august", "september", "oktober", "november", "desember",
+    ]
+    return f"{days[dt.weekday()]} {dt.day}. {months[dt.month - 1]} {dt.year}"
+
+
 @app.route("/")
 def index():
     articles, error = _get_articles()
@@ -199,15 +210,24 @@ def index():
         classified = _classified_count
         total = _total_count or len(articles)
 
+    cermaq_count = sum(1 for a in articles if a.get("scope") == "cermaq")
+    region_counts = {
+        r: sum(1 for a in articles if a.get("region") == r)
+        for r in ("norge", "chile", "canada", "global")
+    }
+
     return render_template(
         "index.html",
         articles=formatted,
         error=error,
         generated_at=generated_at,
+        today=_today_no(),
         cache_count=total,
         classified_count=classified,
         total_count=total,
         queue_size=_classify_queue.qsize(),
+        cermaq_count=cermaq_count,
+        region_counts=region_counts,
     )
 
 
