@@ -10,7 +10,7 @@ from datetime import datetime
 from flask import Flask, jsonify, render_template
 
 from poc.classify import classify
-from poc.fetch import fetch_miniflux
+from poc.fetch import fetch_miniflux, _fetch_og_image
 
 log = logging.getLogger(__name__)
 
@@ -105,6 +105,15 @@ def _classify_loop() -> None:
 
             with _counters_lock:
                 _classified_count += 1
+
+            # Fetch OG image for industry articles that have no image from RSS
+            if enrichment.get("scope") == "industry" and not article.get("image_url"):
+                og_image = _fetch_og_image(article["url"])
+                if og_image:
+                    with _articles_lock:
+                        if article_id in _articles:
+                            _articles[article_id]["image_url"] = og_image
+                    log.info("OG-image hentet for id=%s", article_id)
 
         except Exception as exc:
             log.error("classify loop error for id=%s: %s", article_id, exc)
