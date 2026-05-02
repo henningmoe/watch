@@ -2,6 +2,7 @@
 
 import logging
 import os
+import queue
 import threading
 import time
 from datetime import datetime
@@ -15,68 +16,139 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__, template_folder="templates")
 
-# Cache keyed by article ID so duplicates are never added
-_cache: dict = {"articles": {}, "fetched_at": None, "error": None}
-_cache_lock = threading.Lock()
-_CACHE_TTL = 30 * 60  # 30 minutes
+# Articles keyed by ID; never shrinks (accumulates over time)
+_articles: dict = {}
+_articles_lock = threading.Lock()
+
+# Fetch state
+_fetch_error: str | None = None
+_fetched_at: float | None = None
+_CACHE_TTL = 30 * 60  # seconds between Miniflux fetches
+
+# Classification queue and counters
+_classify_queue: queue.Queue = queue.Queue()
+_classified_count = 0
+_total_count = 0
+_counters_lock = threading.Lock()
+
+_CLASSIFY_RATE = 1.0  # minimum seconds between classify calls
 
 
-def _refresh_cache() -> None:
-    log.info("Refreshing article cache from Miniflux...")
-    try:
-        articles = fetch_miniflux()
+# ---------------------------------------------------------------------------
+# Background thread 1 — fetch
+# ---------------------------------------------------------------------------
 
-        with _cache_lock:
-            existing_ids = set(_cache["articles"].keys())
+def _fetch_loop() -> None:
+    """Runs forever: fetch Miniflux, enqueue new articles, sleep 30 min."""
+    global _fetch_error, _fetched_at
 
-        new_articles = [a for a in articles if a["id"] not in existing_ids]
-        log.info("%d new articles to classify", len(new_articles))
+    while True:
+        log.info("Fetching articles from Miniflux...")
+        try:
+            articles = fetch_miniflux()
 
-        for article in new_articles:
-            try:
-                enrichment = classify(article)
-                article.update(enrichment)
-            except Exception as exc:
-                log.error("classify failed for id=%s: %s", article.get("id"), exc)
+            with _articles_lock:
+                existing_ids = set(_articles.keys())
 
-        with _cache_lock:
-            for article in new_articles:
-                _cache["articles"][article["id"]] = article
-            _cache["fetched_at"] = time.monotonic()
-            _cache["error"] = None
+            new_articles = [a for a in articles if a["id"] not in existing_ids]
+            log.info("Fetch complete: %d total, %d new", len(articles), len(new_articles))
 
-        log.info(
-            "Cache refreshed: %d total articles, %d new",
-            len(_cache["articles"]),
-            len(new_articles),
-        )
-    except Exception as exc:
-        log.error("Failed to fetch articles: %s", exc)
-        with _cache_lock:
-            _cache["error"] = str(exc)
-            _cache["fetched_at"] = time.monotonic()
-    _schedule_refresh()
+            # Add new articles to cache immediately (unclassified) so they
+            # are visible in the UI right away, then enqueue for classification
+            with _articles_lock:
+                for a in new_articles:
+                    _articles[a["id"]] = a
+            with _counters_lock:
+                global _total_count
+                _total_count = len(_articles)
+
+            for a in new_articles:
+                _classify_queue.put(a["id"])
+
+            with _articles_lock:
+                _fetched_at = time.monotonic()
+                _fetch_error = None
+
+        except Exception as exc:
+            log.error("Fetch failed: %s", exc)
+            with _articles_lock:
+                _fetch_error = str(exc)
+                _fetched_at = time.monotonic()
+
+        time.sleep(_CACHE_TTL)
 
 
-def _schedule_refresh() -> None:
-    t = threading.Timer(_CACHE_TTL, _refresh_cache)
-    t.daemon = True
-    t.start()
+# ---------------------------------------------------------------------------
+# Background thread 2 — classify
+# ---------------------------------------------------------------------------
 
+def _classify_loop() -> None:
+    """Runs forever: pop IDs from queue, classify, update cache."""
+    global _classified_count
+
+    while True:
+        article_id = _classify_queue.get()  # blocks until work arrives
+        try:
+            with _articles_lock:
+                article = _articles.get(article_id)
+
+            if article is None or "scope" in article:
+                # Already classified or removed
+                _classify_queue.task_done()
+                continue
+
+            enrichment = classify(article)
+
+            with _articles_lock:
+                if article_id in _articles:
+                    _articles[article_id].update(enrichment)
+
+            with _counters_lock:
+                _classified_count += 1
+
+        except Exception as exc:
+            log.error("classify loop error for id=%s: %s", article_id, exc)
+        finally:
+            _classify_queue.task_done()
+
+        # Rate-limit: at most 1 API call per second
+        time.sleep(_CLASSIFY_RATE)
+
+
+# ---------------------------------------------------------------------------
+# Startup: kick off both background threads
+# ---------------------------------------------------------------------------
+
+def _start_background_threads() -> None:
+    for target, name in [
+        (_fetch_loop, "fetch-thread"),
+        (_classify_loop, "classify-thread"),
+    ]:
+        t = threading.Thread(target=target, name=name, daemon=True)
+        t.start()
+        log.info("Started %s", name)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _get_articles() -> tuple[list[dict], str | None]:
-    with _cache_lock:
-        fetched_at = _cache["fetched_at"]
-        articles = list(_cache["articles"].values())
-        error = _cache["error"]
+    """Return a snapshot of all articles and the last fetch error."""
+    global _fetched_at, _fetch_error
 
-    if fetched_at is None or (time.monotonic() - fetched_at) > _CACHE_TTL:
-        _refresh_cache()
-        with _cache_lock:
-            articles = list(_cache["articles"].values())
-            error = _cache["error"]
+    # Trigger an immediate fetch if cache is empty
+    if _fetched_at is None:
+        # Fetch hasn't run yet — wait briefly for the thread to populate
+        deadline = time.monotonic() + 5
+        while _fetched_at is None and time.monotonic() < deadline:
+            time.sleep(0.1)
 
-    return articles, error
+    with _articles_lock:
+        snapshot = list(_articles.values())
+        error = _fetch_error
+
+    return snapshot, error
 
 
 def _fmt_dt(iso: str | None) -> str:
@@ -103,6 +175,10 @@ def _sort_key(article: dict):
     return (rel, ts)
 
 
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
 @app.before_request
 def _log_request():
     from flask import request
@@ -118,20 +194,36 @@ def index():
         for a in articles_sorted
     ]
     generated_at = _fmt_dt(datetime.utcnow().isoformat() + "Z")
-    cache_count = len(_cache["articles"])
+
+    with _counters_lock:
+        classified = _classified_count
+        total = _total_count or len(articles)
+
     return render_template(
         "index.html",
         articles=formatted,
         error=error,
         generated_at=generated_at,
-        cache_count=cache_count,
+        cache_count=total,
+        classified_count=classified,
+        total_count=total,
+        queue_size=_classify_queue.qsize(),
     )
 
 
 @app.route("/api/feed")
 def api_feed():
     articles, error = _get_articles()
-    return jsonify({"articles": articles, "count": len(articles), "error": error})
+    with _counters_lock:
+        classified = _classified_count
+        total = _total_count or len(articles)
+    return jsonify({
+        "articles": articles,
+        "count": len(articles),
+        "classified": classified,
+        "total": total,
+        "error": error,
+    })
 
 
 @app.route("/healthz")
@@ -139,8 +231,13 @@ def healthz():
     return "OK", 200
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
 def run() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    _start_background_threads()
     port = int(os.environ.get("PORT", 8080))
     log.info("Starting Cermaq Watch server on 0.0.0.0:%d", port)
     app.run(host="0.0.0.0", port=port)

@@ -116,13 +116,14 @@
       white-space: nowrap;
     }
 
-    .badge-norge   { background: #0c4a3e; color: #fff; }
-    .badge-chile   { background: #b8541f; color: #fff; }
-    .badge-canada  { background: #1a3a5c; color: #fff; }
-    .badge-global  { background: #5a6f6a; color: #fff; }
+    .badge-norge    { background: #0c4a3e; color: #fff; }
+    .badge-chile    { background: #b8541f; color: #fff; }
+    .badge-canada   { background: #1a3a5c; color: #fff; }
+    .badge-global   { background: #5a6f6a; color: #fff; }
 
-    .badge-cermaq  { background: #0c4a3e; color: #fff; }
+    .badge-cermaq   { background: #0c4a3e; color: #fff; }
     .badge-industry { background: #fef3c7; color: #713f12; border: 1px solid #fde68a; }
+    .badge-pending  { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; font-style: italic; }
 
     .tone-positiv { color: #15803d; font-weight: 600; font-size: 0.875rem; }
     .tone-kritisk { color: #b91c1c; font-weight: 600; font-size: 0.875rem; }
@@ -175,7 +176,15 @@
     <p>{{ articles | length }} artikler vist · {{ generated_at }}</p>
   </header>
 
-  <div class="stats">{{ articles | length }} artikler hentet</div>
+  <div class="stats">
+    {{ articles | length }} artikler ·
+    {% if total_count > 0 %}
+      {{ classified_count }} av {{ total_count }} klassifisert
+      {% if queue_size > 0 %}· {{ queue_size }} i kø{% endif %}
+    {% else %}
+      Laster…
+    {% endif %}
+  </div>
 
   {% if error %}
   <div class="error-banner">
@@ -194,18 +203,20 @@
           <div class="card-body">
 
             <div class="card-badges">
-              {% if a.region %}
-              <span class="badge badge-{{ a.region }}">{{ a.region }}</span>
-              {% endif %}
-              {% if a.scope == "cermaq" %}
-              <span class="badge badge-cermaq">Cermaq</span>
-              {% elif a.scope == "industry" %}
-              <span class="badge badge-industry">Bransje</span>
-              {% endif %}
-              {% if a.tone == "positiv" %}
-              <span class="tone-positiv">↑ Positiv</span>
-              {% elif a.tone == "kritisk" %}
-              <span class="tone-kritisk">↓ Kritisk</span>
+              {% if a.scope %}
+                <span class="badge badge-{{ a.region or 'global' }}">{{ a.region or 'global' }}</span>
+                {% if a.scope == "cermaq" %}
+                <span class="badge badge-cermaq">Cermaq</span>
+                {% else %}
+                <span class="badge badge-industry">Bransje</span>
+                {% endif %}
+                {% if a.tone == "positiv" %}
+                <span class="tone-positiv">↑ Positiv</span>
+                {% elif a.tone == "kritisk" %}
+                <span class="tone-kritisk">↓ Kritisk</span>
+                {% endif %}
+              {% else %}
+                <span class="badge badge-pending">Ikke klassifisert</span>
               {% endif %}
             </div>
 
@@ -236,6 +247,7 @@
 
   <footer>
     Henter siste 24 timer hver fetch · {{ cache_count }} artikler i cache · cache vokser naturlig over tid ·
+    {{ classified_count }} av {{ total_count }} klassifisert ·
     Generert {{ generated_at }} fra Miniflux
   </footer>
 </body>
