@@ -5,7 +5,7 @@ import os
 import queue
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Flask, jsonify, render_template
 
@@ -213,7 +213,20 @@ def index():
         {**a, "published_at_iso": a.get("published_at") or "", "published_at": _fmt_dt(a.get("published_at"))}
         for a in articles_sorted
     ]
-    generated_at = _fmt_dt(datetime.utcnow().isoformat() + "Z")
+
+    for article in formatted:
+        if "summaries" not in article:
+            fallback = article.get("summary_no", "") or ""
+            article["summaries"] = {"no": fallback, "en": fallback, "es": fallback}
+        else:
+            s = article["summaries"]
+            article["summaries"] = {
+                "no": s.get("no", "") or "",
+                "en": s.get("en", "") or s.get("no", "") or "",
+                "es": s.get("es", "") or s.get("no", "") or "",
+            }
+
+    generated_at = _fmt_dt(datetime.now(timezone.utc).isoformat())
 
     with _counters_lock:
         classified = _classified_count
