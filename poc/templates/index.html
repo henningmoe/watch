@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fafaf7;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #0c4a3e;
+      color: #fff;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    header h1 { font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .lang-selector { display: flex; gap: 0.25rem; }
+
+    .lang-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .lang-btn.active {
+      background: #d4e4d4;
+      color: #0c4a3e;
+      border-color: #d4e4d4;
+    }
+
+    .header-date { font-size: 0.875rem; opacity: 0.8; }
+
+    /* ── Stats strip ── */
+    .stats-strip {
+      background: #d4e4d4;
+      color: #0c4a3e;
+      padding: 10px 40px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+    }
+
+    .stat-item strong { font-weight: 700; }
+    .stat-sep { opacity: 0.5; }
+
+    /* ── Error banner ── */
+    .error-banner {
+      background: #fff0f0;
+      border-left: 4px solid #c0392b;
+      margin: 1.25rem 40px 0;
+      padding: 0.875rem 1.25rem;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      color: #7b2318;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 40px;
+      flex: 1;
+    }
+
+    /* ── Region filter pills ── */
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .filter-btn {
+      padding: 0.375rem 1rem;
+      border-radius: 20px;
+      border: 1.5px solid #0c4a3e;
+      background: transparent;
+      color: #0c4a3e;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .filter-btn:hover, .filter-btn.active {
+      background: #0c4a3e;
+      color: #fff;
+    }
+
+    /* ── Toolbar (date + sort + toggle) ── */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .date-filters { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+    .date-btn {
+      padding: 0.3125rem 0.875rem;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+      background: #fff;
+      color: #555;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .date-btn:hover { border-color: #999; color: #333; }
+
+    .date-btn.active {
+      background: #0c4a3e;
+      color: #fff;
+      border-color: #0c4a3e;
+    }
+
+    .toolbar-right { display: flex; align-items: center; gap: 0.5rem; }
+
+    #sort {
+      padding: 0.3125rem 0.75rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      color: #555;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      cursor: pointer;
+    }
+
+    #cermaq-toggle {
+      padding: 0.3125rem 0.875rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #fff;
+      color: #555;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+
+    #cermaq-toggle:hover { border-color: #999; color: #333; }
+
+    #cermaq-toggle.active {
+      background: #0c4a3e;
+      color: #fff;
+      border-color: #0c4a3e;
+    }
+
+    /* ── Tone filter pills ── */
+    .tone-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.875rem;
+    }
+
+    .tone-btn {
+      padding: 0.375rem 1rem;
+      border-radius: 20px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .tone-btn[data-tone="all"]     { border: 1.5px solid #0c4a3e; color: #0c4a3e; }
+    .tone-btn[data-tone="positiv"] { border: 1px solid #15803d;  color: #15803d; }
+    .tone-btn[data-tone="noytral"] { border: 1px solid #737373;  color: #737373; }
+    .tone-btn[data-tone="kritisk"] { border: 1px solid #b91c1c;  color: #b91c1c; }
+
+    .tone-btn[data-tone="all"].active     { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
+    .tone-btn[data-tone="positiv"].active { background: #15803d; color: #fff; border-color: #15803d; }
+    .tone-btn[data-tone="noytral"].active { background: #737373; color: #fff; border-color: #737373; }
+    .tone-btn[data-tone="kritisk"].active { background: #b91c1c; color: #fff; border-color: #b91c1c; }
+
+    /* ── Article grid ── */
+    .story-cards {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    @media (min-width: 640px) {
+      .story-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (min-width: 1024px) {
+      .story-cards { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.15s ease, transform 0.15s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 6px 20px rgba(12,74,62,0.14), 0 0 0 1px rgba(12,74,62,0.08);
+      transform: translateY(-2px);
+    }
+
+    .card-image { width: 100%; height: 200px; object-fit: cover; display: block; }
+
+    .card-body {
+      padding: 1.25rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .card-meta-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      font-size: 0.625rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    .badge-norge  { background: #0c4a3e; color: #fff; }
+    .badge-chile  { background: #b8541f; color: #fff; }
+    .badge-canada { background: #1a3a5c; color: #fff; }
+    .badge-global { background: #5a6f6a; color: #fff; }
+
+    .badge-cermaq   { background: #0c4a3e; color: #fff; }
+    .badge-industry { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-pending  { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; font-style: italic; }
+
+    .tone-positiv { font-size: 0.75rem; font-weight: 600; color: #15803d; }
+    .tone-kritisk { font-size: 0.75rem; font-weight: 600; color: #b91c1c; }
+
+    .card-source {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+
+    .card-title { font-size: 0.9375rem; font-weight: 500; line-height: 1.45; flex: 1; }
+    .card-title a { color: inherit; text-decoration: none; }
+    .card-title a:hover { color: #0c4a3e; text-decoration: underline; }
+
+    .card-summary {
+      font-size: 0.8125rem;
+      color: #555;
+      line-height: 1.55;
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .card-date { font-size: 0.75rem; color: #9ca3af; margin-top: auto; padding-top: 0.5rem; }
+
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 5rem 0;
+      color: #aaa;
+      font-size: 0.9375rem;
+    }
+
+    /* ── Digest card ── */
+    .digest-card {
+      background: #fff;
+      border-left: 4px solid #0c4a3e;
+      padding: 24px 32px;
+      margin: 24px 40px 0;
+      max-width: 1200px;
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    @media (min-width: 1280px) {
+      .digest-card { margin-left: auto; margin-right: auto; }
+    }
+
+    .digest-card h2 {
+      margin: 0 0 4px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #0c4a3e;
+      font-weight: 600;
+    }
+
+    .digest-headline {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 12px 0 16px;
+      color: #1a1a1a;
+      line-height: 1.3;
+    }
+
+    .digest-body { font-size: 0.9375rem; line-height: 1.7; color: #2a2a2a; }
+    .digest-body h3 { font-size: 1rem; font-weight: 600; color: #0c4a3e; margin: 20px 0 8px; }
+    .digest-body p { margin: 8px 0; }
+    .digest-body strong { color: #0c4a3e; }
+
+    .digest-meta { font-size: 0.75rem; color: #888; margin: 4px 0; }
+
+    .digest-empty {
+      background: #f5f5f5;
+      border-left-color: #ccc;
+      text-align: center;
+      font-style: italic;
+      color: #999;
+      padding: 20px 32px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      background: #fff;
+      border-top: 1px solid #e5e5e0;
+      text-align: center;
+      padding: 1.25rem 40px;
+      font-size: 0.75rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Cermaq Media Watch</h1>
+    <div class="header-right">
+      <div class="lang-selector">
+        <button class="lang-btn active" data-lang="no" title="Norsk">🇳🇴 NO</button>
+        <button class="lang-btn" data-lang="en" title="English">🇬🇧 EN</button>
+        <button class="lang-btn" data-lang="es" title="Español">🇪🇸 ES</button>
+        <button class="lang-btn" data-lang="ja" title="日本語">🇯🇵 JA</button>
+      </div>
+      <span class="header-date">{{ today }}</span>
+    </div>
+  </header>
+
+  <div class="stats-strip">
+    <span class="stat-item"><strong id="stat-total">{{ articles | length }}</strong> artikler</span>
+    <span class="stat-sep">·</span>
+    <span class="stat-item"><strong id="stat-cermaq">{{ cermaq_count }}</strong> Cermaq</span>
+    <span class="stat-sep">·</span>
+    <span class="stat-item">
+      Norge <strong id="stat-norge">{{ region_counts.norge }}</strong> ·
+      Chile <strong id="stat-chile">{{ region_counts.chile }}</strong> ·
+      Canada <strong id="stat-canada">{{ region_counts.canada }}</strong> ·
+      Global <strong id="stat-global">{{ region_counts.global }}</strong>
+    </span>
+    <span class="stat-sep">·</span>
+    <span class="stat-item">
+      ↑ <strong id="stat-positiv">{{ articles | selectattr('tone', 'equalto', 'positiv') | list | length }}</strong> ·
+      — <strong id="stat-noytral">{{ articles | selectattr('tone', 'equalto', 'noytral') | list | length }}</strong> ·
+      ↓ <strong id="stat-kritisk">{{ articles | selectattr('tone', 'equalto', 'kritisk') | list | length }}</strong>
+    </span>
+    <span class="stat-sep">·</span>
+    <span class="stat-item">
+      {% if total_count > 0 %}
+        <strong>{{ classified_count }}</strong> av <strong>{{ total_count }}</strong> klassifisert
+        {% if queue_size > 0 %}&nbsp;({{ queue_size }} i kø){% endif %}
+      {% else %}
+        Laster…
+      {% endif %}
+    </span>
+  </div>
+
+  {% if error %}
+  <div class="error-banner">
+    <strong>Kunne ikke hente artikler:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if digest %}
+  <section class="digest-card">
+    <h2>{{ ui_text.digest_title }}</h2>
+    <p class="digest-meta">
+      {{ ui_text.based_on }} {{ digest.article_count }} {{ ui_text.articles }}
+      {% if digest.cermaq_count > 0 %} · {{ digest.cermaq_count }} Cermaq{% endif %}
+    </p>
+    <h3 class="digest-headline">{{ digest.headline }}</h3>
+    <div class="digest-body">{{ digest.body | safe }}</div>
+    <p class="digest-meta">{{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}</p>
+    {% if digest.search_count and digest.search_count > 0 %}
+    <p class="digest-meta">{{ ui_text.searches_used }} {{ digest.search_count }}</p>
+    {% endif %}
+  </section>
+  {% else %}
+  <section class="digest-card digest-empty">
+    <p>{{ ui_text.digest_pending }}</p>
+  </section>
+  {% endif %}
+
+  <main>
+    <div class="filters">
+      <button class="filter-btn active" data-region="all" data-key="all">Alle</button>
+      <button class="filter-btn" data-region="norge" data-key="norway">Norge</button>
+      <button class="filter-btn" data-region="chile" data-key="chile">Chile</button>
+      <button class="filter-btn" data-region="canada" data-key="canada">Canada</button>
+      <button class="filter-btn" data-region="global" data-key="global">Global</button>
+    </div>
+
+    <div class="tone-filters">
+      <button class="tone-btn active" data-tone="all"     data-key="all_tones">Alle toner</button>
+      <button class="tone-btn"        data-tone="positiv" data-key="positive">Positiv</button>
+      <button class="tone-btn"        data-tone="noytral" data-key="neutral">Nøytral</button>
+      <button class="tone-btn"        data-tone="kritisk" data-key="critical">Kritisk</button>
+    </div>
+
+    <div class="toolbar">
+      <div class="date-filters">
+        <button class="date-btn active" data-range="today" data-key="today">I dag</button>
+        <button class="date-btn" data-range="week" data-key="week">Siste 7 dager</button>
+        <button class="date-btn" data-range="month" data-key="month">Siste 30 dager</button>
+      </div>
+      <div class="toolbar-right">
+        <select id="sort">
+          <option value="relevance" data-key="sort_relevance">Relevans</option>
+          <option value="newest" data-key="sort_newest">Nyeste først</option>
+        </select>
+        <button id="cermaq-toggle" data-key="cermaq_only">Kun Cermaq</button>
+      </div>
+    </div>
+
+    <div class="story-cards">
+      {% if articles %}
+        {% set rk = {"norge": "norway", "chile": "chile", "canada": "canada", "global": "global"} %}
+        {% for a in articles %}
+          {% set r = a.region or "global" %}
+          {% set excerpt = a.content | striptags | truncate(240, True, "…") %}
+          {% set sumno = a.summaries.no or excerpt %}
+          {% set sumen = a.summaries.en or excerpt %}
+          {% set sumes = a.summaries.es or excerpt %}
+          {% set sumja = a.summaries.ja or excerpt %}
+          <div class="card"
+               data-region="{{ r }}"
+               data-published-at="{{ a.published_at_iso }}"
+               data-relevance="{{ a.relevance or 1 }}"
+               data-scope="{{ a.scope or '' }}"
+               data-tone="{{ a.tone or '' }}">
+            {% if a.image_url %}
+            <img class="card-image" src="{{ a.image_url }}" alt="" loading="lazy" />
+            {% endif %}
+            <div class="card-body">
+
+              <div class="card-meta-top">
+                {% if a.scope %}
+                  <span class="badge badge-{{ r }}" data-key="{{ rk.get(r, r) }}">{{ r | capitalize }}</span>
+                  {% if a.scope == "cermaq" %}
+                    <span class="badge badge-cermaq" data-key="scope_cermaq">Cermaq</span>
+                  {% else %}
+                    <span class="badge badge-industry" data-key="scope_industry">Bransje</span>
+                  {% endif %}
+                  {% if a.tone == "positiv" %}
+                    <span class="tone-positiv">↑ <span data-key="tone_positive">Positiv</span></span>
+                  {% elif a.tone == "kritisk" %}
+                    <span class="tone-kritisk">↓ <span data-key="tone_critical">Kritisk</span></span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge badge-pending"><span data-key="classifying">Klassifiseres…</span></span>
+                {% endif %}
+              </div>
+
+              <span class="card-source">{{ a.source_name or "Ukjent kilde" }}</span>
+
+              <p class="card-title">
+                <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
+              </p>
+
+              <div class="summary-container">
+                <p class="card-summary lang-text" data-lang="no">{{ sumno }}</p>
+                <p class="card-summary lang-text" data-lang="en" style="display:none">{{ sumen }}</p>
+                <p class="card-summary lang-text" data-lang="es" style="display:none">{{ sumes }}</p>
+                <p class="card-summary lang-text" data-lang="ja" style="display:none">{{ sumja }}</p>
+              </div>
+
+              <span class="card-date">{{ a.published_at }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty">Ingen artikler funnet.</p>
+      {% endif %}
+    </div>
+  </main>
+
+  <footer>
+    Cermaq Media Watch &nbsp;·&nbsp; Generert {{ generated_at }} &nbsp;·&nbsp;
+    Henter fra Miniflux hver 30. min &nbsp;·&nbsp; Klassifisert med Claude Haiku
+  </footer>
+
+  <script>
+    const UI_TEXTS = {
+      no: {
+        all: "Alle", norway: "Norge", chile: "Chile", canada: "Canada", global: "Global",
+        today: "I dag", week: "Siste 7 dager", month: "Siste 30 dager",
+        sort_relevance: "Relevans", sort_newest: "Nyeste først",
+        cermaq_only: "Kun Cermaq", scope_cermaq: "Cermaq", scope_industry: "Bransje",
+        classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv",
+        all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk",
+        digest_title: "Dagens oppsummering", digest_pending: "Dagens oppsummering genereres…",
+        based_on: "Basert på", articles: "artikler", generated_at: "Generert",
+        searches_used: "Web-søk brukt:"
+      },
+      en: {
+        all: "All", norway: "Norway", chile: "Chile", canada: "Canada", global: "Global",
+        today: "Today", week: "Last 7 days", month: "Last 30 days",
+        sort_relevance: "Relevance", sort_newest: "Newest first",
+        cermaq_only: "Cermaq only", scope_cermaq: "Cermaq", scope_industry: "Industry",
+        classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive",
+        all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical",
+        digest_title: "Daily summary", digest_pending: "Daily summary being generated…",
+        based_on: "Based on", articles: "articles", generated_at: "Generated",
+        searches_used: "Web searches used:"
+      },
+      es: {
+        all: "Todos", norway: "Noruega", chile: "Chile", canada: "Canadá", global: "Global",
+        today: "Hoy", week: "Últimos 7 días", month: "Últimos 30 días",
+        sort_relevance: "Relevancia", sort_newest: "Más recientes",
+        cermaq_only: "Solo Cermaq", scope_cermaq: "Cermaq", scope_industry: "Industria",
+        classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo",
+        all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico",
+        digest_title: "Resumen del día", digest_pending: "Resumen del día generándose…",
+        based_on: "Basado en", articles: "artículos", generated_at: "Generado",
+        searches_used: "Búsquedas web usadas:"
+      },
+      ja: {
+        all: "すべて", norway: "ノルウェー", chile: "チリ", canada: "カナダ", global: "グローバル",
+        today: "今日", week: "過去7日間", month: "過去30日間",
+        sort_relevance: "関連性", sort_newest: "最新順",
+        cermaq_only: "Cermaqのみ", scope_cermaq: "Cermaq", scope_industry: "業界",
+        classifying: "分類中…", tone_critical: "批判的", tone_positive: "ポジティブ",
+        all_tones: "すべてのトーン", positive: "ポジティブ", neutral: "中立", critical: "批判的",
+        digest_title: "本日のまとめ", digest_pending: "本日のまとめを生成中…",
+        based_on: "対象記事", articles: "件", generated_at: "生成日時",
+        searches_used: "ウェブ検索使用回数:"
+      }
+    };
+
+    const DATE_MS = { today: 86400000, week: 604800000, month: 2592000000 };
+
+    var _urlLang = new URLSearchParams(window.location.search).get("lang");
+    var _savedLang = localStorage.getItem("cermaq_lang");
+    if (!_urlLang && _savedLang && _savedLang !== "no") {
+      var _u = new URL(window.location);
+      _u.searchParams.set("lang", _savedLang);
+      window.location.replace(_u.toString());
+    }
+    let activeLang = _urlLang || _savedLang || "no";
+    let activeRegion = "all";
+    let activeDateRange = "today";
+    let activeTone = "all";
+    let cermaqActive = false;
+
+    function applyLang(lang) {
+      activeLang = lang;
+      localStorage.setItem("cermaq_lang", lang);
+
+      document.querySelectorAll(".lang-btn").forEach(function(b) {
+        b.classList.toggle("active", b.dataset.lang === lang);
+      });
+
+      var t = UI_TEXTS[lang] || UI_TEXTS.no;
+      document.querySelectorAll("[data-key]").forEach(function(el) {
+        if (t[el.dataset.key] !== undefined) el.textContent = t[el.dataset.key];
+      });
+
+      document.querySelectorAll(".lang-text").forEach(function(el) {
+        el.style.display = el.dataset.lang === lang ? "" : "none";
+      });
+    }
+
+    function applyFilters() {
+      var now = Date.now();
+      var maxAge = DATE_MS[activeDateRange];
+      var sortBy = document.getElementById("sort").value;
+      var allCards = Array.from(document.querySelectorAll(".card"));
+
+      var visibleCards = allCards.filter(function(card) {
+        if (activeRegion !== "all" && card.dataset.region !== activeRegion) return false;
+
+        var iso = card.dataset.publishedAt;
+        if (iso) {
+          var age = now - new Date(iso).getTime();
+          if (age < 0 || age > maxAge) return false;
+        }
+
+        if (activeTone !== "all" && card.dataset.tone !== activeTone) return false;
+
+        if (cermaqActive && card.dataset.scope !== "cermaq") return false;
+
+        return true;
+      });
+
+      visibleCards.sort(function(a, b) {
+        if (sortBy === "relevance") {
+          return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
+        }
+        return new Date(b.dataset.publishedAt || 0) - new Date(a.dataset.publishedAt || 0);
+      });
+
+      allCards.forEach(function(c) { c.style.display = "none"; });
+      var grid = document.querySelector(".story-cards");
+      visibleCards.forEach(function(c) {
+        c.style.display = "";
+        grid.appendChild(c);
+      });
+
+      var regionCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
+      var toneCounts = { positiv: 0, noytral: 0, kritisk: 0 };
+      var cermaqCount = 0;
+      visibleCards.forEach(function(c) {
+        var r = c.dataset.region;
+        if (r in regionCounts) regionCounts[r]++;
+        else regionCounts.global++;
+        if (c.dataset.scope === "cermaq") cermaqCount++;
+        var t = c.dataset.tone;
+        if (t in toneCounts) toneCounts[t]++;
+      });
+
+      document.getElementById("stat-total").textContent = visibleCards.length;
+      document.getElementById("stat-cermaq").textContent = cermaqCount;
+      document.getElementById("stat-norge").textContent = regionCounts.norge;
+      document.getElementById("stat-chile").textContent = regionCounts.chile;
+      document.getElementById("stat-canada").textContent = regionCounts.canada;
+      document.getElementById("stat-global").textContent = regionCounts.global;
+      document.getElementById("stat-positiv").textContent = toneCounts.positiv;
+      document.getElementById("stat-noytral").textContent = toneCounts.noytral;
+      document.getElementById("stat-kritisk").textContent = toneCounts.kritisk;
+    }
+
+    function switchLanguage(newLang) {
+      localStorage.setItem("cermaq_lang", newLang);
+      var u = new URL(window.location);
+      u.searchParams.set("lang", newLang);
+      window.location.href = u.toString();
+    }
+
+    document.querySelectorAll(".lang-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() { switchLanguage(btn.dataset.lang); });
+    });
+
+    document.querySelectorAll(".filter-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.querySelectorAll(".filter-btn").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        activeRegion = btn.dataset.region;
+        applyFilters();
+      });
+    });
+
+    document.querySelectorAll(".date-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.querySelectorAll(".date-btn").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        activeDateRange = btn.dataset.range;
+        applyFilters();
+      });
+    });
+
+    document.querySelectorAll(".tone-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        document.querySelectorAll(".tone-btn").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        activeTone = btn.dataset.tone;
+        applyFilters();
+      });
+    });
+
+    document.getElementById("sort").addEventListener("change", applyFilters);
+
+    document.getElementById("cermaq-toggle").addEventListener("click", function() {
+      cermaqActive = !cermaqActive;
+      this.classList.toggle("active", cermaqActive);
+      applyFilters();
+    });
+
+    applyLang(activeLang);
+    applyFilters();
+  </script>
+
+</body>
+</html>
