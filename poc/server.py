@@ -8,13 +8,15 @@ from datetime import datetime
 
 from flask import Flask, jsonify, render_template
 
+from poc.classify import classify
 from poc.fetch import fetch_miniflux
 
 log = logging.getLogger(__name__)
 
-app = Flask(__name__, template_folder="../poc/templates")
+app = Flask(__name__, template_folder="templates")
 
-_cache: dict = {"articles": [], "fetched_at": None, "error": None}
+# Cache keyed by article ID so duplicates are never added
+_cache: dict = {"articles": {}, "fetched_at": None, "error": None}
 _cache_lock = threading.Lock()
 _CACHE_TTL = 30 * 60  # 30 minutes
 
@@ -23,11 +25,31 @@ def _refresh_cache() -> None:
     log.info("Refreshing article cache from Miniflux...")
     try:
         articles = fetch_miniflux()
+
         with _cache_lock:
-            _cache["articles"] = articles
+            existing_ids = set(_cache["articles"].keys())
+
+        new_articles = [a for a in articles if a["id"] not in existing_ids]
+        log.info("%d new articles to classify", len(new_articles))
+
+        for article in new_articles:
+            try:
+                enrichment = classify(article)
+                article.update(enrichment)
+            except Exception as exc:
+                log.error("classify failed for id=%s: %s", article.get("id"), exc)
+
+        with _cache_lock:
+            for article in new_articles:
+                _cache["articles"][article["id"]] = article
             _cache["fetched_at"] = time.monotonic()
             _cache["error"] = None
-        log.info("Cache refreshed: %d articles", len(articles))
+
+        log.info(
+            "Cache refreshed: %d total articles, %d new",
+            len(_cache["articles"]),
+            len(new_articles),
+        )
     except Exception as exc:
         log.error("Failed to fetch articles: %s", exc)
         with _cache_lock:
@@ -45,13 +67,13 @@ def _schedule_refresh() -> None:
 def _get_articles() -> tuple[list[dict], str | None]:
     with _cache_lock:
         fetched_at = _cache["fetched_at"]
-        articles = _cache["articles"]
+        articles = list(_cache["articles"].values())
         error = _cache["error"]
 
     if fetched_at is None or (time.monotonic() - fetched_at) > _CACHE_TTL:
         _refresh_cache()
         with _cache_lock:
-            articles = _cache["articles"]
+            articles = list(_cache["articles"].values())
             error = _cache["error"]
 
     return articles, error
@@ -62,13 +84,23 @@ def _fmt_dt(iso: str | None) -> str:
         return ""
     try:
         dt = datetime.fromisoformat(iso.replace("Z", "+00:00"))
-        MONTHS = [
+        months = [
             "januar", "februar", "mars", "april", "mai", "juni",
             "juli", "august", "september", "oktober", "november", "desember",
         ]
-        return f"{dt.day}. {MONTHS[dt.month - 1]} {dt.year}, {dt.strftime('%H:%M')}"
+        return f"{dt.day}. {months[dt.month - 1]} {dt.year}, {dt.strftime('%H:%M')}"
     except ValueError:
         return iso
+
+
+def _sort_key(article: dict):
+    rel = -(article.get("relevance") or 1)
+    pub = article.get("published_at") or ""
+    try:
+        ts = -datetime.fromisoformat(pub.replace("Z", "+00:00")).timestamp()
+    except Exception:
+        ts = 0.0
+    return (rel, ts)
 
 
 @app.before_request
@@ -80,16 +112,19 @@ def _log_request():
 @app.route("/")
 def index():
     articles, error = _get_articles()
+    articles_sorted = sorted(articles, key=_sort_key)
     formatted = [
         {**a, "published_at": _fmt_dt(a.get("published_at"))}
-        for a in articles
+        for a in articles_sorted
     ]
     generated_at = _fmt_dt(datetime.utcnow().isoformat() + "Z")
+    cache_count = len(_cache["articles"])
     return render_template(
         "index.html",
         articles=formatted,
         error=error,
         generated_at=generated_at,
+        cache_count=cache_count,
     )
 
 
