@@ -11,24 +11,58 @@ from bs4 import BeautifulSoup
 log = logging.getLogger(__name__)
 
 _PROMPT = (
-    "Du er media-analyst for Cermaq, et globalt lakseoppdrettsselskap eid "
-    "av Mitsubishi Corporation, med drift i Norge (Nordland og Finnmark), "
-    "Canada (British Columbia) og Chile (Los Lagos, Aysén, Magallanes).\n\n"
-    "Klassifiser denne artikkelen og returner KUN gyldig JSON, ingenting "
-    "annet. Ingen markdown, ingen code blocks, bare ren JSON.\n\n"
+    "Du er media-analyst for Cermaq, et globalt lakseoppdrettsselskap "
+    "eid av Mitsubishi Corporation, med drift i Norge (Nordland og "
+    "Finnmark), Canada (British Columbia) og Chile (Los Lagos, Aysén, "
+    "Magallanes).\n\n"
+    "Klassifiser denne artikkelen og returner KUN gyldig JSON, "
+    "ingenting annet. Ingen markdown, ingen code blocks, bare ren JSON.\n\n"
+    "REGLER FOR scope-FELTET (kritisk viktig):\n\n"
+    'scope = "cermaq" KUN når én av disse er sant:\n'
+    "- Artikkelen nevner ordet \"Cermaq\" eksplisitt\n"
+    "- Artikkelen nevner Cermaq-merker: True Arctic, Salmon Saver, "
+    "Cermaq Norway, Cermaq Canada, Cermaq Chile, Cermaq Group\n"
+    "- Artikkelen nevner Cermaq-ledere ved navn: Steven Rafferty (CEO), "
+    "Snorre Jonassen, Lise Bergan, David Kiemele, Knut Ellekjær, "
+    "Sven Eric Ellingsen, Terje Suul\n\n"
+    'scope = "industry" når artikkelen handler om:\n'
+    "- Lakseoppdrett, fiskehelse, akvakultur generelt\n"
+    "- Sjømat-marked, eksport, lakseprisen\n"
+    "- Konkurrenter (Mowi, SalMar, Lerøy, Grieg, AquaChile, MultiX, "
+    "Bakkafrost, Atlantic Sapphire)\n"
+    "- Oppdrettsregulering, konsesjoner, miljøkrav, fiskehelsekrav\n"
+    "- Akvakultur-teknologi, RAS-anlegg, landbasert oppdrett\n"
+    "- ...uten at Cermaq nevnes direkte\n\n"
+    'scope = "irrelevant" hvis artikkelen IKKE handler om sjømat, '
+    "laks, oppdrett eller relaterte næringstema. Dette inkluderer:\n"
+    "- Generelle nyheter, kriminalitet, terror, ulykker\n"
+    "- Sport, kultur, underholdning, lokale arrangementer\n"
+    "- Politikk og lokalsaker uten næringskobling til oppdrett\n"
+    "- Vær, trafikk, samfunnssaker, samferdsel\n"
+    "- Kraftforsyning eller industri uten direkte oppdrett-kobling\n"
+    "- Tekniske eller administrative meldinger fra fylkeskommuner\n\n"
+    "VIKTIG: Bare det at en artikkel kommer fra norsk kilde eller "
+    "nevner et norsk geografisk område er IKKE nok for scope=cermaq. "
+    "Cermaq må faktisk nevnes ved navn.\n\n"
+    "REGLER FOR ANDRE FELT:\n\n"
+    '- region: "norge" | "chile" | "canada" | "global"\n'
+    '- tone: "positiv" | "noytral" | "kritisk"\n'
+    '- category: "regulatorisk" | "marked" | "fiskehelse" | "miljo" | '
+    '"drift" | "ma" | "politikk" | "annet"\n'
+    "- relevance: 1-5 hvor 5 er mest relevant for Cermaq\n"
+    "  * scope=irrelevant gir alltid relevance=1\n"
+    "  * scope=industry typisk relevance=2-3\n"
+    "  * scope=cermaq typisk relevance=4-5\n\n"
     "Tittel: {title}\n"
     "Innhold: {content_truncated}\n"
     "Kilde: {source_name}\n\n"
-    "Returner JSON med disse feltene:\n"
-    '- region: "norge" | "chile" | "canada" | "global"\n'
-    '- tone: "positiv" | "noytral" | "kritisk"\n'
-    '- scope: "cermaq" hvis Cermaq omtales direkte, "industry" ellers\n'
-    '- category: "regulatorisk" | "marked" | "fiskehelse" | "miljo" | "drift" | "ma" | "politikk" | "annet"\n'
-    "- relevance: heltall 1-5 hvor 5 er mest relevant for Cermaq\n"
-    '- summaries: objekt med tre nøkler:\n'
-    '    "no": 2 setninger på norsk som oppsummerer artikkelen\n'
-    '    "en": 2 sentences in English summarizing the article\n'
-    '    "es": 2 oraciones en español que resumen el artículo'
+    "Returner JSON med:\n"
+    "- region, tone, scope, category, relevance\n"
+    "- summaries: dict med fire nøkler:\n"
+    '    "no": 2 setninger på norsk\n'
+    '    "en": 2 sentences in English\n'
+    '    "es": 2 oraciones en español\n'
+    '    "ja": 日本語の2文'
 )
 
 _DEFAULT = {
@@ -67,6 +101,7 @@ def classify(article: dict) -> dict:
             "no": plain_text[:200],
             "en": plain_text[:200],
             "es": plain_text[:200],
+            "ja": plain_text[:200],
         },
     }
 
@@ -74,7 +109,7 @@ def classify(article: dict) -> dict:
         client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         response = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=700,
+            max_tokens=900,
             temperature=0,
             messages=[
                 {

@@ -78,12 +78,29 @@ def _extract_image(html: str) -> str | None:
 
 def _fetch_og_image(url: str) -> Optional[str]:
     """Fetch the OG/twitter/image_src image for a URL. Returns None on failure."""
+    _DESKTOP_UA = (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+    _MOBILE_UA = (
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+        "Version/16.0 Mobile/15E148 Safari/604.1"
+    )
+    headers = {
+        "User-Agent": _DESKTOP_UA,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "no,en-US;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+    }
     try:
-        response = requests.get(
-            url,
-            timeout=5,
-            headers={"User-Agent": "Mozilla/5.0 (compatible; CermaqWatch/1.0)"},
-        )
+        response = requests.get(url, timeout=5, headers=headers)
+        if response.status_code == 403:
+            headers["User-Agent"] = _MOBILE_UA
+            response = requests.get(url, timeout=5, headers=headers)
         response.raise_for_status()
         soup = BeautifulSoup(response.text, "html.parser")
 

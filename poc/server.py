@@ -5,6 +5,7 @@ import os
 import queue
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from flask import Flask, jsonify, render_template
@@ -106,8 +107,8 @@ def _classify_loop() -> None:
             with _counters_lock:
                 _classified_count += 1
 
-            # Fetch OG image for industry articles that have no image from RSS
-            if enrichment.get("scope") == "industry" and not article.get("image_url"):
+            # Fetch OG image for classified articles that have no image from RSS
+            if enrichment.get("scope") in ("cermaq", "industry") and not article.get("image_url"):
                 og_image = _fetch_og_image(article["url"])
                 if og_image:
                     with _articles_lock:
@@ -125,6 +126,44 @@ def _classify_loop() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Background thread 3 — OG-image backfill (runs once at startup)
+# ---------------------------------------------------------------------------
+
+def _backfill_og_images() -> None:
+    """Wait for the first fetch+classify pass, then fill missing OG images."""
+    deadline = time.monotonic() + 300
+    while _fetched_at is None and time.monotonic() < deadline:
+        time.sleep(2)
+    if _fetched_at is None:
+        log.warning("Backfill: timeout waiting for first fetch, skipping")
+        return
+    # Give the classify loop a head-start before scanning
+    time.sleep(15)
+
+    with _articles_lock:
+        targets = [
+            (a["id"], a["url"]) for a in _articles.values()
+            if a.get("scope") in ("cermaq", "industry") and not a.get("image_url")
+        ]
+
+    if not targets:
+        log.info("Backfill: ingen artikler trenger OG-image")
+        return
+
+    log.info("Backfiller OG-image for %d artikler", len(targets))
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        results = list(executor.map(lambda t: _fetch_og_image(t[1]), targets))
+
+    success = 0
+    with _articles_lock:
+        for (article_id, _), og_image in zip(targets, results):
+            if og_image and article_id in _articles:
+                _articles[article_id]["image_url"] = og_image
+                success += 1
+    log.info("Backfill ferdig: %d av %d fikk bilde", success, len(targets))
+
+
+# ---------------------------------------------------------------------------
 # Startup: kick off both background threads
 # ---------------------------------------------------------------------------
 
@@ -132,6 +171,7 @@ def _start_background_threads() -> None:
     for target, name in [
         (_fetch_loop, "fetch-thread"),
         (_classify_loop, "classify-thread"),
+        (_backfill_og_images, "og-backfill-thread"),
     ]:
         t = threading.Thread(target=target, name=name, daemon=True)
         t.start()
@@ -214,16 +254,24 @@ def index():
         for a in articles_sorted
     ]
 
+    formatted = [a for a in formatted if a.get("scope") != "irrelevant"]
+
+    irrelevant_count = sum(1 for a in articles if a.get("scope") == "irrelevant")
+    if irrelevant_count:
+        log.info("%d artikler filtrert som irrelevant", irrelevant_count)
+
     for article in formatted:
         if "summaries" not in article:
             fallback = article.get("summary_no", "") or ""
-            article["summaries"] = {"no": fallback, "en": fallback, "es": fallback}
+            article["summaries"] = {"no": fallback, "en": fallback, "es": fallback, "ja": fallback}
         else:
             s = article["summaries"]
+            fallback = s.get("no", "") or s.get("en", "") or ""
             article["summaries"] = {
-                "no": s.get("no", "") or "",
-                "en": s.get("en", "") or s.get("no", "") or "",
-                "es": s.get("es", "") or s.get("no", "") or "",
+                "no": s.get("no", "") or fallback,
+                "en": s.get("en", "") or s.get("no", "") or fallback,
+                "es": s.get("es", "") or s.get("no", "") or fallback,
+                "ja": s.get("ja", "") or s.get("en", "") or fallback,
             }
 
     generated_at = _fmt_dt(datetime.now(timezone.utc).isoformat())
