@@ -1,7 +1,6 @@
 [build]
-dockerfilePath = "freshrss/Dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/i/"
-healthcheckTimeout = 30
-restartPolicyType = "on_failure"
+healthcheckTimeout = 60

@@ -1,6 +1,6 @@
 FROM freshrss/freshrss:latest
 
-COPY apache-config.conf /etc/apache2/sites-available/000-default.conf
+# Imaget håndterer alt selv - ingen overrides nødvendig
+# Eksponerer port 80 internt, Railway proxy-er til den
 
-# Replace hardcoded port 80 with $PORT at runtime
-CMD ["/bin/sh", "-c", "sed -i \"s/__PORT__/${PORT:-80}/g\" /etc/apache2/sites-available/000-default.conf && apache2-foreground"]
+EXPOSE 80
