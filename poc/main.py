@@ -7,8 +7,10 @@ Run with:
 
 import argparse
 import logging
+from pathlib import Path
 
 from poc.fetch import fetch_miniflux
+from poc.render import render_html
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -23,6 +25,11 @@ def main(dry_run: bool = False) -> None:
         log.info("Hentet %d artikler", len(articles))
         if articles:
             log.info("Første tittel: %s", articles[0].get("title", "(ingen tittel)"))
+        html = render_html(articles)
+        out = Path("output/index.html")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(html, encoding="utf-8")
+        log.info("HTML skrevet til output/index.html")
 
 
 if __name__ == "__main__":
