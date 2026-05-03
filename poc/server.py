@@ -588,6 +588,48 @@ def _fetch_loop() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Source detection helper
+# ---------------------------------------------------------------------------
+
+def _detect_source_from_url(url: str) -> tuple[str | None, str | None]:
+    """Return (source_name, source_domain) inferred from URL, or (None, None)."""
+    u = (url or "").lower()
+    if "linkedin.com" in u:
+        return "LinkedIn", "linkedin.com"
+    if "twitter.com" in u or "x.com/" in u:
+        return "X", "x.com"
+    if "facebook.com" in u:
+        return "Facebook", "facebook.com"
+    if "ilaks.no" in u:
+        return "iLaks", "ilaks.no"
+    if "intrafish" in u:
+        return "IntraFish", "intrafish.no"
+    if "salmonbusiness" in u:
+        return "SalmonBusiness", "salmonbusiness.com"
+    if "fishfarmingexpert" in u:
+        return "Fish Farming Expert", "fishfarmingexpert.com"
+    if "undercurrentnews" in u:
+        return "Undercurrent News", "undercurrentnews.com"
+    if "seafoodsource" in u:
+        return "SeafoodSource", "seafoodsource.com"
+    if "elciudadano" in u:
+        return "El Ciudadano", "elciudadano.com"
+    if "loslagosnoticias" in u:
+        return "Los Lagos Noticias", "loslagosnoticias.cl"
+    if "altaposten" in u:
+        return "Altaposten", "altaposten.no"
+    if "nrk.no" in u:
+        return "NRK", "nrk.no"
+    if "e24.no" in u:
+        return "E24", "e24.no"
+    if "dn.no" in u:
+        return "Dagens Næringsliv", "dn.no"
+    if "aftenposten" in u:
+        return "Aftenposten", "aftenposten.no"
+    return None, None
+
+
+# ---------------------------------------------------------------------------
 # Background thread 2 — classify
 # ---------------------------------------------------------------------------
 
@@ -604,6 +646,17 @@ def _classify_loop() -> None:
             if article is None or "scope" in article:
                 _classify_queue.task_done()
                 continue
+
+            # Auto-detect source from URL before classification
+            detected_name, detected_domain = _detect_source_from_url(article.get("url"))
+            if detected_name:
+                with _articles_lock:
+                    if article_id in _articles:
+                        _articles[article_id]["source_name"] = detected_name
+                        _articles[article_id]["source_domain"] = detected_domain
+                article = dict(article)
+                article["source_name"] = detected_name
+                article["source_domain"] = detected_domain
 
             enrichment = classify(article)
 
