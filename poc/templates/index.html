@@ -189,7 +189,7 @@
     .stat-cards {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      gap: 16px;
       padding: 20px 28px 0;
     }
     .stat-card {
@@ -282,7 +282,7 @@
     .filter-group:last-child { margin-bottom: 0; }
     .filter-group-label { font-size: 11px; font-weight: 500; color: #6b7280; margin-bottom: 7px; }
 
-    .btn-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .btn-group { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; }
 
     .filter-pill {
       padding: 5px 12px;
@@ -369,7 +369,7 @@
       border-radius: 6px;
       padding: 16px 20px;
       display: grid;
-      grid-template-columns: 1fr 90px;
+      grid-template-columns: 1fr 120px;
       gap: 18px;
       cursor: pointer;
       text-decoration: none;
@@ -449,13 +449,13 @@
 
     .article-img-wrap { align-self: start; }
     .article-img-wrap img {
-      width: 90px; height: 68px;
+      width: 120px; height: 80px;
       object-fit: cover;
       border-radius: 4px;
       display: block;
     }
     .article-img-placeholder {
-      width: 90px; height: 68px;
+      width: 120px; height: 80px;
       border-radius: 4px;
     }
 
@@ -602,7 +602,7 @@
         <div class="lang-selector">
           <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">🇳🇴 NO</button>
           <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">🇬🇧 EN</button>
-          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">🇪🇸 ES</button>
+          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">🇨🇱 ES</button>
           <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">🇯🇵 JA</button>
         </div>
         <div class="avatar">HM</div>
@@ -865,7 +865,7 @@
       all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk",
       digest_title: "Dagens oppsummering", digest_pending: "Dagens oppsummering genereres…",
       based_on: "Basert på", articles: "artikler", generated_at: "Generert",
-      searches_used: "søk", nav_dashboard: "Dagsoversikt", nav_alerts: "Krise-varsler",
+      searches_used: "søk", nav_dashboard: "Dagsoversikt", nav_alerts: "Varsling",
       page_title: "Nyheter", page_subtitle: "Daglig oversikt over Cermaq og bransjedekning",
       showing: "Viser", of: "av",
     },
@@ -878,7 +878,7 @@
       all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical",
       digest_title: "Daily summary", digest_pending: "Daily summary being generated…",
       based_on: "Based on", articles: "articles", generated_at: "Generated",
-      searches_used: "searches", nav_dashboard: "Dashboard", nav_alerts: "Crisis alerts",
+      searches_used: "searches", nav_dashboard: "Dashboard", nav_alerts: "Alerts",
       page_title: "News", page_subtitle: "Daily overview of Cermaq and industry coverage",
       showing: "Showing", of: "of",
     },
