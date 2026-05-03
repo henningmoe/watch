@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch — Krise-varsler</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #fafaf7;
+      color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: #0c4a3e;
+      color: #fff;
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    header h1 { font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
+
+    .header-right { display: flex; align-items: center; gap: 1.25rem; }
+
+    .lang-selector { display: flex; gap: 0.25rem; }
+
+    .lang-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+
+    .lang-btn.active {
+      background: #d4e4d4;
+      color: #0c4a3e;
+      border-color: #d4e4d4;
+    }
+
+    /* ── Nav ── */
+    .main-nav {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      padding: 0 40px;
+    }
+
+    .nav-link {
+      display: inline-block;
+      padding: 14px 18px;
+      color: #555;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .nav-link:hover { color: #0c4a3e; }
+
+    .nav-link.active {
+      color: #0c4a3e;
+      border-bottom-color: #0c4a3e;
+    }
+
+    /* ── Main ── */
+    main {
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 40px;
+      flex: 1;
+    }
+
+    h2 {
+      font-size: 1.375rem;
+      font-weight: 600;
+      color: #0c4a3e;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #0c4a3e;
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Form ── */
+    .form-group { margin-bottom: 1rem; }
+
+    .form-group label {
+      display: block;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 0.375rem;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: #1a1a1a;
+      background: #fff;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #0c4a3e;
+      box-shadow: 0 0 0 3px rgba(12,74,62,0.1);
+    }
+
+    .form-group textarea { resize: vertical; min-height: 72px; }
+
+    .demo-notice {
+      font-size: 0.75rem;
+      color: #888;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 0.5rem 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn-primary {
+      background: #0c4a3e;
+      color: #fff;
+      border: none;
+      padding: 0.5625rem 1.25rem;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .btn-primary:hover { background: #0a3d33; }
+    .btn-primary:disabled { background: #6b7280; cursor: not-allowed; }
+
+    /* ── Alerts list ── */
+    .alerts-list { list-style: none; }
+
+    .alert-item {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.875rem 0;
+      border-bottom: 1px solid #f0f0ec;
+    }
+
+    .alert-item:last-child { border-bottom: none; }
+
+    .alert-info { flex: 1; min-width: 0; }
+
+    .alert-name {
+      font-weight: 600;
+      font-size: 0.9375rem;
+      color: #1a1a1a;
+    }
+
+    .alert-desc {
+      font-size: 0.8125rem;
+      color: #666;
+      margin-top: 0.125rem;
+    }
+
+    .alert-meta {
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 0.25rem;
+    }
+
+    .btn-delete {
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      color: #b91c1c;
+      padding: 0.3125rem 0.75rem;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.75rem;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .btn-delete:hover { background: #fef2f2; border-color: #b91c1c; }
+
+    .empty-state {
+      color: #9ca3af;
+      font-size: 0.875rem;
+      padding: 1rem 0;
+    }
+
+    .db-warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      padding: 0.875rem 1.125rem;
+      font-size: 0.875rem;
+      color: #92400e;
+      margin-bottom: 1.5rem;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.75rem;
+      color: #9ca3af;
+      border-top: 1px solid #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Cermaq Media Watch</h1>
+  <div class="header-right">
+    <div class="lang-selector">
+      <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no" onclick="switchLanguage('no')">🇳🇴 NO</button>
+      <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en" onclick="switchLanguage('en')">🇬🇧 EN</button>
+      <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es" onclick="switchLanguage('es')">🇪🇸 ES</button>
+      <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja" onclick="switchLanguage('ja')">🇯🇵 JA</button>
+    </div>
+  </div>
+</header>
+
+<nav class="main-nav">
+  <a href="/?lang={{ lang }}" class="nav-link">{{ ui_text.nav_dashboard }}</a>
+  <a href="/alerts?lang={{ lang }}" class="nav-link active">{{ ui_text.nav_alerts }}</a>
+</nav>
+
+<main>
+  <h2>{{ ui_text.alerts_title }}</h2>
+
+  {% if db_unavailable %}
+  <div class="db-warning">
+    Database ikke tilgjengelig. Varsler krever Postgres-tilkobling.
+  </div>
+  {% endif %}
+
+  <!-- Create alert form -->
+  <div class="card">
+    <h3>{{ ui_text.new_alert }}</h3>
+    <div class="demo-notice">{{ ui_text.demo_notice }}</div>
+    <form id="alert-form">
+      <div class="form-group">
+        <label for="alert-name">{{ ui_text.alert_name }}</label>
+        <input type="text" id="alert-name" name="name" placeholder="{{ ui_text.alert_name }}" required />
+      </div>
+      <div class="form-group">
+        <label for="alert-desc">{{ ui_text.alert_desc }}</label>
+        <textarea id="alert-desc" name="description" placeholder="{{ ui_text.alert_desc }}"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="alert-frequency">{{ ui_text.frequency }}</label>
+        <select id="alert-frequency" name="frequency">
+          <option value="umiddelbart">{{ ui_text.frequency_immediate }}</option>
+          <option value="hver_time">{{ ui_text.frequency_hourly }}</option>
+          <option value="daglig" selected>{{ ui_text.frequency_daily }}</option>
+          <option value="ukentlig">{{ ui_text.frequency_weekly }}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="alert-email">{{ ui_text.email }}</label>
+        <input type="email" id="alert-email" name="email" placeholder="navn@cermaq.com" required />
+      </div>
+      <button type="submit" class="btn-primary"{% if db_unavailable %} disabled{% endif %}>{{ ui_text.create }}</button>
+    </form>
+  </div>
+
+  <!-- Active alerts list -->
+  <div class="card">
+    <h3>{{ ui_text.active_alerts }}</h3>
+    <ul class="alerts-list" id="alerts-list">
+      {% if alerts %}
+        {% for alert in alerts %}
+        <li class="alert-item" data-id="{{ alert.id }}">
+          <div class="alert-info">
+            <div class="alert-name">{{ alert.name }}</div>
+            {% if alert.description %}
+            <div class="alert-desc">{{ alert.description }}</div>
+            {% endif %}
+            <div class="alert-meta">{{ alert.email }} · {{ alert.frequency }}</div>
+          </div>
+          <button class="btn-delete" onclick="deleteAlert({{ alert.id }})">✕</button>
+        </li>
+        {% endfor %}
+      {% else %}
+        <li class="empty-state" id="empty-state">{{ ui_text.no_alerts }}</li>
+      {% endif %}
+    </ul>
+  </div>
+</main>
+
+<footer>Cermaq Media Watch &mdash; demo</footer>
+
+<script>
+  const UI_TEXTS = {
+    no: {
+      alerts_title: "Krise-varsler", new_alert: "Nytt varsel",
+      alert_name: "Navn på varsel", alert_desc: "Hva skal varsles om",
+      frequency: "Hvor ofte vil du varsles", email: "E-post",
+      create: "Opprett varsel", active_alerts: "Aktive varsler",
+      no_alerts: "Ingen aktive varsler ennå.",
+      demo_notice: "Varselet sendes ikke faktisk i denne demo-versjonen",
+      frequency_immediate: "Umiddelbart ved nye treff",
+      frequency_hourly: "Hver time (oppsamling)",
+      frequency_daily: "Daglig sammendrag",
+      frequency_weekly: "Ukentlig sammendrag",
+      nav_dashboard: "Dagsoversikt", nav_alerts: "Krise-varsler",
+    },
+    en: {
+      alerts_title: "Crisis alerts", new_alert: "New alert",
+      alert_name: "Alert name", alert_desc: "What to monitor",
+      frequency: "Notification frequency", email: "Email",
+      create: "Create alert", active_alerts: "Active alerts",
+      no_alerts: "No active alerts yet.",
+      demo_notice: "Alerts are not actually sent in this demo version",
+      frequency_immediate: "Immediately on new match",
+      frequency_hourly: "Every hour (batched)",
+      frequency_daily: "Daily digest",
+      frequency_weekly: "Weekly digest",
+      nav_dashboard: "Dashboard", nav_alerts: "Crisis alerts",
+    },
+    es: {
+      alerts_title: "Alertas de crisis", new_alert: "Nueva alerta",
+      alert_name: "Nombre de la alerta", alert_desc: "Qué monitorear",
+      frequency: "Frecuencia de notificación", email: "Correo electrónico",
+      create: "Crear alerta", active_alerts: "Alertas activas",
+      no_alerts: "No hay alertas activas todavía.",
+      demo_notice: "Las alertas no se envían realmente en esta versión demo",
+      frequency_immediate: "Inmediatamente al encontrar",
+      frequency_hourly: "Cada hora (agrupadas)",
+      frequency_daily: "Resumen diario",
+      frequency_weekly: "Resumen semanal",
+      nav_dashboard: "Panel", nav_alerts: "Alertas",
+    },
+    ja: {
+      alerts_title: "危機アラート", new_alert: "新規アラート",
+      alert_name: "アラート名", alert_desc: "何を監視するか",
+      frequency: "通知頻度", email: "メールアドレス",
+      create: "アラートを作成", active_alerts: "有効なアラート",
+      no_alerts: "まだ有効なアラートはありません。",
+      demo_notice: "このデモ版では実際にアラートは送信されません",
+      frequency_immediate: "新規ヒット時に即時",
+      frequency_hourly: "毎時（まとめて）",
+      frequency_daily: "日次ダイジェスト",
+      frequency_weekly: "週次ダイジェスト",
+      nav_dashboard: "ダッシュボード", nav_alerts: "アラート",
+    },
+  };
+
+  var _urlLang = new URLSearchParams(window.location.search).get("lang");
+  var _savedLang = localStorage.getItem("cermaq_lang");
+  if (!_urlLang && _savedLang && _savedLang !== "no") {
+    var _u = new URL(window.location);
+    _u.searchParams.set("lang", _savedLang);
+    window.location.replace(_u.toString());
+  }
+  var activeLang = _urlLang || _savedLang || "no";
+
+  function switchLanguage(lang) {
+    localStorage.setItem("cermaq_lang", lang);
+    var u = new URL(window.location);
+    u.searchParams.set("lang", lang);
+    window.location.href = u.toString();
+  }
+
+  document.getElementById("alert-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    var btn = this.querySelector("button[type=submit]");
+    btn.disabled = true;
+    var data = {
+      name: document.getElementById("alert-name").value,
+      description: document.getElementById("alert-desc").value,
+      frequency: document.getElementById("alert-frequency").value,
+      email: document.getElementById("alert-email").value,
+    };
+    try {
+      var resp = await fetch("/api/alerts", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(data),
+      });
+      if (!resp.ok) {
+        var err = await resp.json();
+        alert(err.error || "Feil ved opprettelse av varsel");
+        return;
+      }
+      var created = await resp.json();
+      addAlertToList(created);
+      this.reset();
+    } catch(err) {
+      alert("Nettverksfeil: " + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function addAlertToList(alert) {
+    var list = document.getElementById("alerts-list");
+    var empty = document.getElementById("empty-state");
+    if (empty) empty.remove();
+
+    var li = document.createElement("li");
+    li.className = "alert-item";
+    li.dataset.id = alert.id;
+    li.innerHTML =
+      '<div class="alert-info">' +
+        '<div class="alert-name">' + escHtml(alert.name) + '</div>' +
+        '<div class="alert-meta">' + escHtml(alert.email) + ' · ' + escHtml(alert.frequency) + '</div>' +
+      '</div>' +
+      '<button class="btn-delete" onclick="deleteAlert(' + alert.id + ')">✕</button>';
+    list.appendChild(li);
+  }
+
+  async function deleteAlert(id) {
+    try {
+      var resp = await fetch("/api/alerts/" + id, {method: "DELETE"});
+      if (!resp.ok) {
+        var err = await resp.json();
+        alert(err.error || "Feil ved sletting");
+        return;
+      }
+      var item = document.querySelector('.alert-item[data-id="' + id + '"]');
+      if (item) item.remove();
+      var list = document.getElementById("alerts-list");
+      if (list && list.children.length === 0) {
+        var t = UI_TEXTS[activeLang] || UI_TEXTS.no;
+        var li = document.createElement("li");
+        li.className = "empty-state";
+        li.id = "empty-state";
+        li.textContent = t.no_alerts;
+        list.appendChild(li);
+      }
+    } catch(err) {
+      alert("Nettverksfeil: " + err.message);
+    }
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+</script>
+</body>
+</html>

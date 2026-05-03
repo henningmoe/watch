@@ -61,6 +61,32 @@
 
     .header-date { font-size: 0.875rem; opacity: 0.8; }
 
+    /* ── Nav ── */
+    .main-nav {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      padding: 0 40px;
+    }
+
+    .nav-link {
+      display: inline-block;
+      padding: 14px 18px;
+      color: #555;
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+
+    .nav-link:hover { color: #0c4a3e; }
+
+    .nav-link.active {
+      color: #0c4a3e;
+      border-bottom-color: #0c4a3e;
+    }
+
     /* ── Stats strip ── */
     .stats-strip {
       background: #d4e4d4;
@@ -397,6 +423,11 @@
     </div>
   </header>
 
+  <nav class="main-nav">
+    <a href="/?lang={{ lang }}" class="nav-link active">{{ ui_text.nav_dashboard }}</a>
+    <a href="/alerts?lang={{ lang }}" class="nav-link">{{ ui_text.nav_alerts }}</a>
+  </nav>
+
   <div class="stats-strip">
     <span class="stat-item"><strong id="stat-total">{{ articles | length }}</strong> artikler</span>
     <span class="stat-sep">·</span>
@@ -441,6 +472,9 @@
     <h3 class="digest-headline">{{ digest.headline }}</h3>
     <div class="digest-body">{{ digest.body | safe }}</div>
     <p class="digest-meta">{{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}</p>
+    {% if digest.search_count and digest.search_count > 0 %}
+    <p class="digest-meta">{{ ui_text.searches_used }} {{ digest.search_count }}</p>
+    {% endif %}
   </section>
   {% else %}
   <section class="digest-card digest-empty">
@@ -556,7 +590,8 @@
         classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv",
         all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk",
         digest_title: "Dagens oppsummering", digest_pending: "Dagens oppsummering genereres…",
-        based_on: "Basert på", articles: "artikler", generated_at: "Generert"
+        based_on: "Basert på", articles: "artikler", generated_at: "Generert",
+        searches_used: "Web-søk brukt:", nav_dashboard: "Dagsoversikt", nav_alerts: "Krise-varsler"
       },
       en: {
         all: "All", norway: "Norway", chile: "Chile", canada: "Canada", global: "Global",
@@ -566,7 +601,8 @@
         classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive",
         all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical",
         digest_title: "Daily summary", digest_pending: "Daily summary being generated…",
-        based_on: "Based on", articles: "articles", generated_at: "Generated"
+        based_on: "Based on", articles: "articles", generated_at: "Generated",
+        searches_used: "Web searches used:", nav_dashboard: "Dashboard", nav_alerts: "Crisis alerts"
       },
       es: {
         all: "Todos", norway: "Noruega", chile: "Chile", canada: "Canadá", global: "Global",
@@ -576,7 +612,8 @@
         classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo",
         all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico",
         digest_title: "Resumen del día", digest_pending: "Resumen del día generándose…",
-        based_on: "Basado en", articles: "artículos", generated_at: "Generado"
+        based_on: "Basado en", articles: "artículos", generated_at: "Generado",
+        searches_used: "Búsquedas web usadas:", nav_dashboard: "Panel", nav_alerts: "Alertas"
       },
       ja: {
         all: "すべて", norway: "ノルウェー", chile: "チリ", canada: "カナダ", global: "グローバル",
@@ -586,7 +623,8 @@
         classifying: "分類中…", tone_critical: "批判的", tone_positive: "ポジティブ",
         all_tones: "すべてのトーン", positive: "ポジティブ", neutral: "中立", critical: "批判的",
         digest_title: "本日のまとめ", digest_pending: "本日のまとめを生成中…",
-        based_on: "対象記事", articles: "件", generated_at: "生成日時"
+        based_on: "対象記事", articles: "件", generated_at: "生成日時",
+        searches_used: "ウェブ検索使用回数:", nav_dashboard: "ダッシュボード", nav_alerts: "アラート"
       }
     };
 

@@ -13,6 +13,11 @@ from flask import Flask, jsonify, render_template, request
 
 from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
+from poc.db import (
+    init_db, is_db_available, SessionLocal,
+    Source, Article, Digest, Alert,
+    extract_domain, get_or_create_source,
+)
 
 log = logging.getLogger(__name__)
 
@@ -46,6 +51,9 @@ _UI_TEXTS: dict = {
         "based_on": "Basert på",
         "articles": "artikler",
         "generated_at": "Generert",
+        "searches_used": "Web-søk brukt:",
+        "nav_dashboard": "Dagsoversikt",
+        "nav_alerts": "Krise-varsler",
     },
     "en": {
         "digest_title": "Daily summary",
@@ -53,6 +61,9 @@ _UI_TEXTS: dict = {
         "based_on": "Based on",
         "articles": "articles",
         "generated_at": "Generated",
+        "searches_used": "Web searches used:",
+        "nav_dashboard": "Dashboard",
+        "nav_alerts": "Crisis alerts",
     },
     "es": {
         "digest_title": "Resumen del día",
@@ -60,6 +71,9 @@ _UI_TEXTS: dict = {
         "based_on": "Basado en",
         "articles": "artículos",
         "generated_at": "Generado",
+        "searches_used": "Búsquedas web usadas:",
+        "nav_dashboard": "Panel",
+        "nav_alerts": "Alertas",
     },
     "ja": {
         "digest_title": "本日のまとめ",
@@ -67,9 +81,176 @@ _UI_TEXTS: dict = {
         "based_on": "対象記事",
         "articles": "件",
         "generated_at": "生成日時",
+        "searches_used": "ウェブ検索使用回数:",
+        "nav_dashboard": "ダッシュボード",
+        "nav_alerts": "アラート",
     },
 }
 
+
+# ---------------------------------------------------------------------------
+# Database helpers
+# ---------------------------------------------------------------------------
+
+def _article_db_to_dict(a) -> dict:
+    return {
+        "id": a.id,
+        "title": a.title,
+        "url": a.url,
+        "source_name": a.source_name,
+        "source_domain": a.source_domain,
+        "fetch_method": a.fetch_method,
+        "published_at": a.published_at.isoformat() if a.published_at else None,
+        "scope": a.scope,
+        "region": a.region,
+        "tone": a.tone,
+        "category": a.category,
+        "relevance": a.relevance,
+        "summaries": a.summaries or {},
+        "image_url": a.image_url,
+        "content": a.content,
+        "classified_at": a.classified_at.isoformat() if a.classified_at else None,
+    }
+
+
+def _load_from_db() -> None:
+    if not is_db_available():
+        log.info("Ingen Postgres — bruker tom in-memory cache")
+        return
+
+    try:
+        with SessionLocal() as session:
+            articles = session.query(Article).all()
+            with _articles_lock:
+                for a in articles:
+                    _articles[a.id] = _article_db_to_dict(a)
+            log.info("Lastet %d artikler fra Postgres", len(articles))
+
+            for lang in ("no", "en", "es", "ja"):
+                latest = (
+                    session.query(Digest)
+                    .filter_by(lang=lang)
+                    .order_by(Digest.generated_at.desc())
+                    .first()
+                )
+                if latest:
+                    with _digest_lock:
+                        _digest_cache[lang] = {
+                            "headline": latest.headline,
+                            "body": latest.body,
+                            "sources": latest.web_search_urls or [],
+                            "article_count": latest.article_count or 0,
+                            "cermaq_count": latest.cermaq_count or 0,
+                            "search_count": latest.search_count or 0,
+                            "generated_at": latest.generated_at.isoformat(),
+                            "lang": lang,
+                        }
+            log.info("Lastet %d digester fra Postgres", len(_digest_cache))
+    except Exception as exc:
+        log.error("Feil ved lasting fra Postgres: %s", exc)
+
+
+def _persist_article(article: dict) -> None:
+    if not is_db_available():
+        return
+
+    try:
+        with SessionLocal() as session:
+            existing = session.get(Article, article["id"])
+
+            domain = article.get("source_domain") or extract_domain(article.get("url", ""))
+
+            source_id = None
+            if domain:
+                source = get_or_create_source(
+                    session, domain=domain, name=article.get("source_name", domain)
+                )
+                source_id = source.id
+
+            published_at = None
+            if article.get("published_at"):
+                try:
+                    published_at = datetime.fromisoformat(
+                        article["published_at"].replace("Z", "+00:00")
+                    )
+                except Exception:
+                    pass
+
+            classified_at = None
+            if article.get("classified_at"):
+                try:
+                    classified_at = datetime.fromisoformat(article["classified_at"])
+                except Exception:
+                    pass
+            elif "scope" in article:
+                classified_at = datetime.now(timezone.utc)
+
+            kwargs = {
+                "id": article["id"],
+                "title": article.get("title"),
+                "url": article.get("url"),
+                "source_id": source_id,
+                "source_domain": domain,
+                "source_name": article.get("source_name"),
+                "fetch_method": article.get("fetch_method", "miniflux"),
+                "published_at": published_at,
+                "scope": article.get("scope"),
+                "region": article.get("region"),
+                "tone": article.get("tone"),
+                "category": article.get("category"),
+                "relevance": article.get("relevance"),
+                "summaries": article.get("summaries"),
+                "image_url": article.get("image_url"),
+                "content": article.get("content"),
+                "classified_at": classified_at,
+                "updated_at": datetime.now(timezone.utc),
+            }
+
+            if existing:
+                for k, v in kwargs.items():
+                    setattr(existing, k, v)
+            else:
+                session.add(Article(**kwargs))
+
+            session.commit()
+    except Exception as exc:
+        log.error("Persist-feil for artikkel %s: %s", article.get("id"), exc)
+
+
+def _persist_digest(lang: str, digest: dict, used_article_ids: list = None) -> None:
+    if not is_db_available():
+        return
+
+    try:
+        with SessionLocal() as session:
+            d = Digest(
+                lang=lang,
+                headline=digest.get("headline", ""),
+                body=digest.get("body", ""),
+                article_ids=used_article_ids or [],
+                web_search_urls=digest.get("sources", []),
+                article_count=digest.get("article_count", 0),
+                cermaq_count=digest.get("cermaq_count", 0),
+                search_count=digest.get("search_count", 0),
+            )
+            session.add(d)
+            session.commit()
+            log.info("Digest persistert for %s", lang)
+    except Exception as exc:
+        log.error("Digest-persist-feil for %s: %s", lang, exc)
+
+
+# ---------------------------------------------------------------------------
+# Startup: initialise DB and load existing data
+# ---------------------------------------------------------------------------
+
+init_db()
+_load_from_db()
+
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
 
 def _parse_dt(iso: str | None) -> datetime:
     if not iso:
@@ -99,8 +280,6 @@ def _fetch_loop() -> None:
             new_articles = [a for a in articles if a["id"] not in existing_ids]
             log.info("Fetch complete: %d total, %d new", len(articles), len(new_articles))
 
-            # Add new articles to cache immediately (unclassified) so they
-            # are visible in the UI right away, then enqueue for classification
             with _articles_lock:
                 for a in new_articles:
                     _articles[a["id"]] = a
@@ -129,7 +308,7 @@ def _fetch_loop() -> None:
 # ---------------------------------------------------------------------------
 
 def _classify_loop() -> None:
-    """Runs forever: pop IDs from queue, classify, update cache."""
+    """Runs forever: pop IDs from queue, classify, update cache, persist."""
     global _classified_count
 
     while True:
@@ -139,7 +318,6 @@ def _classify_loop() -> None:
                 article = _articles.get(article_id)
 
             if article is None or "scope" in article:
-                # Already classified or removed
                 _classify_queue.task_done()
                 continue
 
@@ -152,7 +330,7 @@ def _classify_loop() -> None:
             with _counters_lock:
                 _classified_count += 1
 
-            # Fetch OG image for classified articles that have no image from RSS
+            # Fetch OG image for relevant articles that have no image from RSS
             if enrichment.get("scope") in ("cermaq", "industry") and not article.get("image_url"):
                 og_image = _fetch_og_image(article["url"])
                 if og_image:
@@ -161,12 +339,16 @@ def _classify_loop() -> None:
                             _articles[article_id]["image_url"] = og_image
                     log.info("OG-image hentet for id=%s", article_id)
 
+            # Persist to Postgres (non-blocking; errors logged but not re-raised)
+            with _articles_lock:
+                persisted = dict(_articles.get(article_id, {}))
+            _persist_article(persisted)
+
         except Exception as exc:
             log.error("classify loop error for id=%s: %s", article_id, exc)
         finally:
             _classify_queue.task_done()
 
-        # Rate-limit: at most 1 API call per second
         time.sleep(_CLASSIFY_RATE)
 
 
@@ -205,10 +387,13 @@ def _generate_all_digests() -> None:
                     "lang": lang,
                     "article_count": len(recent),
                     "cermaq_count": cermaq_count,
+                    "search_count": 0,
+                    "sources": [],
                 }
         return
 
     from poc.digest import generate_digest
+    article_ids = [a["id"] for a in recent]
     for lang in ("no", "en", "es", "ja"):
         try:
             digest = generate_digest(recent, lang=lang)
@@ -216,6 +401,7 @@ def _generate_all_digests() -> None:
                 with _digest_lock:
                     _digest_cache[lang] = digest
                 log.info("Digest klar lang=%s: %s", lang, digest["headline"][:60])
+                _persist_digest(lang, digest, article_ids)
         except Exception as exc:
             log.error("Digest feilet for lang=%s: %s", lang, exc)
 
@@ -240,7 +426,10 @@ def _digest_scheduler() -> None:
 def _initial_digest() -> None:
     """Generate digest once at startup, after fetch+classify have had time to run."""
     time.sleep(60)
-    _generate_all_digests()
+    with _digest_lock:
+        has_digest = len(_digest_cache) > 0
+    if not has_digest:
+        _generate_all_digests()
 
 
 def get_digest(lang: str = "no") -> dict | None:
@@ -260,7 +449,6 @@ def _backfill_og_images() -> None:
     if _fetched_at is None:
         log.warning("Backfill: timeout waiting for first fetch, skipping")
         return
-    # Give the classify loop a head-start before scanning
     time.sleep(15)
 
     with _articles_lock:
@@ -287,7 +475,7 @@ def _backfill_og_images() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Startup: kick off both background threads
+# Startup: kick off background threads
 # ---------------------------------------------------------------------------
 
 def _start_background_threads() -> None:
@@ -308,12 +496,9 @@ def _start_background_threads() -> None:
 # ---------------------------------------------------------------------------
 
 def _get_articles() -> tuple[list[dict], str | None]:
-    """Return a snapshot of all articles and the last fetch error."""
     global _fetched_at, _fetch_error
 
-    # Trigger an immediate fetch if cache is empty
     if _fetched_at is None:
-        # Fetch hasn't run yet — wait briefly for the thread to populate
         deadline = time.monotonic() + 5
         while _fetched_at is None and time.monotonic() < deadline:
             time.sleep(0.1)
@@ -349,6 +534,11 @@ def _sort_key(article: dict):
     return (rel, ts)
 
 
+def _check_admin_token() -> bool:
+    token = request.args.get("token")
+    return token == os.environ.get("ADMIN_TOKEN") and token is not None
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -359,7 +549,6 @@ def _log_request():
 
 
 def _today_no() -> str:
-    """Return today's date in Norwegian, e.g. 'lørdag 3. mai 2026'."""
     dt = datetime.now()
     days = ["mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag"]
     months = [
@@ -454,6 +643,99 @@ def index():
     )
 
 
+# ---------------------------------------------------------------------------
+# Admin endpoints
+# ---------------------------------------------------------------------------
+
+@app.route("/admin/status")
+def admin_status():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    with _articles_lock:
+        total = len(_articles)
+        scopes = {}
+        for a in _articles.values():
+            scope = a.get("scope", "unclassified")
+            scopes[scope] = scopes.get(scope, 0) + 1
+        classified = sum(1 for a in _articles.values() if "scope" in a)
+
+    digest_status = {}
+    with _digest_lock:
+        for lang, d in _digest_cache.items():
+            digest_status[lang] = {
+                "headline": (d.get("headline") or "")[:80],
+                "generated_at": d.get("generated_at"),
+                "search_count": d.get("search_count", 0),
+            }
+
+    return jsonify({
+        "articles": {"total": total, "classified": classified, "by_scope": scopes},
+        "digests": digest_status,
+        "postgres_available": is_db_available(),
+        "queue_size": _classify_queue.qsize(),
+    })
+
+
+@app.route("/admin/regenerate-digest")
+def admin_regenerate_digest():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    threading.Thread(target=_generate_all_digests, daemon=True).start()
+    return jsonify({"status": "Digest-generering startet"})
+
+
+@app.route("/admin/reclassify")
+def admin_reclassify():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    since_str = request.args.get("since")
+    do_all = request.args.get("all") == "true"
+    missing_only = request.args.get("missing") == "true"
+
+    targets = []
+    with _articles_lock:
+        for article_id, article in _articles.items():
+            if do_all:
+                targets.append(article_id)
+            elif missing_only and "scope" not in article:
+                targets.append(article_id)
+            elif since_str:
+                try:
+                    cutoff = datetime.fromisoformat(since_str).replace(tzinfo=timezone.utc)
+                    classified_at_str = article.get("classified_at")
+                    if not classified_at_str:
+                        targets.append(article_id)
+                    else:
+                        classified_at = datetime.fromisoformat(classified_at_str)
+                        if classified_at < cutoff:
+                            targets.append(article_id)
+                except ValueError:
+                    return jsonify({"error": "Ugyldig dato. Bruk ISO-format f.eks. 2026-05-01"}), 400
+
+    # Strip classification fields so classify loop re-processes them
+    with _articles_lock:
+        for article_id in targets:
+            if article_id in _articles:
+                for key in ("scope", "region", "tone", "category", "relevance", "summaries", "classified_at"):
+                    _articles[article_id].pop(key, None)
+
+    for article_id in targets:
+        _classify_queue.put(article_id)
+
+    log.info("Reklassifiserer %d artikler", len(targets))
+    return jsonify({
+        "queued": len(targets),
+        "criteria": {"since": since_str, "all": do_all, "missing_only": missing_only},
+    })
+
+
+# ---------------------------------------------------------------------------
+# API endpoints
+# ---------------------------------------------------------------------------
+
 @app.route("/api/feed")
 def api_feed():
     articles, error = _get_articles()
@@ -467,6 +749,237 @@ def api_feed():
         "total": total,
         "error": error,
     })
+
+
+@app.route("/api/articles")
+def api_articles():
+    scope = request.args.get("scope")
+    region = request.args.get("region")
+    tone = request.args.get("tone")
+    source_domain = request.args.get("source")
+    since = request.args.get("since")
+    limit = min(int(request.args.get("limit", 50)), 200)
+    offset = int(request.args.get("offset", 0))
+
+    if not is_db_available():
+        with _articles_lock:
+            results = list(_articles.values())
+        if scope:
+            results = [a for a in results if a.get("scope") == scope]
+        if region:
+            results = [a for a in results if a.get("region") == region]
+        if tone:
+            results = [a for a in results if a.get("tone") == tone]
+        return jsonify({
+            "results": results[offset:offset + limit],
+            "total": len(results),
+            "limit": limit,
+            "offset": offset,
+        })
+
+    with SessionLocal() as session:
+        q = session.query(Article)
+        if scope:
+            q = q.filter(Article.scope == scope)
+        if region:
+            q = q.filter(Article.region == region)
+        if tone:
+            q = q.filter(Article.tone == tone)
+        if source_domain:
+            q = q.filter(Article.source_domain == source_domain)
+        if since:
+            try:
+                cutoff = datetime.fromisoformat(since)
+                q = q.filter(Article.published_at >= cutoff)
+            except Exception:
+                pass
+        total = q.count()
+        articles = q.order_by(Article.published_at.desc()).offset(offset).limit(limit).all()
+        return jsonify({
+            "results": [_article_db_to_dict(a) for a in articles],
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+        })
+
+
+@app.route("/api/articles/search")
+def api_articles_search():
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"error": "q parameter required"}), 400
+
+    since = request.args.get("since")
+    limit = min(int(request.args.get("limit", 50)), 200)
+
+    if not is_db_available():
+        return jsonify({"results": [], "query": query, "total": 0})
+
+    with SessionLocal() as session:
+        from sqlalchemy import or_
+        q_filter = or_(
+            Article.title.ilike(f"%{query}%"),
+            Article.content.ilike(f"%{query}%"),
+        )
+        q = session.query(Article).filter(q_filter)
+        if since:
+            try:
+                cutoff = datetime.fromisoformat(since)
+                q = q.filter(Article.published_at >= cutoff)
+            except Exception:
+                pass
+        articles = q.order_by(Article.published_at.desc()).limit(limit).all()
+        return jsonify({
+            "results": [_article_db_to_dict(a) for a in articles],
+            "query": query,
+            "total": len(articles),
+        })
+
+
+@app.route("/api/digest")
+def api_digest():
+    lang = request.args.get("lang", "no")
+    with _digest_lock:
+        digest = _digest_cache.get(lang)
+    if not digest:
+        return jsonify({"error": "No digest available"}), 404
+    return jsonify(digest)
+
+
+@app.route("/api/sources")
+def api_sources():
+    if not is_db_available():
+        return jsonify({"results": []})
+
+    with SessionLocal() as session:
+        sources = session.query(Source).all()
+        return jsonify({
+            "results": [
+                {"domain": s.domain, "name": s.name, "type": s.type, "region": s.region}
+                for s in sources
+            ]
+        })
+
+
+@app.route("/api/stats")
+def api_stats():
+    with _articles_lock:
+        total = len(_articles)
+        by_scope = {}
+        by_region = {}
+        for a in _articles.values():
+            scope = a.get("scope", "unclassified")
+            region = a.get("region", "unknown")
+            by_scope[scope] = by_scope.get(scope, 0) + 1
+            by_region[region] = by_region.get(region, 0) + 1
+
+    return jsonify({
+        "articles": {"total": total, "by_scope": by_scope, "by_region": by_region}
+    })
+
+
+# ---------------------------------------------------------------------------
+# Alert endpoints (Task 7)
+# ---------------------------------------------------------------------------
+
+@app.route("/alerts")
+def alerts_page():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
+
+    if not is_db_available():
+        return render_template(
+            "alerts.html",
+            alerts=[],
+            db_unavailable=True,
+            lang=lang,
+            ui_text=ui_text,
+        )
+
+    with SessionLocal() as session:
+        alerts = session.query(Alert).filter_by(is_active=True).order_by(Alert.created_at.desc()).all()
+        alerts_data = [
+            {
+                "id": a.id,
+                "name": a.name,
+                "description": a.description,
+                "frequency": a.frequency,
+                "email": a.email,
+                "created_at": a.created_at.isoformat(),
+            }
+            for a in alerts
+        ]
+
+    return render_template(
+        "alerts.html",
+        alerts=alerts_data,
+        db_unavailable=False,
+        lang=lang,
+        ui_text=ui_text,
+    )
+
+
+@app.route("/api/alerts", methods=["GET"])
+def list_alerts():
+    if not is_db_available():
+        return jsonify({"results": []})
+
+    with SessionLocal() as session:
+        alerts = session.query(Alert).filter_by(is_active=True).order_by(Alert.created_at.desc()).all()
+        return jsonify({
+            "results": [
+                {
+                    "id": a.id,
+                    "name": a.name,
+                    "description": a.description,
+                    "frequency": a.frequency,
+                    "email": a.email,
+                    "created_at": a.created_at.isoformat(),
+                }
+                for a in alerts
+            ]
+        })
+
+
+@app.route("/api/alerts", methods=["POST"])
+def create_alert():
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+
+    data = request.get_json() or request.form.to_dict()
+    name = (data.get("name") or "").strip()
+    description = (data.get("description") or "").strip()
+    frequency = (data.get("frequency") or "daglig").strip()
+    email = (data.get("email") or "").strip()
+
+    if not name or not email:
+        return jsonify({"error": "Navn og e-post er påkrevd"}), 400
+    if "@" not in email or "." not in email:
+        return jsonify({"error": "Ugyldig e-post"}), 400
+    if frequency not in ("umiddelbart", "hver_time", "daglig", "ukentlig"):
+        return jsonify({"error": "Ugyldig frekvens"}), 400
+
+    with SessionLocal() as session:
+        alert = Alert(name=name, description=description, frequency=frequency, email=email, is_active=True)
+        session.add(alert)
+        session.commit()
+        return jsonify({"id": alert.id, "name": alert.name, "email": alert.email, "frequency": alert.frequency})
+
+
+@app.route("/api/alerts/<int:alert_id>", methods=["DELETE"])
+def delete_alert(alert_id):
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+
+    with SessionLocal() as session:
+        alert = session.get(Alert, alert_id)
+        if not alert:
+            return jsonify({"error": "Ikke funnet"}), 404
+        alert.is_active = False
+        session.commit()
+        return jsonify({"deleted": alert_id})
 
 
 @app.route("/healthz")
