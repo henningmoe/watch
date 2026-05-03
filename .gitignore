@@ -1,9 +1,25 @@
-__pycache__/
-*.py[cod]
-*.pyo
-.env
-*.egg-info/
-dist/
-build/
+# Python
 .venv/
-venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+
+# Secrets
+.env
+*.key
+*.pem
+
+# Data
+data/
+output/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

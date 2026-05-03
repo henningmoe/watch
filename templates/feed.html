@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #fafaf7;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #0c4a3e;
+      color: #fff;
+      padding: 2rem 2.5rem;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    header p {
+      margin-top: 0.25rem;
+      font-size: 0.875rem;
+      opacity: 0.75;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem;
+    }
+
+    .story-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.15s ease;
+    }
+
+    .card:hover {
+      box-shadow: 0 4px 16px rgba(12, 74, 62, 0.12);
+    }
+
+    .card-image {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .card-body {
+      padding: 1.25rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .card-source {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #0c4a3e;
+    }
+
+    .card-title {
+      font-size: 0.9375rem;
+      font-weight: 500;
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .card-title a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .card-title a:hover {
+      color: #0c4a3e;
+    }
+
+    .card-date {
+      font-size: 0.8125rem;
+      color: #777;
+    }
+
+    .empty {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 0;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Cermaq Media Watch</h1>
+    <p>{{ today }}</p>
+  </header>
+  <main>
+    <div class="story-cards">
+      {% if articles %}
+        {% for article in articles %}
+        <div class="card">
+          {% if article.image_url %}
+          <img class="card-image" src="{{ article.image_url }}" alt="" loading="lazy" />
+          {% endif %}
+          <div class="card-body">
+            <span class="card-source">{{ article.source or "Ukjent kilde" }}</span>
+            <p class="card-title">
+              <a href="{{ article.url }}" target="_blank" rel="noopener">{{ article.title }}</a>
+            </p>
+            <span class="card-date">{{ article.published_at or "" }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="empty">Ingen artikler funnet.</p>
+      {% endif %}
+    </div>
+  </main>
+</body>
+</html>

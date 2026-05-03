@@ -94,12 +94,13 @@ def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | N
         "Chile (Los Lagos, Aysén, Magallanes).\n\n"
         "Du har tilgang til web_search-verktøyet og MÅ bruke det aktivt "
         "for å finne ferske Cermaq-relaterte saker fra hele nettet.\n\n"
-        "SØKESTRATEGI — bruk web_search 4-6 ganger med varierte søk:\n"
+        "SØKESTRATEGI — bruk web_search 4-8 ganger med varierte søk:\n"
         '- "Cermaq" (siste Cermaq-spesifikke nyheter)\n'
         '- "Cermaq Norway" eller "Cermaq Norge"\n'
         '- "Cermaq Chile"\n'
         '- "Cermaq Canada"\n'
         '- "Steven Rafferty Cermaq" (CEO-relaterte uttalelser)\n'
+        '- "Mitsubishi Cermaq"\n'
         '- "True Arctic Cermaq" (merkenavn)\n'
         "Eventuelt bredere bransjesøk hvis Cermaq-saker er få:\n"
         '- "norwegian salmon farming news"\n'
