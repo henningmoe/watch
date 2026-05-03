@@ -46,7 +46,10 @@ _PROMPT = (
     "Cermaq må faktisk nevnes ved navn.\n\n"
     "REGLER FOR ANDRE FELT:\n\n"
     '- region: "norge" | "chile" | "canada" | "global"\n'
-    '- tone: "positiv" | "noytral" | "kritisk"\n'
+    '- tone: "positiv" | "noytral" | "negativ"\n'
+    '  * positiv: artikkelen er positiv for Cermaq eller bransjen\n'
+    '  * noytral: faktabasert, ingen tydelig vinkling\n'
+    '  * negativ: kritisk eller negativ omtale\n'
     '- category: "regulatorisk" | "marked" | "fiskehelse" | "miljo" | '
     '"drift" | "ma" | "politikk" | "annet"\n'
     "- relevance: 1-5 hvor 5 er mest relevant for Cermaq\n"

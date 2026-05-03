@@ -11,6 +11,11 @@ from zoneinfo import ZoneInfo
 
 from flask import Flask, jsonify, render_template, request
 
+try:
+    from sqlalchemy import text as _sa_text
+except ImportError:
+    _sa_text = None
+
 from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
@@ -46,6 +51,7 @@ _digest_lock = threading.Lock()
 
 _UI_TEXTS: dict = {
     "no": {
+        # legacy / existing
         "digest_title": "Dagens oppsummering",
         "digest_pending": "Dagens oppsummering genereres…",
         "based_on": "Basert på",
@@ -53,11 +59,74 @@ _UI_TEXTS: dict = {
         "generated_at": "Generert",
         "searches_used": "Web-søk brukt:",
         "nav_dashboard": "Dagsoversikt",
-        "nav_alerts": "Varsling",
+        # page
         "page_title": "Nyheter",
         "page_subtitle": "Daglig oversikt over Cermaq og bransjedekning",
+        # stat cards
+        "stat_articles": "Artikler",
+        "stat_articles_subtitle": "{n} klassifisert",
+        "stat_cermaq": "Cermaq-omtaler",
+        "stat_cermaq_subtitle": "direkte Cermaq-saker",
+        "stat_negative": "Negativ omtale",
+        "stat_negative_subtitle": "negativ omtale",
+        "stat_sources": "Aktive kilder",
+        # digest card
+        "digest_label": "Dagens oppsummering",
+        "digest_generated": "Generert {time}",
+        "digest_loading": "Dagens oppsummering genereres...",
+        "digest_quiet": "Stille mediedøgn",
+        "digest_few_articles": "Få relevante artikler siste 24 timer.",
+        # filter card
+        "filter_title": "Filtrer artikler",
+        "filter_reset": "Tilbakestill alle",
+        "filter_scope": "Omtale-nivå",
+        "filter_country": "Land og region",
+        "filter_tone": "Tone",
+        "filter_time": "Tidsperiode",
+        "filter_sort": "Sortér",
+        "filter_all": "Alle",
+        # scope values
+        "scope_cermaq": "Cermaq direkte",
+        "scope_industry_in_regions": "Bransje i Cermaq-områder",
+        "scope_industry_general": "Bransje generelt",
+        # tone values
+        "tone_positive": "Positiv",
+        "tone_neutral": "Nøytral",
+        "tone_negative": "Negativ",
+        # country values
+        "country_norway": "Norge",
+        "country_chile": "Chile",
+        "country_canada": "Canada",
+        "country_global": "Globalt",
+        # time period values
+        "time_today": "I dag",
+        "time_7days": "Siste 7 dager",
+        "time_30days": "Siste 30 dager",
+        # sort values
+        "sort_newest": "Nyeste først",
+        "sort_oldest": "Eldste først",
+        "sort_relevance": "Relevans",
+        # result header / articles
+        "showing_articles": "Viser {n} av {total} artikler",
+        "btn_export": "Eksporter",
+        "btn_create_alert": "Lag varsel",
+        "time_ago_minutes": "{n} min siden",
+        "time_ago_hours": "{n} t siden",
+        "time_ago_days": "{n} dager siden",
+        "load_more": "Last flere artikler",
+        "search_placeholder": "Søk i artikler, kilder, personer…",
+        # nav
+        "nav_alerts": "Varsling",
+        "nav_overview": "Oversikt",
+        "nav_news": "Nyheter",
+        "nav_search": "Søk",
+        "nav_reports": "Rapporter",
+        "nav_competitors": "Konkurrenter",
+        "nav_settings": "Innstillinger",
+        "nav_sources": "Kilder",
     },
     "en": {
+        # legacy / existing
         "digest_title": "Daily summary",
         "digest_pending": "Daily summary being generated…",
         "based_on": "Based on",
@@ -65,11 +134,74 @@ _UI_TEXTS: dict = {
         "generated_at": "Generated",
         "searches_used": "Web searches used:",
         "nav_dashboard": "Dashboard",
-        "nav_alerts": "Alerts",
+        # page
         "page_title": "News",
         "page_subtitle": "Daily overview of Cermaq and industry coverage",
+        # stat cards
+        "stat_articles": "Articles",
+        "stat_articles_subtitle": "{n} classified",
+        "stat_cermaq": "Cermaq mentions",
+        "stat_cermaq_subtitle": "direct Cermaq stories",
+        "stat_negative": "Negative mentions",
+        "stat_negative_subtitle": "negative coverage",
+        "stat_sources": "Active sources",
+        # digest card
+        "digest_label": "Today's summary",
+        "digest_generated": "Generated {time}",
+        "digest_loading": "Today's summary is being generated...",
+        "digest_quiet": "Quiet news day",
+        "digest_few_articles": "Few relevant articles in the last 24 hours.",
+        # filter card
+        "filter_title": "Filter articles",
+        "filter_reset": "Reset all",
+        "filter_scope": "Mention level",
+        "filter_country": "Country and region",
+        "filter_tone": "Tone",
+        "filter_time": "Time period",
+        "filter_sort": "Sort",
+        "filter_all": "All",
+        # scope values
+        "scope_cermaq": "Cermaq direct",
+        "scope_industry_in_regions": "Industry in Cermaq regions",
+        "scope_industry_general": "General industry",
+        # tone values
+        "tone_positive": "Positive",
+        "tone_neutral": "Neutral",
+        "tone_negative": "Negative",
+        # country values
+        "country_norway": "Norway",
+        "country_chile": "Chile",
+        "country_canada": "Canada",
+        "country_global": "Global",
+        # time period values
+        "time_today": "Today",
+        "time_7days": "Last 7 days",
+        "time_30days": "Last 30 days",
+        # sort values
+        "sort_newest": "Newest first",
+        "sort_oldest": "Oldest first",
+        "sort_relevance": "Relevance",
+        # result header / articles
+        "showing_articles": "Showing {n} of {total} articles",
+        "btn_export": "Export",
+        "btn_create_alert": "Create alert",
+        "time_ago_minutes": "{n} min ago",
+        "time_ago_hours": "{n} h ago",
+        "time_ago_days": "{n} days ago",
+        "load_more": "Load more articles",
+        "search_placeholder": "Search articles, sources, people…",
+        # nav
+        "nav_alerts": "Alerts",
+        "nav_overview": "Overview",
+        "nav_news": "News",
+        "nav_search": "Search",
+        "nav_reports": "Reports",
+        "nav_competitors": "Competitors",
+        "nav_settings": "Settings",
+        "nav_sources": "Sources",
     },
     "es": {
+        # legacy / existing
         "digest_title": "Resumen del día",
         "digest_pending": "Resumen del día generándose…",
         "based_on": "Basado en",
@@ -77,11 +209,74 @@ _UI_TEXTS: dict = {
         "generated_at": "Generado",
         "searches_used": "Búsquedas web usadas:",
         "nav_dashboard": "Panel",
-        "nav_alerts": "Alertas",
+        # page
         "page_title": "Noticias",
-        "page_subtitle": "Resumen diario de Cermaq y cobertura de la industria",
+        "page_subtitle": "Resumen diario de Cermaq y cobertura del sector",
+        # stat cards
+        "stat_articles": "Artículos",
+        "stat_articles_subtitle": "{n} clasificados",
+        "stat_cermaq": "Menciones de Cermaq",
+        "stat_cermaq_subtitle": "noticias directas de Cermaq",
+        "stat_negative": "Menciones negativas",
+        "stat_negative_subtitle": "cobertura negativa",
+        "stat_sources": "Fuentes activas",
+        # digest card
+        "digest_label": "Resumen del día",
+        "digest_generated": "Generado {time}",
+        "digest_loading": "Se está generando el resumen del día...",
+        "digest_quiet": "Día de noticias tranquilo",
+        "digest_few_articles": "Pocos artículos relevantes en las últimas 24 horas.",
+        # filter card
+        "filter_title": "Filtrar artículos",
+        "filter_reset": "Restablecer todo",
+        "filter_scope": "Nivel de mención",
+        "filter_country": "País y región",
+        "filter_tone": "Tono",
+        "filter_time": "Periodo",
+        "filter_sort": "Ordenar",
+        "filter_all": "Todos",
+        # scope values
+        "scope_cermaq": "Cermaq directo",
+        "scope_industry_in_regions": "Industria en regiones Cermaq",
+        "scope_industry_general": "Industria general",
+        # tone values
+        "tone_positive": "Positivo",
+        "tone_neutral": "Neutral",
+        "tone_negative": "Negativo",
+        # country values
+        "country_norway": "Noruega",
+        "country_chile": "Chile",
+        "country_canada": "Canadá",
+        "country_global": "Global",
+        # time period values
+        "time_today": "Hoy",
+        "time_7days": "Últimos 7 días",
+        "time_30days": "Últimos 30 días",
+        # sort values
+        "sort_newest": "Más reciente primero",
+        "sort_oldest": "Más antiguo primero",
+        "sort_relevance": "Relevancia",
+        # result header / articles
+        "showing_articles": "Mostrando {n} de {total} artículos",
+        "btn_export": "Exportar",
+        "btn_create_alert": "Crear alerta",
+        "time_ago_minutes": "hace {n} min",
+        "time_ago_hours": "hace {n} h",
+        "time_ago_days": "hace {n} días",
+        "load_more": "Cargar más artículos",
+        "search_placeholder": "Buscar artículos, fuentes, personas…",
+        # nav
+        "nav_alerts": "Alertas",
+        "nav_overview": "Resumen",
+        "nav_news": "Noticias",
+        "nav_search": "Buscar",
+        "nav_reports": "Informes",
+        "nav_competitors": "Competidores",
+        "nav_settings": "Configuración",
+        "nav_sources": "Fuentes",
     },
     "ja": {
+        # legacy / existing
         "digest_title": "本日のまとめ",
         "digest_pending": "本日のまとめを生成中…",
         "based_on": "対象記事",
@@ -89,9 +284,71 @@ _UI_TEXTS: dict = {
         "generated_at": "生成日時",
         "searches_used": "ウェブ検索使用回数:",
         "nav_dashboard": "ダッシュボード",
-        "nav_alerts": "アラート",
+        # page
         "page_title": "ニュース",
-        "page_subtitle": "Cermaと業界報道の毎日の概要",
+        "page_subtitle": "Cermaqと業界カバレッジの毎日の概要",
+        # stat cards
+        "stat_articles": "記事",
+        "stat_articles_subtitle": "{n}件分類済み",
+        "stat_cermaq": "Cermaqの言及",
+        "stat_cermaq_subtitle": "Cermaq直接記事",
+        "stat_negative": "ネガティブな言及",
+        "stat_negative_subtitle": "ネガティブな報道",
+        "stat_sources": "アクティブなソース",
+        # digest card
+        "digest_label": "本日のまとめ",
+        "digest_generated": "生成日時 {time}",
+        "digest_loading": "本日のまとめを生成中...",
+        "digest_quiet": "静かな報道日",
+        "digest_few_articles": "過去24時間で関連記事はわずかです。",
+        # filter card
+        "filter_title": "記事をフィルター",
+        "filter_reset": "すべてリセット",
+        "filter_scope": "言及レベル",
+        "filter_country": "国と地域",
+        "filter_tone": "トーン",
+        "filter_time": "期間",
+        "filter_sort": "並び替え",
+        "filter_all": "すべて",
+        # scope values
+        "scope_cermaq": "Cermaq直接",
+        "scope_industry_in_regions": "Cermaq地域の業界",
+        "scope_industry_general": "一般業界",
+        # tone values
+        "tone_positive": "ポジティブ",
+        "tone_neutral": "ニュートラル",
+        "tone_negative": "ネガティブ",
+        # country values
+        "country_norway": "ノルウェー",
+        "country_chile": "チリ",
+        "country_canada": "カナダ",
+        "country_global": "グローバル",
+        # time period values
+        "time_today": "今日",
+        "time_7days": "過去7日間",
+        "time_30days": "過去30日間",
+        # sort values
+        "sort_newest": "新しい順",
+        "sort_oldest": "古い順",
+        "sort_relevance": "関連性",
+        # result header / articles
+        "showing_articles": "{total}件中{n}件を表示",
+        "btn_export": "エクスポート",
+        "btn_create_alert": "アラート作成",
+        "time_ago_minutes": "{n}分前",
+        "time_ago_hours": "{n}時間前",
+        "time_ago_days": "{n}日前",
+        "load_more": "さらに記事を読み込む",
+        "search_placeholder": "記事、ソース、人物を検索…",
+        # nav
+        "nav_alerts": "アラート",
+        "nav_overview": "概要",
+        "nav_news": "ニュース",
+        "nav_search": "検索",
+        "nav_reports": "レポート",
+        "nav_competitors": "競合他社",
+        "nav_settings": "設定",
+        "nav_sources": "ソース",
     },
 }
 
@@ -640,7 +897,9 @@ def index():
         1 for a in formatted
         if a.get("scope") == "industry" and a.get("region") not in ("norge", "chile", "canada")
     )
-    kritisk_count = sum(1 for a in formatted if a.get("tone") == "kritisk")
+    negative_count = sum(
+        1 for a in formatted if a.get("tone") in ("kritisk", "negativ")
+    )
 
     return render_template(
         "index.html",
@@ -656,7 +915,7 @@ def index():
         region_counts=region_counts,
         industry_core_count=industry_core_count,
         industry_global_count=industry_global_count,
-        kritisk_count=kritisk_count,
+        negative_count=negative_count,
         digest=digest,
         lang=lang,
         ui_text=ui_text,
@@ -750,6 +1009,33 @@ def admin_reclassify():
         "queued": len(targets),
         "criteria": {"since": since_str, "all": do_all, "missing_only": missing_only},
     })
+
+
+@app.route("/admin/migrate-tone")
+def admin_migrate_tone():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+
+    if _sa_text is None:
+        return jsonify({"error": "SQLAlchemy text not available"}), 500
+
+    with SessionLocal() as session:
+        result = session.execute(
+            _sa_text("UPDATE articles SET tone='negativ' WHERE tone='kritisk'")
+        )
+        session.commit()
+        affected = result.rowcount
+
+    with _articles_lock:
+        for a in _articles.values():
+            if a.get("tone") == "kritisk":
+                a["tone"] = "negativ"
+
+    log.info("Tone-migrering: %d artikler oppdatert fra 'kritisk' til 'negativ'", affected)
+    return jsonify({"migrated": affected, "status": "ok"})
 
 
 # ---------------------------------------------------------------------------
