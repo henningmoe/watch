@@ -3,10 +3,14 @@
 import logging
 import os
 import queue
+import re
+import hashlib
 import threading
 import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from flask import Flask, jsonify, render_template, request
@@ -629,6 +633,88 @@ def _detect_source_from_url(url: str) -> tuple[str | None, str | None]:
     return None, None
 
 
+def _fetch_article_metadata(url: str) -> dict:
+    """Fetch title, description, image_url and text content from a URL via OG metadata."""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Cermaq Watch"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+
+        title_match = (
+            re.search(r"<meta[^>]*property=['\"]og:title['\"][^>]*content=['\"]([^'\"]+)", html)
+            or re.search(r"<title>([^<]+)</title>", html)
+        )
+        title = title_match.group(1).strip() if title_match else ""
+
+        desc_match = re.search(
+            r"<meta[^>]*property=['\"]og:description['\"][^>]*content=['\"]([^'\"]+)", html
+        )
+        description = desc_match.group(1).strip() if desc_match else ""
+
+        image_match = re.search(
+            r"<meta[^>]*property=['\"]og:image['\"][^>]*content=['\"]([^'\"]+)", html
+        )
+        image_url = image_match.group(1).strip() if image_match else None
+
+        text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
+        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()[:5000]
+
+        return {"title": title, "description": description, "image_url": image_url,
+                "content": (description + "\n\n" + text).strip()}
+    except Exception as exc:
+        log.warning("Kunne ikke hente metadata for %s: %s", url, exc)
+        return {"title": "", "description": "", "image_url": None, "content": ""}
+
+
+def _ingest_urls_as_articles(urls: list) -> int:
+    """Add a list of URLs as new articles and queue them for classification."""
+    if not urls:
+        return 0
+    added = 0
+    for url in urls:
+        if not url or not url.startswith("http"):
+            continue
+        if is_db_available():
+            try:
+                with SessionLocal() as session:
+                    if session.query(Article).filter_by(url=url).first():
+                        continue
+            except Exception:
+                pass
+
+        article_id = int(hashlib.md5(url.encode()).hexdigest()[:8], 16)
+        with _articles_lock:
+            if article_id in _articles:
+                continue
+
+        domain = urlparse(url).netloc.replace("www.", "")
+        source_name, source_domain = _detect_source_from_url(url)
+        if not source_name:
+            source_name = domain.split(".")[0]
+            source_domain = domain
+
+        article = {
+            "id": article_id,
+            "title": "",
+            "url": url,
+            "source_name": source_name,
+            "source_domain": source_domain,
+            "fetch_method": "websearch",
+            "published_at": None,
+            "content": "",
+            "image_url": None,
+        }
+        with _articles_lock:
+            _articles[article_id] = article
+        _classify_queue.put(article_id)
+        added += 1
+
+    log.info("Web-søk: la til %d nye artikler i klassifiseringskøen", added)
+    return added
+
+
 # ---------------------------------------------------------------------------
 # Background thread 2 — classify
 # ---------------------------------------------------------------------------
@@ -657,6 +743,29 @@ def _classify_loop() -> None:
                 article = dict(article)
                 article["source_name"] = detected_name
                 article["source_domain"] = detected_domain
+
+            # Fetch metadata for articles without title/content (e.g. from websearch)
+            if not article.get("title") or not article.get("content"):
+                meta = _fetch_article_metadata(article["url"])
+                updates = {}
+                if meta.get("title"):
+                    updates["title"] = meta["title"]
+                    article["title"] = meta["title"]
+                if meta.get("content"):
+                    updates["content"] = meta["content"]
+                    article["content"] = meta["content"]
+                if meta.get("image_url") and not article.get("image_url"):
+                    updates["image_url"] = meta["image_url"]
+                    article["image_url"] = meta["image_url"]
+                if updates:
+                    with _articles_lock:
+                        if article_id in _articles:
+                            _articles[article_id].update(updates)
+            if not article.get("title"):
+                article["title"] = f"Artikkel fra {article.get('source_name', 'web')}"
+                with _articles_lock:
+                    if article_id in _articles:
+                        _articles[article_id]["title"] = article["title"]
 
             enrichment = classify(article)
 
@@ -731,6 +840,7 @@ def _generate_all_digests() -> None:
 
     from poc.digest import generate_digest
     article_ids = [a["id"] for a in recent]
+    all_sources: set = set()
     for lang in ("no", "en", "es", "ja"):
         try:
             digest = generate_digest(recent, lang=lang)
@@ -739,8 +849,15 @@ def _generate_all_digests() -> None:
                     _digest_cache[lang] = digest
                 log.info("Digest klar lang=%s: %s", lang, digest["headline"][:60])
                 _persist_digest(lang, digest, article_ids)
+                for url in digest.get("sources", []):
+                    if url:
+                        all_sources.add(url)
         except Exception as exc:
             log.error("Digest feilet for lang=%s: %s", lang, exc)
+
+    if all_sources:
+        added = _ingest_urls_as_articles(list(all_sources))
+        log.info("Digest-generering la til %d nye artikler fra web-søk", added)
 
 
 def _digest_scheduler() -> None:
@@ -1299,11 +1416,6 @@ def admin_add_article():
     if not _check_admin_token():
         return jsonify({"error": "Unauthorized"}), 401
 
-    import re
-    import hashlib
-    import urllib.request
-    from urllib.parse import urlparse
-
     data = request.get_json() or {}
     url = (data.get("url") or "").strip()
 
@@ -1319,37 +1431,13 @@ def admin_add_article():
         except Exception:
             pass
 
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Cermaq Watch"})
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            html = resp.read().decode("utf-8", errors="ignore")
-    except Exception as exc:
-        return jsonify({"error": f"Could not fetch URL: {exc}"}), 500
-
-    title_match = (
-        re.search(r"<meta[^>]*property=['\"]og:title['\"][^>]*content=['\"]([^'\"]+)", html)
-        or re.search(r"<title>([^<]+)</title>", html)
-    )
-    title = title_match.group(1).strip() if title_match else url
-
-    desc_match = re.search(
-        r"<meta[^>]*property=['\"]og:description['\"][^>]*content=['\"]([^'\"]+)", html
-    )
-    description = desc_match.group(1).strip() if desc_match else ""
-
-    image_match = re.search(
-        r"<meta[^>]*property=['\"]og:image['\"][^>]*content=['\"]([^'\"]+)", html
-    )
-    image_url = image_match.group(1).strip() if image_match else None
-
-    text_content = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
-    text_content = re.sub(r"<style[^>]*>.*?</style>", "", text_content, flags=re.DOTALL)
-    text_content = re.sub(r"<[^>]+>", " ", text_content)
-    text_content = re.sub(r"\s+", " ", text_content).strip()[:5000]
+    meta = _fetch_article_metadata(url)
+    if not meta["title"] and not meta["content"]:
+        return jsonify({"error": f"Could not fetch URL"}), 500
 
     article_id = int(hashlib.md5(url.encode()).hexdigest()[:8], 16)
-    parsed = urlparse(url)
-    domain = parsed.netloc.replace("www.", "")
+    domain = urlparse(url).netloc.replace("www.", "")
+    title = meta["title"] or url
 
     article = {
         "id": article_id,
@@ -1359,8 +1447,8 @@ def admin_add_article():
         "source_domain": domain,
         "fetch_method": "manual",
         "published_at": data.get("published_at"),
-        "content": description + "\n\n" + text_content,
-        "image_url": image_url,
+        "content": meta["content"],
+        "image_url": meta["image_url"],
     }
 
     with _articles_lock:
@@ -1374,6 +1462,59 @@ def admin_add_article():
         "source": article["source_name"],
         "status": "Added and queued for classification",
     })
+
+
+@app.route("/admin/run-websearch", methods=["POST"])
+def admin_run_websearch():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    def _run():
+        try:
+            import anthropic as _anthropic
+            import json as _json
+            client = _anthropic.Anthropic()
+            queries = [
+                "Cermaq",
+                "Cermaq Norway",
+                "Cermaq Chile",
+                "Cermaq Canada",
+                "Steven Rafferty Cermaq",
+                "Mitsubishi Cermaq",
+                "True Arctic Cermaq",
+            ]
+            all_urls: set = set()
+            for query in queries:
+                try:
+                    resp = client.messages.create(
+                        model="claude-sonnet-4-6-20250514",
+                        max_tokens=2000,
+                        tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 2}],
+                        messages=[{"role": "user", "content": (
+                            f"Search the web for: {query}\n\n"
+                            f"Find recent articles about Cermaq from the last 7 days. "
+                            f"Return ONLY a JSON array of URLs:\n"
+                            f'["url1", "url2", ...]\n\nNo prose, just JSON. Maximum 10 URLs.'
+                        )}],
+                    )
+                    for block in resp.content:
+                        if getattr(block, "type", "") == "text":
+                            m = re.search(r'\[\s*"[^"]+"(?:\s*,\s*"[^"]+")*\s*\]', block.text)
+                            if m:
+                                try:
+                                    all_urls.update(_json.loads(m.group(0)))
+                                except _json.JSONDecodeError:
+                                    pass
+                except Exception as exc:
+                    log.error("Web-søk feilet for '%s': %s", query, exc)
+
+            added = _ingest_urls_as_articles(list(all_urls))
+            log.info("Manuelt web-søk: fant %d URL-er, la til %d nye artikler", len(all_urls), added)
+        except Exception as exc:
+            log.error("Web-søk-trigger feilet: %s", exc)
+
+    threading.Thread(target=_run, daemon=True).start()
+    return jsonify({"status": "Web-søk startet", "note": "Sjekk Railway-logg eller hovedsiden om 1–3 minutter"})
 
 
 # ---------------------------------------------------------------------------

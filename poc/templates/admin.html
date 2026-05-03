@@ -252,6 +252,17 @@
     <div id="backfill-feedback" class="feedback"></div>
   </div>
 
+  <!-- Card 2b: Web-søk -->
+  <div class="card">
+    <div class="card-title">Web-søk — ferske Cermaq-artikler</div>
+    <div class="card-desc">Kjører web-søk på 7 Cermaq-relaterte søketermer. Nye URL-er legges som artikler og klassifiseres automatisk. Tar 1–3 minutter.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="startWebsearch()">Start web-søk</button>
+    </div>
+    <p class="hint">Sjekk Railway-logg for: «Manuelt web-søk: fant X URL-er, la til Y nye artikler»</p>
+    <div id="websearch-feedback" class="feedback"></div>
+  </div>
+
   <!-- Card 3: Legg til artikkel -->
   <div class="card">
     <div class="card-title">Legg til artikkel manuelt</div>
@@ -489,6 +500,22 @@
   function reclassifyAll() {
     if (!confirm("Reklassifiser ALLE artikler? Dette tar tid og bruker API-kvoter.")) return;
     reclassify("all");
+  }
+
+  /* ─── Card 2b: Web-søk ──────────────────────────────────── */
+  async function startWebsearch() {
+    if (!requireToken("websearch-feedback")) return;
+    showFeedback("websearch-feedback", "Starter web-søk…", "loading", true);
+    try {
+      var resp = await fetch("/admin/run-websearch?" + tokenParam(), {method: "POST"});
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("websearch-feedback", data.error || "Feil", "error", true); return; }
+      showFeedback("websearch-feedback",
+        "✓ " + data.status + " — " + data.note, "success", true
+      );
+    } catch (e) {
+      showFeedback("websearch-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
   }
 
   /* ─── Card 5: Regenerer digest ───────────────────────────── */
