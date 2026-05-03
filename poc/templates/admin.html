@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Watch — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f7f8fa; color: #111827; }
+
+    /* ─── Header ─────────────────────────────────────────────── */
+    .admin-header {
+      background: #0c4a3e;
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .admin-header-left { display: flex; align-items: center; gap: 12px; }
+    .admin-logo {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; color: #fff;
+    }
+    .admin-title { font-size: 16px; font-weight: 600; color: #fff; }
+    .admin-subtitle { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 1px; }
+    .admin-header-right { display: flex; align-items: center; gap: 10px; }
+    .header-link {
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      text-decoration: none;
+      padding: 5px 10px;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px;
+      transition: background 0.12s;
+    }
+    .header-link:hover { background: rgba(255,255,255,0.1); }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .admin-body { max-width: 900px; margin: 0 auto; padding: 28px 20px 48px; }
+
+    /* ─── Token card ─────────────────────────────────────────── */
+    .token-card {
+      background: #fff;
+      border: 2px solid #0c4a3e;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .token-label { font-size: 12px; font-weight: 600; color: #374151; white-space: nowrap; }
+    .token-input {
+      flex: 1;
+      min-width: 260px;
+      padding: 7px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: 'Inter', monospace;
+      font-size: 13px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .token-input:focus { border-color: #0c4a3e; box-shadow: 0 0 0 3px rgba(12,74,62,0.08); }
+    .token-save-btn {
+      padding: 7px 14px;
+      background: #0c4a3e;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .token-save-btn:hover { background: #0a3d33; }
+    .token-status { font-size: 11px; color: #9ca3af; }
+    .token-status.ok { color: #15803d; }
+
+    /* ─── Cards ──────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 22px 24px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #111827;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .card-desc {
+      font-size: 12px;
+      color: #6b7280;
+      margin-bottom: 16px;
+      line-height: 1.5;
+    }
+
+    /* ─── Form rows ──────────────────────────────────────────── */
+    .form-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .form-field { display: flex; flex-direction: column; gap: 4px; }
+    .form-field label { font-size: 11px; font-weight: 500; color: #6b7280; }
+    .form-control {
+      padding: 7px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      color: #111827;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-control:focus { border-color: #0c4a3e; box-shadow: 0 0 0 3px rgba(12,74,62,0.08); }
+    .form-control.wide { min-width: 360px; }
+    .form-control.short { width: 80px; }
+
+    /* ─── Buttons ────────────────────────────────────────────── */
+    .btn {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, opacity 0.12s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #0c4a3e; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #0a3d33; }
+    .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+    .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
+    .btn-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+    .btn-danger:hover:not(:disabled) { background: #fee2e2; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    /* ─── Feedback boxes ─────────────────────────────────────── */
+    .feedback {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+      font-family: 'Inter', monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+      display: none;
+    }
+    .feedback.success { background: #f0fdf4; border: 1px solid #86efac; color: #15803d; }
+    .feedback.error   { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+    .feedback.info    { background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; }
+    .feedback.loading { background: #f9fafb; border: 1px solid #e5e7eb; color: #6b7280; }
+
+    /* ─── Status grid ────────────────────────────────────────── */
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .status-cell {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 10px 12px;
+    }
+    .status-cell-label { font-size: 10px; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.5px; }
+    .status-cell-value { font-size: 20px; font-weight: 500; color: #111827; margin-top: 3px; }
+    .status-cell-value.green { color: #0c4a3e; }
+    .status-cell-value.red   { color: #b91c1c; }
+
+    /* ─── Hint text ──────────────────────────────────────────── */
+    .hint { font-size: 11px; color: #9ca3af; margin-top: 6px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="admin-header">
+  <div class="admin-header-left">
+    <div class="admin-logo">CW</div>
+    <div>
+      <div class="admin-title">Cermaq Watch</div>
+      <div class="admin-subtitle">Admin-panel</div>
+    </div>
+  </div>
+  <div class="admin-header-right">
+    <a href="/" class="header-link">← Tilbake til nyheter</a>
+    <a href="/alerts" class="header-link">Varsling</a>
+  </div>
+</header>
+
+<!-- Body -->
+<div class="admin-body">
+
+  <!-- Token -->
+  <div class="token-card">
+    <span class="token-label">Admin token</span>
+    <input type="password" id="admin-token" class="token-input" placeholder="Skriv inn ADMIN_TOKEN…" autocomplete="off" />
+    <button class="token-save-btn" onclick="saveToken()">Lagre</button>
+    <span class="token-status" id="token-status">Ikke satt</span>
+  </div>
+
+  <!-- Card 1: Status -->
+  <div class="card">
+    <div class="card-title">System-status</div>
+    <div class="card-desc">Hent sanntidsstatus for artikler, klassifisering og Postgres.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="loadStatus()">Last status</button>
+    </div>
+    <div id="status-grid" class="status-grid" style="display:none"></div>
+    <div id="status-feedback" class="feedback"></div>
+  </div>
+
+  <!-- Card 2: Backfill -->
+  <div class="card">
+    <div class="card-title">Backfill — hent historiske artikler</div>
+    <div class="card-desc">Søker etter Cermaq-relaterte artikler via websøk og legger dem i klassifiseringskøen. Tar 2–5 min.</div>
+    <div class="form-row">
+      <div class="form-field">
+        <label for="bf-days">Antall dager bakover</label>
+        <input type="number" id="bf-days" class="form-control short" value="7" min="1" max="30" />
+      </div>
+      <div class="form-field">
+        <label for="bf-max">Maks artikler</label>
+        <input type="number" id="bf-max" class="form-control short" value="30" min="1" max="100" />
+      </div>
+      <button class="btn btn-primary" onclick="startBackfill()">Start backfill</button>
+    </div>
+    <p class="hint">Sjekk Railway-logg eller last siden på nytt etter noen minutter for å se resultatene.</p>
+    <div id="backfill-feedback" class="feedback"></div>
+  </div>
+
+  <!-- Card 3: Legg til artikkel -->
+  <div class="card">
+    <div class="card-title">Legg til artikkel manuelt</div>
+    <div class="card-desc">Henter OG-metadata og innhold fra URL-en, og legger artikkelen i klassifiseringskøen.</div>
+    <div class="form-row">
+      <div class="form-field" style="flex:1">
+        <label for="add-url">URL</label>
+        <input type="url" id="add-url" class="form-control wide" placeholder="https://ilaks.no/artikkel/…" />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label for="add-source">Kilde-navn (valgfritt)</label>
+        <input type="text" id="add-source" class="form-control" placeholder="f.eks. iLaks" style="width:200px" />
+      </div>
+      <div class="form-field">
+        <label for="add-date">Publisert dato (YYYY-MM-DD, valgfritt)</label>
+        <input type="date" id="add-date" class="form-control" style="width:170px" />
+      </div>
+      <button class="btn btn-primary" onclick="addArticle()">Legg til artikkel</button>
+    </div>
+    <div id="add-feedback" class="feedback"></div>
+  </div>
+
+  <!-- Card 4: Reklassifisering -->
+  <div class="card">
+    <div class="card-title">Reklassifisering</div>
+    <div class="card-desc">Sett artikler i klassifiseringskøen på nytt. "Kun uklassifiserte" er trygt å kjøre alltid.</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="reclassify('missing')">Reklassifiser kun uklassifiserte</button>
+      <button class="btn btn-danger" onclick="reclassifyAll()">Reklassifiser alle</button>
+    </div>
+    <div id="reclassify-feedback" class="feedback"></div>
+  </div>
+
+  <!-- Card 5: Regenerer digest -->
+  <div class="card">
+    <div class="card-title">AI-digest</div>
+    <div class="card-desc">Generer daglig oppsummering på nytt for alle fire språk (NO/EN/ES/JA). Tar ca. 30–60 sek.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="regenerateDigest()">Generer digest på nytt</button>
+    </div>
+    <div id="digest-feedback" class="feedback"></div>
+  </div>
+
+  <!-- Card 6: Migrer tone -->
+  <div class="card">
+    <div class="card-title">Migrer tone-verdier</div>
+    <div class="card-desc">Engangs-operasjon: oppdaterer alle artikler med <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px">tone='kritisk'</code> til <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px">tone='negativ'</code> i databasen og in-memory cache. Trygt å kjøre flere ganger.</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="migrateTone()">Migrer 'kritisk' → 'negativ'</button>
+    </div>
+    <div id="migrate-feedback" class="feedback"></div>
+  </div>
+
+</div><!-- /admin-body -->
+
+<script>
+  /* ─── Token management ───────────────────────────────────── */
+  var token = sessionStorage.getItem("cermaq_admin_token") || "";
+
+  (function initToken() {
+    if (token) {
+      document.getElementById("admin-token").value = token;
+      document.getElementById("token-status").textContent = "Satt ✓";
+      document.getElementById("token-status").className = "token-status ok";
+    }
+  })();
+
+  function saveToken() {
+    token = document.getElementById("admin-token").value.trim();
+    if (!token) {
+      showFeedback("token-status", "Tomt token!", "error", true);
+      return;
+    }
+    sessionStorage.setItem("cermaq_admin_token", token);
+    var el = document.getElementById("token-status");
+    el.textContent = "Lagret ✓";
+    el.className = "token-status ok";
+  }
+
+  document.getElementById("admin-token").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") saveToken();
+  });
+
+  /* ─── Generic feedback helper ────────────────────────────── */
+  function showFeedback(id, message, type, isText) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.style.display = "block";
+    el.className = "feedback " + (type || "info");
+    if (isText) {
+      el.textContent = message;
+    } else {
+      el.textContent = typeof message === "string" ? message : JSON.stringify(message, null, 2);
+    }
+  }
+
+  function tokenParam() {
+    return "token=" + encodeURIComponent(token);
+  }
+
+  function requireToken(feedbackId) {
+    if (!token) {
+      showFeedback(feedbackId, "Sett admin token øverst på siden først.", "error", true);
+      return false;
+    }
+    return true;
+  }
+
+  /* ─── Card 1: Status ─────────────────────────────────────── */
+  async function loadStatus() {
+    if (!requireToken("status-feedback")) return;
+    showFeedback("status-feedback", "Henter status…", "loading", true);
+    document.getElementById("status-grid").style.display = "none";
+    try {
+      var resp = await fetch("/admin/status?" + tokenParam());
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("status-feedback", data.error || "Feil", "error", true); return; }
+
+      var grid = document.getElementById("status-grid");
+      var arts = data.articles || {};
+      var cells = [
+        ["Totalt", arts.total || 0, ""],
+        ["Klassifisert", arts.classified || 0, "green"],
+        ["Postgres", data.postgres_available ? "✓" : "✗", data.postgres_available ? "green" : "red"],
+        ["I kø", data.queue_size || 0, ""],
+      ];
+      var byScope = arts.by_scope || {};
+      Object.keys(byScope).forEach(function(k) {
+        cells.push([k, byScope[k], ""]);
+      });
+
+      grid.innerHTML = cells.map(function(c) {
+        return '<div class="status-cell">'
+          + '<div class="status-cell-label">' + esc(String(c[0])) + '</div>'
+          + '<div class="status-cell-value ' + c[2] + '">' + esc(String(c[1])) + '</div>'
+          + '</div>';
+      }).join("");
+
+      grid.style.display = "grid";
+
+      var digestInfo = "";
+      if (data.digests) {
+        Object.keys(data.digests).forEach(function(lang) {
+          var d = data.digests[lang];
+          digestInfo += lang.toUpperCase() + ": " + (d.headline || "—").substring(0, 60) + "\n";
+        });
+      }
+      showFeedback("status-feedback", digestInfo.trim() || "OK", "success", true);
+    } catch (e) {
+      showFeedback("status-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  /* ─── Card 2: Backfill ───────────────────────────────────── */
+  async function startBackfill() {
+    if (!requireToken("backfill-feedback")) return;
+    var days = parseInt(document.getElementById("bf-days").value) || 7;
+    var max = parseInt(document.getElementById("bf-max").value) || 30;
+    showFeedback("backfill-feedback", "Starter backfill…", "loading", true);
+    try {
+      var resp = await fetch("/admin/backfill?" + tokenParam() + "&days=" + days + "&max=" + max, {
+        method: "POST"
+      });
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("backfill-feedback", data.error || "Feil", "error", true); return; }
+      showFeedback("backfill-feedback",
+        "✓ Backfill startet!\n"
+        + "Søker " + data.days + " dager bakover, maks " + data.max_articles + " artikler.\n"
+        + data.note,
+        "success", true
+      );
+    } catch (e) {
+      showFeedback("backfill-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  /* ─── Card 3: Legg til artikkel ──────────────────────────── */
+  async function addArticle() {
+    if (!requireToken("add-feedback")) return;
+    var url = document.getElementById("add-url").value.trim();
+    if (!url || !url.startsWith("http")) {
+      showFeedback("add-feedback", "Skriv inn en gyldig URL (starter med http).", "error", true);
+      return;
+    }
+    showFeedback("add-feedback", "Henter artikkelen…", "loading", true);
+    try {
+      var body = { url: url };
+      var src = document.getElementById("add-source").value.trim();
+      var dt = document.getElementById("add-date").value.trim();
+      if (src) body.source_name = src;
+      if (dt) body.published_at = dt;
+
+      var resp = await fetch("/admin/add-article?" + tokenParam(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("add-feedback", data.error || "Feil", "error", true); return; }
+      showFeedback("add-feedback",
+        "✓ Artikkel lagt til!\n"
+        + "Tittel: " + data.title + "\n"
+        + "Kilde: " + data.source + "\n"
+        + "ID: " + data.id + "\n"
+        + "Status: " + data.status,
+        "success", true
+      );
+      document.getElementById("add-url").value = "";
+      document.getElementById("add-source").value = "";
+      document.getElementById("add-date").value = "";
+    } catch (e) {
+      showFeedback("add-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  /* ─── Card 4: Reklassifisering ───────────────────────────── */
+  async function reclassify(mode) {
+    if (!requireToken("reclassify-feedback")) return;
+    showFeedback("reclassify-feedback", "Sender reklassifiseringsforespørsel…", "loading", true);
+    var qs = tokenParam() + (mode === "missing" ? "&missing=true" : "&all=true");
+    try {
+      var resp = await fetch("/admin/reclassify?" + qs);
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("reclassify-feedback", data.error || "Feil", "error", true); return; }
+      showFeedback("reclassify-feedback",
+        "✓ " + data.queued + " artikler lagt i klassifiseringskøen.", "success", true
+      );
+    } catch (e) {
+      showFeedback("reclassify-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  function reclassifyAll() {
+    if (!confirm("Reklassifiser ALLE artikler? Dette tar tid og bruker API-kvoter.")) return;
+    reclassify("all");
+  }
+
+  /* ─── Card 5: Regenerer digest ───────────────────────────── */
+  async function regenerateDigest() {
+    if (!requireToken("digest-feedback")) return;
+    showFeedback("digest-feedback", "Starter digest-generering…", "loading", true);
+    try {
+      var resp = await fetch("/admin/regenerate-digest?" + tokenParam());
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("digest-feedback", data.error || "Feil", "error", true); return; }
+      showFeedback("digest-feedback",
+        "✓ Digest-generering startet. Sjekk hovedsiden om 30–60 sek.", "success", true
+      );
+    } catch (e) {
+      showFeedback("digest-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  /* ─── Card 6: Migrer tone ────────────────────────────────── */
+  async function migrateTone() {
+    if (!requireToken("migrate-feedback")) return;
+    showFeedback("migrate-feedback", "Kjører migrering…", "loading", true);
+    try {
+      var resp = await fetch("/admin/migrate-tone?" + tokenParam());
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("migrate-feedback", data.error || "Feil", "error", true); return; }
+      showFeedback("migrate-feedback",
+        "✓ Migrering fullført! " + data.migrated + " artikler oppdatert fra 'kritisk' til 'negativ'.",
+        "success", true
+      );
+    } catch (e) {
+      showFeedback("migrate-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  /* ─── Escape helper ──────────────────────────────────────── */
+  function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+</script>
+</body>
+</html>

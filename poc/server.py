@@ -703,6 +703,108 @@ def get_digest(lang: str = "no") -> dict | None:
 
 
 # ---------------------------------------------------------------------------
+# Backfill via Anthropic web search
+# ---------------------------------------------------------------------------
+
+def _run_backfill(days: int, max_articles: int) -> None:
+    """Search for Cermaq articles via web search and add them to the pipeline."""
+    import re
+    import json
+    import hashlib
+    from urllib.parse import urlparse
+    import anthropic as _anthropic
+
+    client = _anthropic.Anthropic()
+
+    queries = [
+        ("site:ilaks.no Cermaq", "iLaks", "ilaks.no"),
+        ("site:intrafish.no Cermaq", "IntraFish", "intrafish.no"),
+        ("site:salmonbusiness.com Cermaq", "SalmonBusiness", "salmonbusiness.com"),
+        ("site:fishfarmingexpert.com Cermaq", "Fish Farming Expert", "fishfarmingexpert.com"),
+        ("Cermaq Norway news 2026", "various", None),
+        ("Cermaq Chile noticias 2026", "various", None),
+    ]
+
+    found_urls: set = set()
+    new_articles: list = []
+
+    for query, source_hint, _domain in queries:
+        if len(new_articles) >= max_articles:
+            break
+        try:
+            response = client.messages.create(
+                model="claude-sonnet-4-6-20250514",
+                max_tokens=4000,
+                tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
+                messages=[{
+                    "role": "user",
+                    "content": (
+                        f"Search the web for: {query}\n\n"
+                        f"Find Cermaq-related articles published in the last {days} days. "
+                        f"Return ONLY a JSON array:\n"
+                        f'[{{"url": "...", "title": "...", "published_at": "YYYY-MM-DD", "summary": "brief summary"}}]\n\n'
+                        f"No prose, just JSON. Maximum 10 articles."
+                    ),
+                }],
+            )
+            for block in response.content:
+                if getattr(block, "type", "") == "text":
+                    text = block.text.strip()
+                    match = re.search(r"\[\s*\{.*?\}\s*\]", text, re.DOTALL)
+                    if match:
+                        try:
+                            articles = json.loads(match.group(0))
+                            for art in articles:
+                                url = art.get("url", "")
+                                if url and url not in found_urls:
+                                    found_urls.add(url)
+                                    new_articles.append({**art, "source_hint": source_hint})
+                        except json.JSONDecodeError:
+                            log.warning("Backfill: JSON-parse feilet for søk '%s'", query)
+        except Exception as exc:
+            log.error("Backfill-søk feilet for '%s': %s", query, exc)
+
+    log.info("Backfill fant %d unike artikler", len(new_articles))
+
+    added = 0
+    for art in new_articles[:max_articles]:
+        url = art.get("url", "")
+        if not url:
+            continue
+
+        if is_db_available():
+            try:
+                with SessionLocal() as session:
+                    if session.query(Article).filter_by(url=url).first():
+                        continue
+            except Exception:
+                pass
+
+        article_id = int(hashlib.md5(url.encode()).hexdigest()[:8], 16)
+        domain = urlparse(url).netloc.replace("www.", "")
+
+        article = {
+            "id": article_id,
+            "title": art.get("title", ""),
+            "url": url,
+            "source_name": art.get("source_hint", domain.split(".")[0]),
+            "source_domain": domain,
+            "fetch_method": "backfill",
+            "published_at": art.get("published_at"),
+            "content": art.get("summary", ""),
+            "image_url": None,
+        }
+
+        with _articles_lock:
+            if article_id not in _articles:
+                _articles[article_id] = article
+                _classify_queue.put(article_id)
+                added += 1
+
+    log.info("Backfill: %d nye artikler lagt til klassifiseringskøen", added)
+
+
+# ---------------------------------------------------------------------------
 # Background thread 3 — OG-image backfill (runs once at startup)
 # ---------------------------------------------------------------------------
 
@@ -1036,6 +1138,111 @@ def admin_migrate_tone():
 
     log.info("Tone-migrering: %d artikler oppdatert fra 'kritisk' til 'negativ'", affected)
     return jsonify({"migrated": affected, "status": "ok"})
+
+
+@app.route("/admin/")
+def admin_page():
+    return render_template("admin.html")
+
+
+@app.route("/admin/backfill", methods=["POST"])
+def admin_backfill():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    days = int(request.args.get("days", 7))
+    max_articles = int(request.args.get("max", 30))
+
+    threading.Thread(target=_run_backfill, args=(days, max_articles), daemon=True).start()
+
+    return jsonify({
+        "status": "Backfill started",
+        "days": days,
+        "max_articles": max_articles,
+        "note": "Sjekk Railway-logg eller hovedsiden for fremdrift",
+    })
+
+
+@app.route("/admin/add-article", methods=["POST"])
+def admin_add_article():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    import re
+    import hashlib
+    import urllib.request
+    from urllib.parse import urlparse
+
+    data = request.get_json() or {}
+    url = (data.get("url") or "").strip()
+
+    if not url or not url.startswith("http"):
+        return jsonify({"error": "Valid URL required"}), 400
+
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                existing = session.query(Article).filter_by(url=url).first()
+                if existing:
+                    return jsonify({"error": "Article already exists", "id": existing.id}), 409
+        except Exception:
+            pass
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Cermaq Watch"})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
+    except Exception as exc:
+        return jsonify({"error": f"Could not fetch URL: {exc}"}), 500
+
+    title_match = (
+        re.search(r"<meta[^>]*property=['\"]og:title['\"][^>]*content=['\"]([^'\"]+)", html)
+        or re.search(r"<title>([^<]+)</title>", html)
+    )
+    title = title_match.group(1).strip() if title_match else url
+
+    desc_match = re.search(
+        r"<meta[^>]*property=['\"]og:description['\"][^>]*content=['\"]([^'\"]+)", html
+    )
+    description = desc_match.group(1).strip() if desc_match else ""
+
+    image_match = re.search(
+        r"<meta[^>]*property=['\"]og:image['\"][^>]*content=['\"]([^'\"]+)", html
+    )
+    image_url = image_match.group(1).strip() if image_match else None
+
+    text_content = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
+    text_content = re.sub(r"<style[^>]*>.*?</style>", "", text_content, flags=re.DOTALL)
+    text_content = re.sub(r"<[^>]+>", " ", text_content)
+    text_content = re.sub(r"\s+", " ", text_content).strip()[:5000]
+
+    article_id = int(hashlib.md5(url.encode()).hexdigest()[:8], 16)
+    parsed = urlparse(url)
+    domain = parsed.netloc.replace("www.", "")
+
+    article = {
+        "id": article_id,
+        "title": title,
+        "url": url,
+        "source_name": data.get("source_name") or domain.split(".")[0],
+        "source_domain": domain,
+        "fetch_method": "manual",
+        "published_at": data.get("published_at"),
+        "content": description + "\n\n" + text_content,
+        "image_url": image_url,
+    }
+
+    with _articles_lock:
+        _articles[article_id] = article
+    _classify_queue.put(article_id)
+
+    return jsonify({
+        "id": article_id,
+        "title": title,
+        "url": url,
+        "source": article["source_name"],
+        "status": "Added and queued for classification",
+    })
 
 
 # ---------------------------------------------------------------------------
