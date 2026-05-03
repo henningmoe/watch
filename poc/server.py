@@ -54,6 +54,8 @@ _UI_TEXTS: dict = {
         "searches_used": "Web-søk brukt:",
         "nav_dashboard": "Dagsoversikt",
         "nav_alerts": "Krise-varsler",
+        "page_title": "Nyheter",
+        "page_subtitle": "Daglig oversikt over Cermaq og bransjedekning",
     },
     "en": {
         "digest_title": "Daily summary",
@@ -64,6 +66,8 @@ _UI_TEXTS: dict = {
         "searches_used": "Web searches used:",
         "nav_dashboard": "Dashboard",
         "nav_alerts": "Crisis alerts",
+        "page_title": "News",
+        "page_subtitle": "Daily overview of Cermaq and industry coverage",
     },
     "es": {
         "digest_title": "Resumen del día",
@@ -74,6 +78,8 @@ _UI_TEXTS: dict = {
         "searches_used": "Búsquedas web usadas:",
         "nav_dashboard": "Panel",
         "nav_alerts": "Alertas",
+        "page_title": "Noticias",
+        "page_subtitle": "Resumen diario de Cermaq y cobertura de la industria",
     },
     "ja": {
         "digest_title": "本日のまとめ",
@@ -84,6 +90,8 @@ _UI_TEXTS: dict = {
         "searches_used": "ウェブ検索使用回数:",
         "nav_dashboard": "ダッシュボード",
         "nav_alerts": "アラート",
+        "page_title": "ニュース",
+        "page_subtitle": "Cermaと業界報道の毎日の概要",
     },
 }
 
@@ -624,6 +632,15 @@ def index():
         r: sum(1 for a in articles if a.get("region") == r)
         for r in ("norge", "chile", "canada", "global")
     }
+    industry_core_count = sum(
+        1 for a in formatted
+        if a.get("scope") == "industry" and a.get("region") in ("norge", "chile", "canada")
+    )
+    industry_global_count = sum(
+        1 for a in formatted
+        if a.get("scope") == "industry" and a.get("region") not in ("norge", "chile", "canada")
+    )
+    kritisk_count = sum(1 for a in formatted if a.get("tone") == "kritisk")
 
     return render_template(
         "index.html",
@@ -637,6 +654,9 @@ def index():
         queue_size=_classify_queue.qsize(),
         cermaq_count=cermaq_count,
         region_counts=region_counts,
+        industry_core_count=industry_core_count,
+        industry_global_count=industry_global_count,
+        kritisk_count=kritisk_count,
         digest=digest,
         lang=lang,
         ui_text=ui_text,

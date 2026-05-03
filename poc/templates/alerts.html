@@ -9,388 +9,446 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif; background: #f7f8fa; color: #111827; }
 
-    body {
-      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #fafaf7;
-      color: #1a1a1a;
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
     }
 
-    /* ── Header ── */
-    header {
-      background: #0c4a3e;
+    /* ─── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      background: #1a2332;
+      width: 220px;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      padding: 20px;
+      border-bottom: 1px solid #2a3441;
+    }
+    .sidebar-logo .brand-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
+    .sidebar-logo .brand-name { font-size: 15px; font-weight: 500; color: #fff; margin-top: 2px; }
+
+    .nav-section { padding: 18px 0 4px; }
+    .nav-section-label {
+      padding: 0 20px 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6e7884;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 13px;
+      color: #c9d1d9;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      transition: background 0.12s;
+    }
+    .nav-item:hover { background: #243044; }
+    .nav-item.active {
+      background: rgba(12,74,62,0.25);
       color: #fff;
-      padding: 20px 40px;
+      border-left: 3px solid #0c4a3e;
+      padding-left: 17px;
+    }
+    .nav-item svg { flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active svg { opacity: 1; }
+
+    .competitor-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ─── Main content ───────────────────────────────────────── */
+    .main-content {
+      margin-left: 220px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ─── Top bar ────────────────────────────────────────────── */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 14px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
 
-    header h1 { font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
+    .topbar-title { font-size: 14px; font-weight: 500; color: #374151; }
 
-    .header-right { display: flex; align-items: center; gap: 1.25rem; }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
 
-    .lang-selector { display: flex; gap: 0.25rem; }
-
+    .lang-selector { display: flex; gap: 4px; }
     .lang-btn {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.3);
-      color: #fff;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #6b7280;
       font-family: inherit;
-      font-size: 13px;
-      padding: 6px 12px;
+      font-size: 11px;
+      padding: 5px 10px;
       border-radius: 4px;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
-
-    .lang-btn.active {
-      background: #d4e4d4;
-      color: #0c4a3e;
-      border-color: #d4e4d4;
-    }
-
-    /* ── Nav ── */
-    .main-nav {
-      background: #fff;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      padding: 0 40px;
-    }
-
-    .nav-link {
-      display: inline-block;
-      padding: 14px 18px;
-      color: #555;
-      text-decoration: none;
-      font-size: 0.875rem;
       font-weight: 500;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
     }
+    .lang-btn.active { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
+    .lang-btn:hover:not(.active) { border-color: #9ca3af; }
 
-    .nav-link:hover { color: #0c4a3e; }
-
-    .nav-link.active {
-      color: #0c4a3e;
-      border-bottom-color: #0c4a3e;
-    }
-
-    /* ── Main ── */
-    main {
-      max-width: 760px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 2rem 40px;
-      flex: 1;
-    }
-
-    h2 {
-      font-size: 1.375rem;
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #0c4a3e;
+      color: #fff;
+      font-size: 11px;
       font-weight: 600;
-      color: #0c4a3e;
-      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    /* ── Card ── */
+    /* ─── Page header ────────────────────────────────────────── */
+    .page-hd {
+      padding: 24px 28px 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .page-hd h1 { font-size: 22px; font-weight: 500; color: #111827; }
+    .page-hd-sub { font-size: 13px; color: #6b7280; margin-top: 3px; }
+
+    /* ─── Content area ───────────────────────────────────────── */
+    .content-area {
+      padding: 20px 28px 40px;
+      max-width: 720px;
+    }
+
+    /* ─── DB warning ─────────────────────────────────────────── */
+    .db-warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #92400e;
+      margin-bottom: 20px;
+    }
+
+    /* ─── Card ───────────────────────────────────────────────── */
     .card {
       background: #fff;
+      border: 1px solid #e5e7eb;
       border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
+      padding: 22px 26px;
+      margin-bottom: 16px;
     }
 
-    .card h3 {
-      font-size: 1rem;
+    .card-title {
+      font-size: 13px;
       font-weight: 600;
-      color: #0c4a3e;
-      margin-bottom: 1.25rem;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
     }
 
-    /* ── Form ── */
-    .form-group { margin-bottom: 1rem; }
+    /* ─── Form ───────────────────────────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-group:last-of-type { margin-bottom: 0; }
 
     .form-group label {
       display: block;
-      font-size: 0.8125rem;
+      font-size: 12px;
       font-weight: 500;
       color: #374151;
-      margin-bottom: 0.375rem;
+      margin-bottom: 5px;
     }
 
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
+    .form-control {
       width: 100%;
-      padding: 0.5rem 0.75rem;
+      padding: 8px 10px;
       border: 1px solid #d1d5db;
       border-radius: 6px;
       font-family: inherit;
-      font-size: 0.875rem;
-      color: #1a1a1a;
+      font-size: 13px;
+      color: #111827;
       background: #fff;
+      outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus {
-      outline: none;
+    .form-control:focus {
       border-color: #0c4a3e;
-      box-shadow: 0 0 0 3px rgba(12,74,62,0.1);
+      box-shadow: 0 0 0 3px rgba(12,74,62,0.08);
     }
-
-    .form-group textarea { resize: vertical; min-height: 72px; }
+    textarea.form-control { resize: vertical; min-height: 68px; }
 
     .demo-notice {
-      font-size: 0.75rem;
-      color: #888;
+      font-size: 11px;
+      color: #9ca3af;
       background: #f9fafb;
       border: 1px solid #e5e7eb;
       border-radius: 4px;
-      padding: 0.5rem 0.75rem;
-      margin-bottom: 1rem;
+      padding: 6px 10px;
+      margin-bottom: 14px;
     }
 
     .btn-primary {
       background: #0c4a3e;
       color: #fff;
       border: none;
-      padding: 0.5625rem 1.25rem;
+      padding: 9px 18px;
       border-radius: 6px;
       font-family: inherit;
-      font-size: 0.875rem;
+      font-size: 13px;
       font-weight: 500;
       cursor: pointer;
+      margin-top: 4px;
       transition: background 0.15s;
     }
-
     .btn-primary:hover { background: #0a3d33; }
-    .btn-primary:disabled { background: #6b7280; cursor: not-allowed; }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
 
-    /* ── Alerts list ── */
-    .alerts-list { list-style: none; }
-
-    .alert-item {
+    /* ─── Alert list rows ────────────────────────────────────── */
+    .alert-row {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 1rem;
-      padding: 0.875rem 0;
-      border-bottom: 1px solid #f0f0ec;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f3f4f6;
     }
-
-    .alert-item:last-child { border-bottom: none; }
+    .alert-row:first-child { padding-top: 0; }
+    .alert-row:last-child { border-bottom: none; padding-bottom: 0; }
 
     .alert-info { flex: 1; min-width: 0; }
-
-    .alert-name {
-      font-weight: 600;
-      font-size: 0.9375rem;
-      color: #1a1a1a;
-    }
-
-    .alert-desc {
-      font-size: 0.8125rem;
-      color: #666;
-      margin-top: 0.125rem;
-    }
-
-    .alert-meta {
-      font-size: 0.75rem;
-      color: #999;
-      margin-top: 0.25rem;
-    }
+    .alert-name { font-size: 14px; font-weight: 500; color: #111827; }
+    .alert-desc { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .alert-meta { font-size: 11px; color: #9ca3af; margin-top: 4px; }
 
     .btn-delete {
       background: transparent;
       border: 1px solid #e5e7eb;
       color: #b91c1c;
-      padding: 0.3125rem 0.75rem;
+      padding: 5px 10px;
       border-radius: 4px;
       font-family: inherit;
-      font-size: 0.75rem;
+      font-size: 11px;
       font-weight: 500;
       cursor: pointer;
       white-space: nowrap;
       flex-shrink: 0;
-      transition: background 0.15s, border-color 0.15s;
+      transition: background 0.12s, border-color 0.12s;
     }
+    .btn-delete:hover { background: #fef2f2; border-color: #fca5a5; }
 
-    .btn-delete:hover { background: #fef2f2; border-color: #b91c1c; }
+    .empty-alerts { font-size: 13px; color: #9ca3af; padding: 8px 0; }
 
-    .empty-state {
-      color: #9ca3af;
-      font-size: 0.875rem;
-      padding: 1rem 0;
-    }
-
-    .db-warning {
-      background: #fffbeb;
-      border: 1px solid #f59e0b;
-      border-radius: 6px;
-      padding: 0.875rem 1.125rem;
-      font-size: 0.875rem;
-      color: #92400e;
-      margin-bottom: 1.5rem;
-    }
-
-    /* ── Footer ── */
-    footer {
-      text-align: center;
-      padding: 1.5rem;
-      font-size: 0.75rem;
-      color: #9ca3af;
-      border-top: 1px solid #e5e7eb;
+    /* ─── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .app-layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; }
+      .content-area { padding: 16px; }
     }
   </style>
 </head>
 <body>
 
-<header>
-  <h1>Cermaq Media Watch</h1>
-  <div class="header-right">
-    <div class="lang-selector">
-      <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no" onclick="switchLanguage('no')">🇳🇴 NO</button>
-      <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en" onclick="switchLanguage('en')">🇬🇧 EN</button>
-      <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es" onclick="switchLanguage('es')">🇪🇸 ES</button>
-      <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja" onclick="switchLanguage('ja')">🇯🇵 JA</button>
+<div class="app-layout">
+
+  <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand-sub">Cermaq</div>
+      <div class="brand-name">Media Watch</div>
     </div>
-  </div>
-</header>
 
-<nav class="main-nav">
-  <a href="/?lang={{ lang }}" class="nav-link">{{ ui_text.nav_dashboard }}</a>
-  <a href="/alerts?lang={{ lang }}" class="nav-link active">{{ ui_text.nav_alerts }}</a>
-</nav>
+    <div class="nav-section">
+      <div class="nav-section-label">Oversikt</div>
 
-<main>
-  <h2>{{ ui_text.alerts_title }}</h2>
+      <a href="/?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        {{ ui_text.page_title }}
+      </a>
 
-  {% if db_unavailable %}
-  <div class="db-warning">
-    Database ikke tilgjengelig. Varsler krever Postgres-tilkobling.
-  </div>
-  {% endif %}
+      <a href="/alerts?lang={{ lang }}" class="nav-item active">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {{ ui_text.nav_alerts }}
+      </a>
 
-  <!-- Create alert form -->
-  <div class="card">
-    <h3>{{ ui_text.new_alert }}</h3>
-    <div class="demo-notice">{{ ui_text.demo_notice }}</div>
-    <form id="alert-form">
-      <div class="form-group">
-        <label for="alert-name">{{ ui_text.alert_name }}</label>
-        <input type="text" id="alert-name" name="name" placeholder="{{ ui_text.alert_name }}" required />
+      <a href="/?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Søk
+      </a>
+
+      <a href="/api/articles" target="_blank" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        Rapporter
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Konkurrenter</div>
+
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Mowi
+        <span class="competitor-dot" style="background:#10b981"></span>
+      </span>
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        SalMar
+        <span class="competitor-dot" style="background:#f59e0b"></span>
+      </span>
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Grieg Seafood
+        <span class="competitor-dot" style="background:#ef4444"></span>
+      </span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Innstillinger</div>
+      <a href="/api/sources" target="_blank" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+        </svg>
+        Kilder
+      </a>
+    </div>
+  </aside>
+
+  <!-- ═══ Main content ══════════════════════════════════════════ -->
+  <div class="main-content">
+
+    <header class="topbar">
+      <span class="topbar-title">{{ ui_text.nav_alerts }}</span>
+      <div class="topbar-right">
+        <div class="lang-selector">
+          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">🇳🇴 NO</button>
+          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">🇬🇧 EN</button>
+          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">🇪🇸 ES</button>
+          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">🇯🇵 JA</button>
+        </div>
+        <div class="avatar">HM</div>
       </div>
-      <div class="form-group">
-        <label for="alert-desc">{{ ui_text.alert_desc }}</label>
-        <textarea id="alert-desc" name="description" placeholder="{{ ui_text.alert_desc }}"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="alert-frequency">{{ ui_text.frequency }}</label>
-        <select id="alert-frequency" name="frequency">
-          <option value="umiddelbart">{{ ui_text.frequency_immediate }}</option>
-          <option value="hver_time">{{ ui_text.frequency_hourly }}</option>
-          <option value="daglig" selected>{{ ui_text.frequency_daily }}</option>
-          <option value="ukentlig">{{ ui_text.frequency_weekly }}</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="alert-email">{{ ui_text.email }}</label>
-        <input type="email" id="alert-email" name="email" placeholder="navn@cermaq.com" required />
-      </div>
-      <button type="submit" class="btn-primary"{% if db_unavailable %} disabled{% endif %}>{{ ui_text.create }}</button>
-    </form>
-  </div>
+    </header>
 
-  <!-- Active alerts list -->
-  <div class="card">
-    <h3>{{ ui_text.active_alerts }}</h3>
-    <ul class="alerts-list" id="alerts-list">
-      {% if alerts %}
-        {% for alert in alerts %}
-        <li class="alert-item" data-id="{{ alert.id }}">
-          <div class="alert-info">
-            <div class="alert-name">{{ alert.name }}</div>
-            {% if alert.description %}
-            <div class="alert-desc">{{ alert.description }}</div>
-            {% endif %}
-            <div class="alert-meta">{{ alert.email }} · {{ alert.frequency }}</div>
-          </div>
-          <button class="btn-delete" onclick="deleteAlert({{ alert.id }})">✕</button>
-        </li>
-        {% endfor %}
-      {% else %}
-        <li class="empty-state" id="empty-state">{{ ui_text.no_alerts }}</li>
+    <div class="page-hd">
+      <div>
+        <h1>{{ ui_text.nav_alerts }}</h1>
+        <p class="page-hd-sub">Opprett og administrer varsler for Cermaq-relaterte saker</p>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      {% if db_unavailable %}
+      <div class="db-warning">
+        ⚠ Database ikke tilgjengelig. Varsler krever Postgres-tilkobling (DATABASE_URL).
+      </div>
       {% endif %}
-    </ul>
-  </div>
-</main>
 
-<footer>Cermaq Media Watch &mdash; demo</footer>
+      <!-- Create alert form -->
+      <div class="card">
+        <div class="card-title">Nytt varsel</div>
+        <div class="demo-notice">⚠ Varselet sendes ikke faktisk i denne demo-versjonen</div>
+        <form id="alert-form">
+          <div class="form-group">
+            <label for="alert-name">Navn på varsel</label>
+            <input type="text" id="alert-name" class="form-control" name="name" placeholder="f.eks. Cermaq Chile-kriser" required />
+          </div>
+          <div class="form-group">
+            <label for="alert-desc">Hva skal varsles om</label>
+            <textarea id="alert-desc" class="form-control" name="description" placeholder="Beskriv hva slags saker som skal utløse varselet…"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="alert-frequency">Varslerfrekvens</label>
+            <select id="alert-frequency" class="form-control" name="frequency">
+              <option value="umiddelbart">Umiddelbart ved nye treff</option>
+              <option value="hver_time">Hver time (oppsamling)</option>
+              <option value="daglig" selected>Daglig sammendrag</option>
+              <option value="ukentlig">Ukentlig sammendrag</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="alert-email">E-post</label>
+            <input type="email" id="alert-email" class="form-control" name="email" placeholder="navn@cermaq.com" required />
+          </div>
+          <button type="submit" class="btn-primary"{% if db_unavailable %} disabled{% endif %}>Opprett varsel</button>
+        </form>
+      </div>
+
+      <!-- Active alerts list -->
+      <div class="card">
+        <div class="card-title">Aktive varsler</div>
+        <div id="alerts-list">
+          {% if alerts %}
+            {% for alert in alerts %}
+            <div class="alert-row" data-id="{{ alert.id }}">
+              <div class="alert-info">
+                <div class="alert-name">{{ alert.name }}</div>
+                {% if alert.description %}
+                <div class="alert-desc">{{ alert.description }}</div>
+                {% endif %}
+                <div class="alert-meta">{{ alert.email }} · {{ alert.frequency }}</div>
+              </div>
+              <button class="btn-delete" onclick="deleteAlert({{ alert.id }})">✕ Slett</button>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-alerts" id="empty-state">Ingen aktive varsler ennå.</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
 
 <script>
-  const UI_TEXTS = {
-    no: {
-      alerts_title: "Krise-varsler", new_alert: "Nytt varsel",
-      alert_name: "Navn på varsel", alert_desc: "Hva skal varsles om",
-      frequency: "Hvor ofte vil du varsles", email: "E-post",
-      create: "Opprett varsel", active_alerts: "Aktive varsler",
-      no_alerts: "Ingen aktive varsler ennå.",
-      demo_notice: "Varselet sendes ikke faktisk i denne demo-versjonen",
-      frequency_immediate: "Umiddelbart ved nye treff",
-      frequency_hourly: "Hver time (oppsamling)",
-      frequency_daily: "Daglig sammendrag",
-      frequency_weekly: "Ukentlig sammendrag",
-      nav_dashboard: "Dagsoversikt", nav_alerts: "Krise-varsler",
-    },
-    en: {
-      alerts_title: "Crisis alerts", new_alert: "New alert",
-      alert_name: "Alert name", alert_desc: "What to monitor",
-      frequency: "Notification frequency", email: "Email",
-      create: "Create alert", active_alerts: "Active alerts",
-      no_alerts: "No active alerts yet.",
-      demo_notice: "Alerts are not actually sent in this demo version",
-      frequency_immediate: "Immediately on new match",
-      frequency_hourly: "Every hour (batched)",
-      frequency_daily: "Daily digest",
-      frequency_weekly: "Weekly digest",
-      nav_dashboard: "Dashboard", nav_alerts: "Crisis alerts",
-    },
-    es: {
-      alerts_title: "Alertas de crisis", new_alert: "Nueva alerta",
-      alert_name: "Nombre de la alerta", alert_desc: "Qué monitorear",
-      frequency: "Frecuencia de notificación", email: "Correo electrónico",
-      create: "Crear alerta", active_alerts: "Alertas activas",
-      no_alerts: "No hay alertas activas todavía.",
-      demo_notice: "Las alertas no se envían realmente en esta versión demo",
-      frequency_immediate: "Inmediatamente al encontrar",
-      frequency_hourly: "Cada hora (agrupadas)",
-      frequency_daily: "Resumen diario",
-      frequency_weekly: "Resumen semanal",
-      nav_dashboard: "Panel", nav_alerts: "Alertas",
-    },
-    ja: {
-      alerts_title: "危機アラート", new_alert: "新規アラート",
-      alert_name: "アラート名", alert_desc: "何を監視するか",
-      frequency: "通知頻度", email: "メールアドレス",
-      create: "アラートを作成", active_alerts: "有効なアラート",
-      no_alerts: "まだ有効なアラートはありません。",
-      demo_notice: "このデモ版では実際にアラートは送信されません",
-      frequency_immediate: "新規ヒット時に即時",
-      frequency_hourly: "毎時（まとめて）",
-      frequency_daily: "日次ダイジェスト",
-      frequency_weekly: "週次ダイジェスト",
-      nav_dashboard: "ダッシュボード", nav_alerts: "アラート",
-    },
-  };
-
+  /* ─── Language switching ─────────────────────────────────── */
   var _urlLang = new URLSearchParams(window.location.search).get("lang");
   var _savedLang = localStorage.getItem("cermaq_lang");
   if (!_urlLang && _savedLang && _savedLang !== "no") {
@@ -398,19 +456,22 @@
     _u.searchParams.set("lang", _savedLang);
     window.location.replace(_u.toString());
   }
-  var activeLang = _urlLang || _savedLang || "no";
 
-  function switchLanguage(lang) {
-    localStorage.setItem("cermaq_lang", lang);
-    var u = new URL(window.location);
-    u.searchParams.set("lang", lang);
-    window.location.href = u.toString();
-  }
+  document.querySelectorAll(".lang-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      localStorage.setItem("cermaq_lang", btn.dataset.lang);
+      var u = new URL(window.location);
+      u.searchParams.set("lang", btn.dataset.lang);
+      window.location.href = u.toString();
+    });
+  });
 
+  /* ─── Alert form submit ──────────────────────────────────── */
   document.getElementById("alert-form").addEventListener("submit", async function(e) {
     e.preventDefault();
     var btn = this.querySelector("button[type=submit]");
     btn.disabled = true;
+    btn.textContent = "Oppretter…";
     var data = {
       name: document.getElementById("alert-name").value,
       description: document.getElementById("alert-desc").value,
@@ -420,7 +481,7 @@
     try {
       var resp = await fetch("/api/alerts", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
       if (!resp.ok) {
@@ -429,62 +490,58 @@
         return;
       }
       var created = await resp.json();
-      addAlertToList(created);
+      addAlertRow(created);
       this.reset();
-    } catch(err) {
+    } catch (err) {
       alert("Nettverksfeil: " + err.message);
     } finally {
       btn.disabled = false;
+      btn.textContent = "Opprett varsel";
     }
   });
 
-  function addAlertToList(alert) {
+  function addAlertRow(alert) {
     var list = document.getElementById("alerts-list");
     var empty = document.getElementById("empty-state");
     if (empty) empty.remove();
 
-    var li = document.createElement("li");
-    li.className = "alert-item";
-    li.dataset.id = alert.id;
-    li.innerHTML =
+    var div = document.createElement("div");
+    div.className = "alert-row";
+    div.dataset.id = alert.id;
+    div.innerHTML =
       '<div class="alert-info">' +
-        '<div class="alert-name">' + escHtml(alert.name) + '</div>' +
-        '<div class="alert-meta">' + escHtml(alert.email) + ' · ' + escHtml(alert.frequency) + '</div>' +
+        '<div class="alert-name">' + esc(alert.name) + '</div>' +
+        '<div class="alert-meta">' + esc(alert.email) + ' · ' + esc(alert.frequency) + '</div>' +
       '</div>' +
-      '<button class="btn-delete" onclick="deleteAlert(' + alert.id + ')">✕</button>';
-    list.appendChild(li);
+      '<button class="btn-delete" onclick="deleteAlert(' + alert.id + ')">✕ Slett</button>';
+    list.appendChild(div);
   }
 
   async function deleteAlert(id) {
     try {
-      var resp = await fetch("/api/alerts/" + id, {method: "DELETE"});
+      var resp = await fetch("/api/alerts/" + id, { method: "DELETE" });
       if (!resp.ok) {
         var err = await resp.json();
         alert(err.error || "Feil ved sletting");
         return;
       }
-      var item = document.querySelector('.alert-item[data-id="' + id + '"]');
+      var item = document.querySelector('.alert-row[data-id="' + id + '"]');
       if (item) item.remove();
       var list = document.getElementById("alerts-list");
       if (list && list.children.length === 0) {
-        var t = UI_TEXTS[activeLang] || UI_TEXTS.no;
-        var li = document.createElement("li");
-        li.className = "empty-state";
-        li.id = "empty-state";
-        li.textContent = t.no_alerts;
-        list.appendChild(li);
+        var d = document.createElement("div");
+        d.className = "empty-alerts";
+        d.id = "empty-state";
+        d.textContent = "Ingen aktive varsler ennå.";
+        list.appendChild(d);
       }
-    } catch(err) {
+    } catch (err) {
       alert("Nettverksfeil: " + err.message);
     }
   }
 
-  function escHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+  function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
   }
 </script>
 </body>

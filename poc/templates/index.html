@@ -9,766 +9,1182 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif; background: #f7f8fa; color: #111827; }
 
-    body {
-      font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #fafaf7;
-      color: #1a1a1a;
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
       min-height: 100vh;
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      background: #1a2332;
+      width: 220px;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
       display: flex;
       flex-direction: column;
     }
 
-    /* ── Header ── */
-    header {
-      background: #0c4a3e;
+    .sidebar-logo {
+      padding: 20px;
+      border-bottom: 1px solid #2a3441;
+    }
+    .sidebar-logo .brand-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
+    .sidebar-logo .brand-name { font-size: 15px; font-weight: 500; color: #fff; margin-top: 2px; }
+
+    .nav-section { padding: 18px 0 4px; }
+    .nav-section-label {
+      padding: 0 20px 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6e7884;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 13px;
+      color: #c9d1d9;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      transition: background 0.12s;
+      position: relative;
+    }
+    .nav-item:hover { background: #243044; }
+    .nav-item.active {
+      background: rgba(12,74,62,0.25);
       color: #fff;
-      padding: 20px 40px;
+      border-left: 3px solid #0c4a3e;
+      padding-left: 17px;
+    }
+    .nav-item svg { flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active svg { opacity: 1; }
+
+    .nav-badge {
+      margin-left: auto;
+      background: #ef4444;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 8px;
+      line-height: 1.4;
+    }
+
+    .competitor-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ─── Main content ───────────────────────────────────────── */
+    .main-content {
+      margin-left: 220px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ─── Top bar ────────────────────────────────────────────── */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 14px 28px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.75rem;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
     }
 
-    header h1 { font-size: 1.375rem; font-weight: 600; letter-spacing: -0.01em; }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 1.25rem;
+    .search-wrap {
+      position: relative;
+      flex: 1;
+      max-width: 420px;
     }
-
-    .lang-selector { display: flex; gap: 0.25rem; }
-
-    .lang-btn {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.3);
-      color: #fff;
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #9ca3af;
+      pointer-events: none;
+    }
+    .search-input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      background: #f9fafb;
       font-family: inherit;
       font-size: 13px;
-      padding: 6px 12px;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .search-input:focus { border-color: #0c4a3e; box-shadow: 0 0 0 3px rgba(12,74,62,0.08); }
+    .search-input::placeholder { color: #9ca3af; }
+
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    .lang-selector { display: flex; gap: 4px; }
+    .lang-btn {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 5px 10px;
       border-radius: 4px;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
-
-    .lang-btn.active {
-      background: #d4e4d4;
-      color: #0c4a3e;
-      border-color: #d4e4d4;
-    }
-
-    .header-date { font-size: 0.875rem; opacity: 0.8; }
-
-    /* ── Nav ── */
-    .main-nav {
-      background: #fff;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      padding: 0 40px;
-    }
-
-    .nav-link {
-      display: inline-block;
-      padding: 14px 18px;
-      color: #555;
-      text-decoration: none;
-      font-size: 0.875rem;
       font-weight: 500;
-      border-bottom: 2px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
     }
+    .lang-btn.active { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
+    .lang-btn:hover:not(.active) { border-color: #9ca3af; }
 
-    .nav-link:hover { color: #0c4a3e; }
-
-    .nav-link.active {
-      color: #0c4a3e;
-      border-bottom-color: #0c4a3e;
-    }
-
-    /* ── Stats strip ── */
-    .stats-strip {
-      background: #d4e4d4;
-      color: #0c4a3e;
-      padding: 10px 40px;
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #0c4a3e;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
       display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* ─── Page header ────────────────────────────────────────── */
+    .page-hd {
+      padding: 24px 28px 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
       flex-wrap: wrap;
-      gap: 0.5rem 1.25rem;
-      font-size: 0.8125rem;
-      font-weight: 500;
+      gap: 8px;
     }
+    .page-hd h1 { font-size: 22px; font-weight: 500; color: #111827; }
+    .page-hd-sub { font-size: 13px; color: #6b7280; margin-top: 3px; }
+    .page-hd-date { font-size: 12px; color: #6b7280; white-space: nowrap; padding-top: 4px; }
 
-    .stat-item strong { font-weight: 700; }
-    .stat-sep { opacity: 0.5; }
+    /* ─── Stat cards ─────────────────────────────────────────── */
+    .stat-cards {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 20px 28px 0;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+    .stat-card-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card-number { font-size: 24px; font-weight: 500; margin-top: 4px; color: #111827; }
+    .stat-card-number.green { color: #0c4a3e; }
+    .stat-card-number.red { color: #b91c1c; }
+    .stat-card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
-    /* ── Error banner ── */
+    /* ─── Error banner ───────────────────────────────────────── */
     .error-banner {
+      margin: 16px 28px 0;
       background: #fff0f0;
       border-left: 4px solid #c0392b;
-      margin: 1.25rem 40px 0;
-      padding: 0.875rem 1.25rem;
+      padding: 10px 14px;
       border-radius: 4px;
-      font-size: 0.875rem;
+      font-size: 13px;
       color: #7b2318;
     }
 
-    /* ── Main ── */
-    main {
-      max-width: 1200px;
-      width: 100%;
-      margin: 0 auto;
-      padding: 2rem 40px;
-      flex: 1;
+    /* ─── Digest card ────────────────────────────────────────── */
+    .digest-wrapper { padding: 20px 28px 0; }
+    .digest-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid #0c4a3e;
+      border-radius: 0;
+      padding: 22px 26px;
     }
-
-    /* ── Region filter pills ── */
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 0.875rem;
-    }
-
-    .filter-btn {
-      padding: 0.375rem 1rem;
-      border-radius: 20px;
-      border: 1.5px solid #0c4a3e;
-      background: transparent;
-      color: #0c4a3e;
-      font-family: inherit;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s;
-    }
-
-    .filter-btn:hover, .filter-btn.active {
-      background: #0c4a3e;
-      color: #fff;
-    }
-
-    /* ── Toolbar (date + sort + toggle) ── */
-    .toolbar {
+    .digest-card-hd {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      margin-bottom: 1.75rem;
+      margin-bottom: 10px;
     }
+    .digest-card-hd-left { display: flex; align-items: center; gap: 8px; }
+    .ai-badge {
+      width: 22px; height: 22px;
+      border-radius: 4px;
+      background: #d4e4d4;
+      color: #0c4a3e;
+      font-size: 9px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .digest-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #0c4a3e; font-weight: 600; }
+    .digest-timestamp { font-size: 11px; color: #9ca3af; }
+    .digest-headline { font-size: 17px; font-weight: 500; color: #111827; line-height: 1.4; margin-bottom: 10px; }
+    .digest-body { font-size: 13px; line-height: 1.65; color: #374151; }
+    .digest-body h3 { font-size: 13px; font-weight: 600; color: #0c4a3e; margin: 14px 0 5px; }
+    .digest-body p { margin: 5px 0; }
+    .digest-body ul { margin: 5px 0 5px 18px; }
+    .digest-body a { color: #0c4a3e; }
+    .digest-empty { background: #f9fafb; border-left-color: #d1d5db; padding: 18px 26px; font-size: 13px; color: #9ca3af; font-style: italic; }
 
-    .date-filters { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    /* ─── Filter card ────────────────────────────────────────── */
+    .filter-wrapper { padding: 16px 28px 0; }
+    .filter-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px 20px;
+    }
+    .filter-card-hd {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .filter-card-hd-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; font-weight: 600; }
+    .filter-reset {
+      font-size: 11px;
+      color: #6b7280;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .filter-reset:hover { color: #374151; }
 
-    .date-btn {
-      padding: 0.3125rem 0.875rem;
+    .filter-group { margin-bottom: 14px; }
+    .filter-group:last-child { margin-bottom: 0; }
+    .filter-group-label { font-size: 11px; font-weight: 500; color: #6b7280; margin-bottom: 7px; }
+
+    .btn-group { display: flex; flex-wrap: wrap; gap: 6px; }
+
+    .filter-pill {
+      padding: 5px 12px;
       border-radius: 20px;
-      border: 1px solid #ccc;
+      border: 1px solid #e5e7eb;
       background: #fff;
-      color: #555;
+      color: #6b7280;
       font-family: inherit;
-      font-size: 0.8125rem;
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-    }
-
-    .date-btn:hover { border-color: #999; color: #333; }
-
-    .date-btn.active {
-      background: #0c4a3e;
-      color: #fff;
-      border-color: #0c4a3e;
-    }
-
-    .toolbar-right { display: flex; align-items: center; gap: 0.5rem; }
-
-    #sort {
-      padding: 0.3125rem 0.75rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background: #fff;
-      color: #555;
-      font-family: inherit;
-      font-size: 0.8125rem;
-      cursor: pointer;
-    }
-
-    #cermaq-toggle {
-      padding: 0.3125rem 0.875rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      background: #fff;
-      color: #555;
-      font-family: inherit;
-      font-size: 0.8125rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
       white-space: nowrap;
     }
+    .filter-pill:hover { border-color: #9ca3af; color: #374151; }
+    .filter-pill.active { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
 
-    #cermaq-toggle:hover { border-color: #999; color: #333; }
+    .scope-pill.active-cermaq   { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
+    .scope-pill.active-core     { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+    .scope-pill.active-global   { background: #f3f4f6; color: #374151; border-color: #9ca3af; }
 
-    #cermaq-toggle.active {
-      background: #0c4a3e;
-      color: #fff;
-      border-color: #0c4a3e;
+    .tone-pill[data-tone="positiv"].active { background: #f0fdf4; color: #15803d; border-color: #86efac; }
+    .tone-pill[data-tone="noytral"].active { background: #f1f5f9; color: #475569; border-color: #94a3b8; }
+    .tone-pill[data-tone="kritisk"].active { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+
+    .filter-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
     }
 
-    /* ── Tone filter pills ── */
-    .tone-filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 0.875rem;
-    }
-
-    .tone-btn {
-      padding: 0.375rem 1rem;
-      border-radius: 20px;
+    .filter-select {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
       background: #fff;
       font-family: inherit;
-      font-size: 0.8125rem;
-      font-weight: 500;
+      font-size: 12px;
+      color: #374151;
       cursor: pointer;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      outline: none;
     }
+    .filter-select:focus { border-color: #0c4a3e; }
 
-    .tone-btn[data-tone="all"]     { border: 1.5px solid #0c4a3e; color: #0c4a3e; }
-    .tone-btn[data-tone="positiv"] { border: 1px solid #15803d;  color: #15803d; }
-    .tone-btn[data-tone="noytral"] { border: 1px solid #737373;  color: #737373; }
-    .tone-btn[data-tone="kritisk"] { border: 1px solid #b91c1c;  color: #b91c1c; }
-
-    .tone-btn[data-tone="all"].active     { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
-    .tone-btn[data-tone="positiv"].active { background: #15803d; color: #fff; border-color: #15803d; }
-    .tone-btn[data-tone="noytral"].active { background: #737373; color: #fff; border-color: #737373; }
-    .tone-btn[data-tone="kritisk"].active { background: #b91c1c; color: #fff; border-color: #b91c1c; }
-
-    /* ── Article grid ── */
-    .story-cards {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 24px;
-    }
-
-    @media (min-width: 640px) {
-      .story-cards { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    @media (min-width: 1024px) {
-      .story-cards { grid-template-columns: repeat(3, 1fr); }
-    }
-
-    /* ── Card ── */
-    .card {
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.04);
-      overflow: hidden;
+    /* ─── Result header ──────────────────────────────────────── */
+    .result-hd {
+      padding: 14px 28px 8px;
       display: flex;
-      flex-direction: column;
-      transition: box-shadow 0.15s ease, transform 0.15s ease;
-    }
-
-    .card:hover {
-      box-shadow: 0 6px 20px rgba(12,74,62,0.14), 0 0 0 1px rgba(12,74,62,0.08);
-      transform: translateY(-2px);
-    }
-
-    .card-image { width: 100%; height: 200px; object-fit: cover; display: block; }
-
-    .card-body {
-      padding: 1.25rem;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .card-meta-top {
-      display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 0.375rem;
+      justify-content: space-between;
+      gap: 12px;
     }
-
-    .badge {
+    .result-count { font-size: 13px; color: #6b7280; }
+    .result-actions { display: flex; gap: 8px; }
+    .result-action-btn {
+      padding: 5px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      text-decoration: none;
       display: inline-flex;
       align-items: center;
-      font-size: 0.625rem;
+      gap: 4px;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .result-action-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+
+    /* ─── Article feed ───────────────────────────────────────── */
+    .article-feed {
+      padding: 0 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .article-row {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 1fr 90px;
+      gap: 18px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: box-shadow 0.12s;
+    }
+    .article-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.08); border-color: #d1d5db; }
+
+    .article-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    .source-favicon {
+      width: 16px; height: 16px;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
       font-weight: 700;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-      padding: 0.2rem 0.5rem;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .source-name { font-size: 11px; font-weight: 600; color: #6b7280; }
+    .meta-dot { font-size: 10px; color: #d1d5db; }
+    .time-ago { font-size: 11px; color: #9ca3af; }
+
+    .scope-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
       border-radius: 3px;
       white-space: nowrap;
     }
+    .scope-cermaq   { background: #d4e4d4; color: #0c4a3e; }
+    .scope-core     { background: #dbeafe; color: #1e40af; }
+    .scope-global   { background: #f3f4f6; color: #4b5563; }
+    .scope-pending  { background: #f3f4f6; color: #9ca3af; font-style: italic; }
 
-    .badge-norge  { background: #0c4a3e; color: #fff; }
-    .badge-chile  { background: #b8541f; color: #fff; }
-    .badge-canada { background: #1a3a5c; color: #fff; }
-    .badge-global { background: #5a6f6a; color: #fff; }
+    .region-flag { font-size: 11px; }
 
-    .badge-cermaq   { background: #0c4a3e; color: #fff; }
-    .badge-industry { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
-    .badge-pending  { background: #f3f4f6; color: #9ca3af; border: 1px solid #e5e7eb; font-style: italic; }
-
-    .tone-positiv { font-size: 0.75rem; font-weight: 600; color: #15803d; }
-    .tone-kritisk { font-size: 0.75rem; font-weight: 600; color: #b91c1c; }
-
-    .card-source {
-      font-size: 0.6875rem;
+    .tone-badge {
+      font-size: 10px;
       font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #6b7280;
+      padding: 2px 6px;
+      border-radius: 3px;
     }
+    .tone-positiv { background: #f0fdf4; color: #15803d; }
+    .tone-noytral { background: #f1f5f9; color: #475569; }
+    .tone-kritisk { background: #fef2f2; color: #b91c1c; }
 
-    .card-title { font-size: 0.9375rem; font-weight: 500; line-height: 1.45; flex: 1; }
-    .card-title a { color: inherit; text-decoration: none; }
-    .card-title a:hover { color: #0c4a3e; text-decoration: underline; }
+    .relevance-star { font-size: 10px; color: #9ca3af; }
 
-    .card-summary {
-      font-size: 0.8125rem;
-      color: #555;
-      line-height: 1.55;
+    .article-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #111827;
+      line-height: 1.4;
+      text-decoration: none;
+      display: block;
+      margin-bottom: 5px;
+    }
+    .article-title:hover { color: #0c4a3e; }
+
+    .article-summary {
+      font-size: 12px;
+      color: #6b7280;
+      line-height: 1.5;
       display: -webkit-box;
-      -webkit-line-clamp: 4;
+      -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
 
-    .card-date { font-size: 0.75rem; color: #9ca3af; margin-top: auto; padding-top: 0.5rem; }
-
-    .empty {
-      grid-column: 1 / -1;
-      text-align: center;
-      padding: 5rem 0;
-      color: #aaa;
-      font-size: 0.9375rem;
-    }
-
-    /* ── Digest card ── */
-    .digest-card {
-      background: #fff;
-      border-left: 4px solid #0c4a3e;
-      padding: 24px 32px;
-      margin: 24px 40px 0;
-      max-width: 1200px;
+    .article-img-wrap { align-self: start; }
+    .article-img-wrap img {
+      width: 90px; height: 68px;
+      object-fit: cover;
       border-radius: 4px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      display: block;
+    }
+    .article-img-placeholder {
+      width: 90px; height: 68px;
+      border-radius: 4px;
     }
 
-    @media (min-width: 1280px) {
-      .digest-card { margin-left: auto; margin-right: auto; }
-    }
-
-    .digest-card h2 {
-      margin: 0 0 4px;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #0c4a3e;
-      font-weight: 600;
-    }
-
-    .digest-headline {
-      font-size: 1.25rem;
-      font-weight: 600;
-      margin: 12px 0 16px;
-      color: #1a1a1a;
-      line-height: 1.3;
-    }
-
-    .digest-body { font-size: 0.9375rem; line-height: 1.7; color: #2a2a2a; }
-    .digest-body h3 { font-size: 1rem; font-weight: 600; color: #0c4a3e; margin: 20px 0 8px; }
-    .digest-body p { margin: 8px 0; }
-    .digest-body strong { color: #0c4a3e; }
-
-    .digest-meta { font-size: 0.75rem; color: #888; margin: 4px 0; }
-
-    .digest-empty {
-      background: #f5f5f5;
-      border-left-color: #ccc;
+    .empty-feed {
       text-align: center;
-      font-style: italic;
-      color: #999;
-      padding: 20px 32px;
-    }
-
-    /* ── Footer ── */
-    footer {
-      background: #fff;
-      border-top: 1px solid #e5e5e0;
-      text-align: center;
-      padding: 1.25rem 40px;
-      font-size: 0.75rem;
+      padding: 48px 0;
+      font-size: 14px;
       color: #9ca3af;
+    }
+
+    /* ─── Load more ──────────────────────────────────────────── */
+    .load-more-wrap {
+      padding: 18px 28px 28px;
+      text-align: center;
+    }
+    .load-more-btn {
+      padding: 8px 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 5px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s;
+    }
+    .load-more-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+
+    /* ─── Hidden legacy stat placeholders ───────────────────── */
+    .stat-hidden { display: none !important; }
+
+    /* ─── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .app-layout { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; }
+      .stat-cards { grid-template-columns: repeat(2, 1fr); }
+      .filter-row-3 { grid-template-columns: 1fr; }
+      .article-row { grid-template-columns: 1fr; }
+      .article-img-wrap { display: none; }
+      .topbar { padding: 12px 16px; }
+      .page-hd, .stat-cards, .digest-wrapper, .filter-wrapper,
+      .result-hd, .article-feed, .load-more-wrap { padding-left: 16px; padding-right: 16px; }
     }
   </style>
 </head>
 <body>
 
-  <header>
-    <h1>Cermaq Media Watch</h1>
-    <div class="header-right">
-      <div class="lang-selector">
-        <button class="lang-btn active" data-lang="no" title="Norsk">🇳🇴 NO</button>
-        <button class="lang-btn" data-lang="en" title="English">🇬🇧 EN</button>
-        <button class="lang-btn" data-lang="es" title="Español">🇪🇸 ES</button>
-        <button class="lang-btn" data-lang="ja" title="日本語">🇯🇵 JA</button>
-      </div>
-      <span class="header-date">{{ today }}</span>
+<div class="app-layout">
+
+  <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand-sub">Cermaq</div>
+      <div class="brand-name">Media Watch</div>
     </div>
-  </header>
 
-  <nav class="main-nav">
-    <a href="/?lang={{ lang }}" class="nav-link active">{{ ui_text.nav_dashboard }}</a>
-    <a href="/alerts?lang={{ lang }}" class="nav-link">{{ ui_text.nav_alerts }}</a>
-  </nav>
+    <div class="nav-section">
+      <div class="nav-section-label">Oversikt</div>
 
-  <div class="stats-strip">
-    <span class="stat-item"><strong id="stat-total">{{ articles | length }}</strong> artikler</span>
-    <span class="stat-sep">·</span>
-    <span class="stat-item"><strong id="stat-cermaq">{{ cermaq_count }}</strong> Cermaq</span>
-    <span class="stat-sep">·</span>
-    <span class="stat-item">
-      Norge <strong id="stat-norge">{{ region_counts.norge }}</strong> ·
-      Chile <strong id="stat-chile">{{ region_counts.chile }}</strong> ·
-      Canada <strong id="stat-canada">{{ region_counts.canada }}</strong> ·
-      Global <strong id="stat-global">{{ region_counts.global }}</strong>
-    </span>
-    <span class="stat-sep">·</span>
-    <span class="stat-item">
-      ↑ <strong id="stat-positiv">{{ articles | selectattr('tone', 'equalto', 'positiv') | list | length }}</strong> ·
-      — <strong id="stat-noytral">{{ articles | selectattr('tone', 'equalto', 'noytral') | list | length }}</strong> ·
-      ↓ <strong id="stat-kritisk">{{ articles | selectattr('tone', 'equalto', 'kritisk') | list | length }}</strong>
-    </span>
-    <span class="stat-sep">·</span>
-    <span class="stat-item">
-      {% if total_count > 0 %}
-        <strong>{{ classified_count }}</strong> av <strong>{{ total_count }}</strong> klassifisert
-        {% if queue_size > 0 %}&nbsp;({{ queue_size }} i kø){% endif %}
-      {% else %}
-        Laster…
-      {% endif %}
-    </span>
-  </div>
+      <a href="/?lang={{ lang }}" class="nav-item active">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        {{ ui_text.page_title }}
+      </a>
 
-  {% if error %}
-  <div class="error-banner">
-    <strong>Kunne ikke hente artikler:</strong> {{ error }}
-  </div>
-  {% endif %}
+      <a href="/alerts?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {{ ui_text.nav_alerts }}
+      </a>
 
-  {% if digest %}
-  <section class="digest-card">
-    <h2>{{ ui_text.digest_title }}</h2>
-    <p class="digest-meta">
-      {{ ui_text.based_on }} {{ digest.article_count }} {{ ui_text.articles }}
-      {% if digest.cermaq_count > 0 %} · {{ digest.cermaq_count }} Cermaq{% endif %}
-    </p>
-    <h3 class="digest-headline">{{ digest.headline }}</h3>
-    <div class="digest-body">{{ digest.body | safe }}</div>
-    <p class="digest-meta">{{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}</p>
-    {% if digest.search_count and digest.search_count > 0 %}
-    <p class="digest-meta">{{ ui_text.searches_used }} {{ digest.search_count }}</p>
+      <a href="#" class="nav-item" onclick="document.querySelector('.search-input').focus();return false;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Søk
+      </a>
+
+      <a href="/api/articles" target="_blank" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        Rapporter
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Konkurrenter</div>
+
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Mowi
+        <span class="competitor-dot" style="background:#10b981"></span>
+      </span>
+
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        SalMar
+        <span class="competitor-dot" style="background:#f59e0b"></span>
+      </span>
+
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Grieg Seafood
+        <span class="competitor-dot" style="background:#ef4444"></span>
+      </span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">Innstillinger</div>
+
+      <a href="/api/sources" target="_blank" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+        </svg>
+        Kilder
+      </a>
+    </div>
+  </aside>
+
+  <!-- ═══ Main content ══════════════════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="search-input" id="search-input" type="text"
+               placeholder="Søk i artikler, kilder, personer…" autocomplete="off" />
+      </div>
+      <div class="topbar-right">
+        <div class="lang-selector">
+          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">🇳🇴 NO</button>
+          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">🇬🇧 EN</button>
+          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">🇪🇸 ES</button>
+          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">🇯🇵 JA</button>
+        </div>
+        <div class="avatar">HM</div>
+      </div>
+    </header>
+
+    <!-- Page header -->
+    <div class="page-hd">
+      <div>
+        <h1>{{ ui_text.page_title }}</h1>
+        <p class="page-hd-sub">{{ ui_text.page_subtitle }}</p>
+      </div>
+      <span class="page-hd-date">{{ today }}</span>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="stat-cards">
+      <div class="stat-card">
+        <div class="stat-card-label">Artikler</div>
+        <div class="stat-card-number" id="stat-total">{{ articles | length }}</div>
+        <div class="stat-card-sub" id="stat-queue-info">
+          {% if queue_size > 0 %}{{ queue_size }} i kø{% else %}{{ classified_count }} klassifisert{% endif %}
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Cermaq-omtaler</div>
+        <div class="stat-card-number green" id="stat-cermaq">{{ cermaq_count }}</div>
+        <div class="stat-card-sub">direkte Cermaq-saker</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Kritisk omtale</div>
+        <div class="stat-card-number{% if kritisk_count > 0 %} red{% endif %}" id="stat-kritisk">{{ kritisk_count }}</div>
+        <div class="stat-card-sub">negativ dekning</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-card-label">Aktive kilder</div>
+        <div class="stat-card-number" id="stat-sources">–</div>
+        <div class="stat-card-sub" id="stat-region-dist">
+          NO {{ region_counts.norge }} · CL {{ region_counts.chile }} · CA {{ region_counts.canada }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden legacy stat placeholders (used by applyFilters) -->
+    <span class="stat-hidden" id="stat-norge">{{ region_counts.norge }}</span>
+    <span class="stat-hidden" id="stat-chile">{{ region_counts.chile }}</span>
+    <span class="stat-hidden" id="stat-canada">{{ region_counts.canada }}</span>
+    <span class="stat-hidden" id="stat-global">{{ region_counts.global }}</span>
+    <span class="stat-hidden" id="stat-positiv">{{ articles | selectattr('tone', 'equalto', 'positiv') | list | length }}</span>
+    <span class="stat-hidden" id="stat-noytral">{{ articles | selectattr('tone', 'equalto', 'noytral') | list | length }}</span>
+
+    {% if error %}
+    <div class="error-banner"><strong>Feil:</strong> {{ error }}</div>
     {% endif %}
-  </section>
-  {% else %}
-  <section class="digest-card digest-empty">
-    <p>{{ ui_text.digest_pending }}</p>
-  </section>
-  {% endif %}
 
-  <main>
-    <div class="filters">
-      <button class="filter-btn active" data-region="all" data-key="all">Alle</button>
-      <button class="filter-btn" data-region="norge" data-key="norway">Norge</button>
-      <button class="filter-btn" data-region="chile" data-key="chile">Chile</button>
-      <button class="filter-btn" data-region="canada" data-key="canada">Canada</button>
-      <button class="filter-btn" data-region="global" data-key="global">Global</button>
-    </div>
-
-    <div class="tone-filters">
-      <button class="tone-btn active" data-tone="all"     data-key="all_tones">Alle toner</button>
-      <button class="tone-btn"        data-tone="positiv" data-key="positive">Positiv</button>
-      <button class="tone-btn"        data-tone="noytral" data-key="neutral">Nøytral</button>
-      <button class="tone-btn"        data-tone="kritisk" data-key="critical">Kritisk</button>
-    </div>
-
-    <div class="toolbar">
-      <div class="date-filters">
-        <button class="date-btn active" data-range="today" data-key="today">I dag</button>
-        <button class="date-btn" data-range="week" data-key="week">Siste 7 dager</button>
-        <button class="date-btn" data-range="month" data-key="month">Siste 30 dager</button>
+    <!-- Digest -->
+    <div class="digest-wrapper">
+      {% if digest %}
+      <div class="digest-card">
+        <div class="digest-card-hd">
+          <div class="digest-card-hd-left">
+            <div class="ai-badge">AI</div>
+            <span class="digest-label">{{ ui_text.digest_title }}</span>
+          </div>
+          <span class="digest-timestamp">
+            {{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}
+            {% if digest.search_count and digest.search_count > 0 %}
+             · {{ digest.search_count }} {{ ui_text.searches_used }}
+            {% endif %}
+          </span>
+        </div>
+        <div class="digest-headline">{{ digest.headline }}</div>
+        <div class="digest-body">{{ digest.body | safe }}</div>
       </div>
-      <div class="toolbar-right">
-        <select id="sort">
-          <option value="relevance" data-key="sort_relevance">Relevans</option>
-          <option value="newest" data-key="sort_newest">Nyeste først</option>
-        </select>
-        <button id="cermaq-toggle" data-key="cermaq_only">Kun Cermaq</button>
+      {% else %}
+      <div class="digest-card digest-empty">{{ ui_text.digest_pending }}</div>
+      {% endif %}
+    </div>
+
+    <!-- Filter card -->
+    <div class="filter-wrapper">
+      <div class="filter-card">
+        <div class="filter-card-hd">
+          <span class="filter-card-hd-label">Filtrer artikler</span>
+          <button class="filter-reset" id="reset-filters">Tilbakestill alle</button>
+        </div>
+
+        <!-- Scope filter -->
+        <div class="filter-group">
+          <div class="filter-group-label">Omtale-nivå</div>
+          <div class="btn-group">
+            <button class="filter-pill scope-pill active" data-scope-filter="all">
+              Alle ({{ articles | length }})
+            </button>
+            <button class="filter-pill scope-pill" data-scope-filter="cermaq">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#0c4a3e;margin-right:4px;vertical-align:middle"></span>Cermaq direkte ({{ cermaq_count }})
+            </button>
+            <button class="filter-pill scope-pill" data-scope-filter="industry-core">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1e40af;margin-right:4px;vertical-align:middle"></span>Bransje i Cermaq-områder ({{ industry_core_count }})
+            </button>
+            <button class="filter-pill scope-pill" data-scope-filter="industry-global">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#9ca3af;margin-right:4px;vertical-align:middle"></span>Bransje generelt ({{ industry_global_count }})
+            </button>
+          </div>
+        </div>
+
+        <!-- Region filter -->
+        <div class="filter-group">
+          <div class="filter-group-label">Land og region</div>
+          <div class="btn-group">
+            <button class="filter-pill active" data-region="all">Alle</button>
+            <button class="filter-pill" data-region="norge">🇳🇴 Norge ({{ region_counts.norge }})</button>
+            <button class="filter-pill" data-region="chile">🇨🇱 Chile ({{ region_counts.chile }})</button>
+            <button class="filter-pill" data-region="canada">🇨🇦 Canada ({{ region_counts.canada }})</button>
+            <button class="filter-pill" data-region="global">🌐 Globalt ({{ region_counts.global }})</button>
+          </div>
+        </div>
+
+        <!-- Tone + date + sort -->
+        <div class="filter-row-3">
+          <div class="filter-group">
+            <div class="filter-group-label">Tone</div>
+            <div class="btn-group">
+              <button class="filter-pill tone-pill active" data-tone="all">Alle</button>
+              <button class="filter-pill tone-pill" data-tone="positiv">Positiv</button>
+              <button class="filter-pill tone-pill" data-tone="noytral">Nøytral</button>
+              <button class="filter-pill tone-pill" data-tone="kritisk">Kritisk</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <div class="filter-group-label">Tidsperiode</div>
+            <select class="filter-select" id="date-select">
+              <option value="today">I dag</option>
+              <option value="week">Siste 7 dager</option>
+              <option value="month">Siste 30 dager</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <div class="filter-group-label">Sortér</div>
+            <select class="filter-select" id="sort">
+              <option value="relevance">Relevans</option>
+              <option value="newest">Nyeste først</option>
+              <option value="oldest">Eldste først</option>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="story-cards">
+    <!-- Result header -->
+    <div class="result-hd">
+      <span class="result-count" id="result-count">Viser 0 artikler</span>
+      <div class="result-actions">
+        <button class="result-action-btn" title="Eksporter ikke tilgjengelig i demo">📥 Eksporter</button>
+        <a href="/alerts?lang={{ lang }}" class="result-action-btn">🔔 Lag varsel</a>
+      </div>
+    </div>
+
+    <!-- Article feed -->
+    <div class="article-feed" id="article-feed">
       {% if articles %}
-        {% set rk = {"norge": "norway", "chile": "chile", "canada": "canada", "global": "global"} %}
         {% for a in articles %}
           {% set r = a.region or "global" %}
-          {% set excerpt = a.content | striptags | truncate(240, True, "…") %}
+          {% set excerpt = a.content | striptags | truncate(200, True, "…") %}
           {% set sumno = a.summaries.no or excerpt %}
           {% set sumen = a.summaries.en or excerpt %}
           {% set sumes = a.summaries.es or excerpt %}
           {% set sumja = a.summaries.ja or excerpt %}
-          <div class="card"
-               data-region="{{ r }}"
-               data-published-at="{{ a.published_at_iso }}"
-               data-relevance="{{ a.relevance or 1 }}"
-               data-scope="{{ a.scope or '' }}"
-               data-tone="{{ a.tone or '' }}">
-            {% if a.image_url %}
-            <img class="card-image" src="{{ a.image_url }}" alt="" loading="lazy" />
-            {% endif %}
-            <div class="card-body">
+          {% if a.scope == 'cermaq' %}
+            {% set scope_cls = 'scope-cermaq' %}
+            {% set scope_lbl = 'Cermaq direkte' %}
+          {% elif a.scope == 'industry' and r in ['norge', 'chile', 'canada'] %}
+            {% set scope_cls = 'scope-core' %}
+            {% set scope_lbl = 'Bransje i Cermaq-områder' %}
+          {% elif a.scope == 'industry' %}
+            {% set scope_cls = 'scope-global' %}
+            {% set scope_lbl = 'Bransje generelt' %}
+          {% else %}
+            {% set scope_cls = 'scope-pending' %}
+            {% set scope_lbl = 'Klassifiseres…' %}
+          {% endif %}
+          {% set region_flags = {'norge': '🇳🇴', 'chile': '🇨🇱', 'canada': '🇨🇦', 'global': '🌐'} %}
+          <a class="article-row"
+             href="{{ a.url }}" target="_blank" rel="noopener"
+             data-region="{{ r }}"
+             data-published-at="{{ a.published_at_iso }}"
+             data-relevance="{{ a.relevance or 1 }}"
+             data-scope="{{ a.scope or '' }}"
+             data-tone="{{ a.tone or '' }}"
+             data-source="{{ a.source_name or '' }}"
+             data-title="{{ a.title | lower }}">
 
-              <div class="card-meta-top">
+            <div class="article-left">
+              <div class="article-meta">
+                <span class="source-favicon" data-source-name="{{ a.source_name or 'U' }}">{{ (a.source_name or 'U')[0] | upper }}</span>
+                <span class="source-name">{{ a.source_name or "Ukjent" }}</span>
+                <span class="meta-dot">·</span>
+                <span class="time-ago" data-published="{{ a.published_at_iso }}">{{ a.published_at }}</span>
                 {% if a.scope %}
-                  <span class="badge badge-{{ r }}" data-key="{{ rk.get(r, r) }}">{{ r | capitalize }}</span>
-                  {% if a.scope == "cermaq" %}
-                    <span class="badge badge-cermaq" data-key="scope_cermaq">Cermaq</span>
-                  {% else %}
-                    <span class="badge badge-industry" data-key="scope_industry">Bransje</span>
-                  {% endif %}
-                  {% if a.tone == "positiv" %}
-                    <span class="tone-positiv">↑ <span data-key="tone_positive">Positiv</span></span>
-                  {% elif a.tone == "kritisk" %}
-                    <span class="tone-kritisk">↓ <span data-key="tone_critical">Kritisk</span></span>
-                  {% endif %}
-                {% else %}
-                  <span class="badge badge-pending"><span data-key="classifying">Klassifiseres…</span></span>
+                <span class="scope-badge {{ scope_cls }}">{{ scope_lbl }}</span>
                 {% endif %}
+                <span class="region-flag">{{ region_flags.get(r, '🌐') }}</span>
+                {% if a.tone == 'positiv' %}
+                  <span class="tone-badge tone-positiv lang-text" data-lang="no">↑ Positiv</span>
+                  <span class="tone-badge tone-positiv lang-text" data-lang="en" style="display:none">↑ Positive</span>
+                  <span class="tone-badge tone-positiv lang-text" data-lang="es" style="display:none">↑ Positivo</span>
+                  <span class="tone-badge tone-positiv lang-text" data-lang="ja" style="display:none">↑ ポジティブ</span>
+                {% elif a.tone == 'kritisk' %}
+                  <span class="tone-badge tone-kritisk lang-text" data-lang="no">↓ Kritisk</span>
+                  <span class="tone-badge tone-kritisk lang-text" data-lang="en" style="display:none">↓ Critical</span>
+                  <span class="tone-badge tone-kritisk lang-text" data-lang="es" style="display:none">↓ Crítico</span>
+                  <span class="tone-badge tone-kritisk lang-text" data-lang="ja" style="display:none">↓ 批判的</span>
+                {% elif a.tone == 'noytral' %}
+                  <span class="tone-badge tone-noytral" style="background:#f1f5f9;color:#475569">— <span class="lang-text" data-lang="no" style="display:inline">Nøytral</span><span class="lang-text" data-lang="en" style="display:none">Neutral</span><span class="lang-text" data-lang="es" style="display:none">Neutral</span><span class="lang-text" data-lang="ja" style="display:none">中立</span></span>
+                {% endif %}
+                {% if a.relevance %}<span class="relevance-star">★ {{ a.relevance }}</span>{% endif %}
               </div>
 
-              <span class="card-source">{{ a.source_name or "Ukjent kilde" }}</span>
-
-              <p class="card-title">
-                <a href="{{ a.url }}" target="_blank" rel="noopener">{{ a.title }}</a>
-              </p>
+              <span class="article-title">{{ a.title }}</span>
 
               <div class="summary-container">
-                <p class="card-summary lang-text" data-lang="no">{{ sumno }}</p>
-                <p class="card-summary lang-text" data-lang="en" style="display:none">{{ sumen }}</p>
-                <p class="card-summary lang-text" data-lang="es" style="display:none">{{ sumes }}</p>
-                <p class="card-summary lang-text" data-lang="ja" style="display:none">{{ sumja }}</p>
+                <p class="article-summary lang-text" data-lang="no">{{ sumno }}</p>
+                <p class="article-summary lang-text" data-lang="en" style="display:none">{{ sumen }}</p>
+                <p class="article-summary lang-text" data-lang="es" style="display:none">{{ sumes }}</p>
+                <p class="article-summary lang-text" data-lang="ja" style="display:none">{{ sumja }}</p>
               </div>
-
-              <span class="card-date">{{ a.published_at }}</span>
             </div>
-          </div>
+
+            <div class="article-img-wrap">
+              {% if a.image_url %}
+              <img src="{{ a.image_url }}" alt="" loading="lazy" />
+              {% else %}
+              <div class="article-img-placeholder" data-source-name="{{ a.source_name or '' }}" style="background: #e5e7eb;"></div>
+              {% endif %}
+            </div>
+          </a>
         {% endfor %}
       {% else %}
-        <p class="empty">Ingen artikler funnet.</p>
+        <div class="empty-feed">Ingen artikler funnet.</div>
       {% endif %}
     </div>
-  </main>
 
-  <footer>
-    Cermaq Media Watch &nbsp;·&nbsp; Generert {{ generated_at }} &nbsp;·&nbsp;
-    Henter fra Miniflux hver 30. min &nbsp;·&nbsp; Klassifisert med Claude Haiku
-  </footer>
+    <!-- Load more -->
+    <div class="load-more-wrap" id="load-more-wrap" style="display:none">
+      <button class="load-more-btn" id="load-more">Last flere artikler</button>
+    </div>
 
-  <script>
-    const UI_TEXTS = {
-      no: {
-        all: "Alle", norway: "Norge", chile: "Chile", canada: "Canada", global: "Global",
-        today: "I dag", week: "Siste 7 dager", month: "Siste 30 dager",
-        sort_relevance: "Relevans", sort_newest: "Nyeste først",
-        cermaq_only: "Kun Cermaq", scope_cermaq: "Cermaq", scope_industry: "Bransje",
-        classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv",
-        all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk",
-        digest_title: "Dagens oppsummering", digest_pending: "Dagens oppsummering genereres…",
-        based_on: "Basert på", articles: "artikler", generated_at: "Generert",
-        searches_used: "Web-søk brukt:", nav_dashboard: "Dagsoversikt", nav_alerts: "Krise-varsler"
-      },
-      en: {
-        all: "All", norway: "Norway", chile: "Chile", canada: "Canada", global: "Global",
-        today: "Today", week: "Last 7 days", month: "Last 30 days",
-        sort_relevance: "Relevance", sort_newest: "Newest first",
-        cermaq_only: "Cermaq only", scope_cermaq: "Cermaq", scope_industry: "Industry",
-        classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive",
-        all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical",
-        digest_title: "Daily summary", digest_pending: "Daily summary being generated…",
-        based_on: "Based on", articles: "articles", generated_at: "Generated",
-        searches_used: "Web searches used:", nav_dashboard: "Dashboard", nav_alerts: "Crisis alerts"
-      },
-      es: {
-        all: "Todos", norway: "Noruega", chile: "Chile", canada: "Canadá", global: "Global",
-        today: "Hoy", week: "Últimos 7 días", month: "Últimos 30 días",
-        sort_relevance: "Relevancia", sort_newest: "Más recientes",
-        cermaq_only: "Solo Cermaq", scope_cermaq: "Cermaq", scope_industry: "Industria",
-        classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo",
-        all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico",
-        digest_title: "Resumen del día", digest_pending: "Resumen del día generándose…",
-        based_on: "Basado en", articles: "artículos", generated_at: "Generado",
-        searches_used: "Búsquedas web usadas:", nav_dashboard: "Panel", nav_alerts: "Alertas"
-      },
-      ja: {
-        all: "すべて", norway: "ノルウェー", chile: "チリ", canada: "カナダ", global: "グローバル",
-        today: "今日", week: "過去7日間", month: "過去30日間",
-        sort_relevance: "関連性", sort_newest: "最新順",
-        cermaq_only: "Cermaqのみ", scope_cermaq: "Cermaq", scope_industry: "業界",
-        classifying: "分類中…", tone_critical: "批判的", tone_positive: "ポジティブ",
-        all_tones: "すべてのトーン", positive: "ポジティブ", neutral: "中立", critical: "批判的",
-        digest_title: "本日のまとめ", digest_pending: "本日のまとめを生成中…",
-        based_on: "対象記事", articles: "件", generated_at: "生成日時",
-        searches_used: "ウェブ検索使用回数:", nav_dashboard: "ダッシュボード", nav_alerts: "アラート"
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<script>
+  /* ─── Language texts ─────────────────────────────────────── */
+  const UI_TEXTS = {
+    no: {
+      all: "Alle", norway: "Norge", chile: "Chile", canada: "Canada", global: "Global",
+      today: "I dag", week: "Siste 7 dager", month: "Siste 30 dager",
+      sort_relevance: "Relevans", sort_newest: "Nyeste først", sort_oldest: "Eldste først",
+      cermaq_only: "Kun Cermaq", scope_cermaq: "Cermaq", scope_industry: "Bransje",
+      classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv",
+      all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk",
+      digest_title: "Dagens oppsummering", digest_pending: "Dagens oppsummering genereres…",
+      based_on: "Basert på", articles: "artikler", generated_at: "Generert",
+      searches_used: "søk", nav_dashboard: "Dagsoversikt", nav_alerts: "Krise-varsler",
+      page_title: "Nyheter", page_subtitle: "Daglig oversikt over Cermaq og bransjedekning",
+      showing: "Viser", of: "av",
+    },
+    en: {
+      all: "All", norway: "Norway", chile: "Chile", canada: "Canada", global: "Global",
+      today: "Today", week: "Last 7 days", month: "Last 30 days",
+      sort_relevance: "Relevance", sort_newest: "Newest first", sort_oldest: "Oldest first",
+      cermaq_only: "Cermaq only", scope_cermaq: "Cermaq", scope_industry: "Industry",
+      classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive",
+      all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical",
+      digest_title: "Daily summary", digest_pending: "Daily summary being generated…",
+      based_on: "Based on", articles: "articles", generated_at: "Generated",
+      searches_used: "searches", nav_dashboard: "Dashboard", nav_alerts: "Crisis alerts",
+      page_title: "News", page_subtitle: "Daily overview of Cermaq and industry coverage",
+      showing: "Showing", of: "of",
+    },
+    es: {
+      all: "Todos", norway: "Noruega", chile: "Chile", canada: "Canadá", global: "Global",
+      today: "Hoy", week: "Últimos 7 días", month: "Últimos 30 días",
+      sort_relevance: "Relevancia", sort_newest: "Más recientes", sort_oldest: "Más antiguos",
+      cermaq_only: "Solo Cermaq", scope_cermaq: "Cermaq", scope_industry: "Industria",
+      classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo",
+      all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico",
+      digest_title: "Resumen del día", digest_pending: "Resumen del día generándose…",
+      based_on: "Basado en", articles: "artículos", generated_at: "Generado",
+      searches_used: "búsquedas", nav_dashboard: "Panel", nav_alerts: "Alertas",
+      page_title: "Noticias", page_subtitle: "Resumen diario de Cermaq y cobertura de la industria",
+      showing: "Mostrando", of: "de",
+    },
+    ja: {
+      all: "すべて", norway: "ノルウェー", chile: "チリ", canada: "カナダ", global: "グローバル",
+      today: "今日", week: "過去7日間", month: "過去30日間",
+      sort_relevance: "関連性", sort_newest: "最新順", sort_oldest: "古い順",
+      cermaq_only: "Cermaqのみ", scope_cermaq: "Cermaq", scope_industry: "業界",
+      classifying: "分類中…", tone_critical: "批判的", tone_positive: "ポジティブ",
+      all_tones: "すべてのトーン", positive: "ポジティブ", neutral: "中立", critical: "批判的",
+      digest_title: "本日のまとめ", digest_pending: "本日のまとめを生成中…",
+      based_on: "対象記事", articles: "件", generated_at: "生成日時",
+      searches_used: "検索", nav_dashboard: "ダッシュボード", nav_alerts: "アラート",
+      page_title: "ニュース", page_subtitle: "Cermaと業界報道の毎日の概要",
+      showing: "表示中", of: "/",
+    },
+  };
+
+  /* ─── Language init ──────────────────────────────────────── */
+  var _urlLang = new URLSearchParams(window.location.search).get("lang");
+  var _savedLang = localStorage.getItem("cermaq_lang");
+  if (!_urlLang && _savedLang && _savedLang !== "no") {
+    var _u = new URL(window.location);
+    _u.searchParams.set("lang", _savedLang);
+    window.location.replace(_u.toString());
+  }
+  var activeLang = _urlLang || _savedLang || "no";
+
+  /* ─── Filter state ───────────────────────────────────────── */
+  var activeRegion = "all";
+  var activeDateRange = "today";
+  var activeTone = "all";
+  var activeScopeFilter = "all";
+  var activeSearch = "";
+  var cermaqActive = false; // legacy compat
+  var currentVisible = 25;
+  var PAGE_SIZE = 25;
+
+  var DATE_MS = { today: 86400000, week: 604800000, month: 2592000000 };
+
+  /* ─── Source favicon colors ──────────────────────────────── */
+  var SRC_COLORS = ['#0c4a3e','#1e40af','#7e22ce','#c2410c','#b45309','#0891b2','#065f46','#1d4ed8'];
+  function srcColor(name) {
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+    return SRC_COLORS[h % SRC_COLORS.length];
+  }
+
+  /* ─── Time-since helper ──────────────────────────────────── */
+  function timeSince(isoStr) {
+    if (!isoStr) return "";
+    var diff = Date.now() - new Date(isoStr).getTime();
+    if (diff < 0) return "";
+    if (diff < 60000) return "Nå";
+    if (diff < 3600000) return Math.floor(diff / 60000) + " min siden";
+    if (diff < 86400000) return Math.floor(diff / 3600000) + " t siden";
+    return Math.floor(diff / 86400000) + " d siden";
+  }
+
+  /* ─── Init source favicons and time-ago ──────────────────── */
+  function initRows() {
+    document.querySelectorAll(".source-favicon").forEach(function(el) {
+      el.style.background = srcColor(el.dataset.sourceName || "?");
+    });
+    document.querySelectorAll(".article-img-placeholder").forEach(function(el) {
+      el.style.background = srcColor(el.dataset.sourceName || "?") + "22";
+    });
+    document.querySelectorAll(".time-ago[data-published]").forEach(function(el) {
+      var ts = timeSince(el.dataset.published);
+      if (ts) el.textContent = ts;
+    });
+  }
+
+  /* ─── Main filter + sort ─────────────────────────────────── */
+  function applyFilters() {
+    var now = Date.now();
+    var maxAge = DATE_MS[activeDateRange] || DATE_MS.today;
+    var sortBy = document.getElementById("sort").value;
+    var searchLc = activeSearch.toLowerCase();
+    var allRows = Array.from(document.querySelectorAll("#article-feed .article-row"));
+
+    var visible = allRows.filter(function(row) {
+      // Region
+      if (activeRegion !== "all" && row.dataset.region !== activeRegion) return false;
+
+      // Date
+      var iso = row.dataset.publishedAt;
+      if (iso) {
+        var age = now - new Date(iso).getTime();
+        if (age < 0 || age > maxAge) return false;
       }
-    };
 
-    const DATE_MS = { today: 86400000, week: 604800000, month: 2592000000 };
+      // Tone
+      if (activeTone !== "all" && row.dataset.tone !== activeTone) return false;
 
-    var _urlLang = new URLSearchParams(window.location.search).get("lang");
-    var _savedLang = localStorage.getItem("cermaq_lang");
-    if (!_urlLang && _savedLang && _savedLang !== "no") {
-      var _u = new URL(window.location);
-      _u.searchParams.set("lang", _savedLang);
-      window.location.replace(_u.toString());
-    }
-    let activeLang = _urlLang || _savedLang || "no";
-    let activeRegion = "all";
-    let activeDateRange = "today";
-    let activeTone = "all";
-    let cermaqActive = false;
+      // Scope
+      if (activeScopeFilter !== "all") {
+        var scope = row.dataset.scope;
+        var region = row.dataset.region;
+        var coreRegions = ["norge", "chile", "canada"];
+        if (activeScopeFilter === "cermaq" && scope !== "cermaq") return false;
+        if (activeScopeFilter === "industry-core" && !(scope === "industry" && coreRegions.indexOf(region) > -1)) return false;
+        if (activeScopeFilter === "industry-global" && !(scope === "industry" && coreRegions.indexOf(region) === -1)) return false;
+      }
 
-    function applyLang(lang) {
-      activeLang = lang;
-      localStorage.setItem("cermaq_lang", lang);
+      // Search
+      if (searchLc) {
+        var title = (row.dataset.title || "").toLowerCase();
+        var source = (row.dataset.source || "").toLowerCase();
+        if (title.indexOf(searchLc) === -1 && source.indexOf(searchLc) === -1) return false;
+      }
 
-      document.querySelectorAll(".lang-btn").forEach(function(b) {
-        b.classList.toggle("active", b.dataset.lang === lang);
-      });
-
-      var t = UI_TEXTS[lang] || UI_TEXTS.no;
-      document.querySelectorAll("[data-key]").forEach(function(el) {
-        if (t[el.dataset.key] !== undefined) el.textContent = t[el.dataset.key];
-      });
-
-      document.querySelectorAll(".lang-text").forEach(function(el) {
-        el.style.display = el.dataset.lang === lang ? "" : "none";
-      });
-    }
-
-    function applyFilters() {
-      var now = Date.now();
-      var maxAge = DATE_MS[activeDateRange];
-      var sortBy = document.getElementById("sort").value;
-      var allCards = Array.from(document.querySelectorAll(".card"));
-
-      var visibleCards = allCards.filter(function(card) {
-        if (activeRegion !== "all" && card.dataset.region !== activeRegion) return false;
-
-        var iso = card.dataset.publishedAt;
-        if (iso) {
-          var age = now - new Date(iso).getTime();
-          if (age < 0 || age > maxAge) return false;
-        }
-
-        if (activeTone !== "all" && card.dataset.tone !== activeTone) return false;
-
-        if (cermaqActive && card.dataset.scope !== "cermaq") return false;
-
-        return true;
-      });
-
-      visibleCards.sort(function(a, b) {
-        if (sortBy === "relevance") {
-          return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
-        }
-        return new Date(b.dataset.publishedAt || 0) - new Date(a.dataset.publishedAt || 0);
-      });
-
-      allCards.forEach(function(c) { c.style.display = "none"; });
-      var grid = document.querySelector(".story-cards");
-      visibleCards.forEach(function(c) {
-        c.style.display = "";
-        grid.appendChild(c);
-      });
-
-      var regionCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
-      var toneCounts = { positiv: 0, noytral: 0, kritisk: 0 };
-      var cermaqCount = 0;
-      visibleCards.forEach(function(c) {
-        var r = c.dataset.region;
-        if (r in regionCounts) regionCounts[r]++;
-        else regionCounts.global++;
-        if (c.dataset.scope === "cermaq") cermaqCount++;
-        var t = c.dataset.tone;
-        if (t in toneCounts) toneCounts[t]++;
-      });
-
-      document.getElementById("stat-total").textContent = visibleCards.length;
-      document.getElementById("stat-cermaq").textContent = cermaqCount;
-      document.getElementById("stat-norge").textContent = regionCounts.norge;
-      document.getElementById("stat-chile").textContent = regionCounts.chile;
-      document.getElementById("stat-canada").textContent = regionCounts.canada;
-      document.getElementById("stat-global").textContent = regionCounts.global;
-      document.getElementById("stat-positiv").textContent = toneCounts.positiv;
-      document.getElementById("stat-noytral").textContent = toneCounts.noytral;
-      document.getElementById("stat-kritisk").textContent = toneCounts.kritisk;
-    }
-
-    function switchLanguage(newLang) {
-      localStorage.setItem("cermaq_lang", newLang);
-      var u = new URL(window.location);
-      u.searchParams.set("lang", newLang);
-      window.location.href = u.toString();
-    }
-
-    document.querySelectorAll(".lang-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() { switchLanguage(btn.dataset.lang); });
+      return true;
     });
 
-    document.querySelectorAll(".filter-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        document.querySelectorAll(".filter-btn").forEach(function(b) { b.classList.remove("active"); });
-        btn.classList.add("active");
-        activeRegion = btn.dataset.region;
-        applyFilters();
-      });
+    // Sort
+    visible.sort(function(a, b) {
+      if (sortBy === "relevance") {
+        return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
+      }
+      if (sortBy === "oldest") {
+        return new Date(a.dataset.publishedAt || 0) - new Date(b.dataset.publishedAt || 0);
+      }
+      return new Date(b.dataset.publishedAt || 0) - new Date(a.dataset.publishedAt || 0);
     });
 
-    document.querySelectorAll(".date-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        document.querySelectorAll(".date-btn").forEach(function(b) { b.classList.remove("active"); });
-        btn.classList.add("active");
-        activeDateRange = btn.dataset.range;
-        applyFilters();
-      });
+    // Hide all, then show paginated
+    allRows.forEach(function(r) { r.style.display = "none"; });
+    var feed = document.getElementById("article-feed");
+    var toShow = visible.slice(0, currentVisible);
+    toShow.forEach(function(r) {
+      r.style.display = "";
+      feed.appendChild(r);
     });
 
-    document.querySelectorAll(".tone-btn").forEach(function(btn) {
-      btn.addEventListener("click", function() {
-        document.querySelectorAll(".tone-btn").forEach(function(b) { b.classList.remove("active"); });
-        btn.classList.add("active");
-        activeTone = btn.dataset.tone;
-        applyFilters();
-      });
+    // Load more button
+    var loadWrap = document.getElementById("load-more-wrap");
+    var remaining = visible.length - currentVisible;
+    if (remaining > 0) {
+      loadWrap.style.display = "";
+      document.getElementById("load-more").textContent = "Last " + remaining + " flere artikler";
+    } else {
+      loadWrap.style.display = "none";
+    }
+
+    // Stats
+    var regionCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
+    var toneCounts = { positiv: 0, noytral: 0, kritisk: 0 };
+    var cermaqCount = 0;
+    var sources = new Set();
+    visible.forEach(function(r) {
+      var reg = r.dataset.region;
+      if (reg in regionCounts) regionCounts[reg]++; else regionCounts.global++;
+      if (r.dataset.scope === "cermaq") cermaqCount++;
+      var t = r.dataset.tone;
+      if (t in toneCounts) toneCounts[t]++;
+      if (r.dataset.source) sources.add(r.dataset.source);
     });
 
-    document.getElementById("sort").addEventListener("change", applyFilters);
+    document.getElementById("stat-total").textContent = visible.length;
+    document.getElementById("stat-cermaq").textContent = cermaqCount;
+    document.getElementById("stat-kritisk").textContent = toneCounts.kritisk;
+    document.getElementById("stat-sources").textContent = sources.size || "–";
+    document.getElementById("stat-norge").textContent = regionCounts.norge;
+    document.getElementById("stat-chile").textContent = regionCounts.chile;
+    document.getElementById("stat-canada").textContent = regionCounts.canada;
+    document.getElementById("stat-global").textContent = regionCounts.global;
+    document.getElementById("stat-positiv").textContent = toneCounts.positiv;
+    document.getElementById("stat-noytral").textContent = toneCounts.noytral;
 
-    document.getElementById("cermaq-toggle").addEventListener("click", function() {
-      cermaqActive = !cermaqActive;
-      this.classList.toggle("active", cermaqActive);
+    var t = UI_TEXTS[activeLang] || UI_TEXTS.no;
+    document.getElementById("result-count").textContent =
+      t.showing + " " + Math.min(currentVisible, visible.length) + " " + t.of + " " + visible.length + " artikler";
+  }
+
+  /* ─── Language apply ─────────────────────────────────────── */
+  function applyLang(lang) {
+    activeLang = lang;
+    localStorage.setItem("cermaq_lang", lang);
+    document.querySelectorAll(".lang-btn").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.lang === lang);
+    });
+    var t = UI_TEXTS[lang] || UI_TEXTS.no;
+    document.querySelectorAll("[data-key]").forEach(function(el) {
+      if (t[el.dataset.key] !== undefined) el.textContent = t[el.dataset.key];
+    });
+    document.querySelectorAll(".lang-text").forEach(function(el) {
+      el.style.display = el.dataset.lang === lang ? "" : "none";
+    });
+  }
+
+  function switchLanguage(newLang) {
+    localStorage.setItem("cermaq_lang", newLang);
+    var u = new URL(window.location);
+    u.searchParams.set("lang", newLang);
+    window.location.href = u.toString();
+  }
+
+  /* ─── Event listeners ────────────────────────────────────── */
+  document.querySelectorAll(".lang-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() { switchLanguage(btn.dataset.lang); });
+  });
+
+  document.querySelectorAll(".scope-pill").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".scope-pill").forEach(function(b) {
+        b.classList.remove("active", "active-cermaq", "active-core", "active-global");
+      });
+      btn.classList.add("active");
+      activeScopeFilter = btn.dataset.scopeFilter;
+      cermaqActive = activeScopeFilter === "cermaq";
+      currentVisible = PAGE_SIZE;
       applyFilters();
     });
+  });
 
-    applyLang(activeLang);
+  document.querySelectorAll("[data-region]").forEach(function(btn) {
+    if (!btn.classList.contains("scope-pill")) {
+      btn.addEventListener("click", function() {
+        document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        activeRegion = btn.dataset.region;
+        currentVisible = PAGE_SIZE;
+        applyFilters();
+      });
+    }
+  });
+
+  document.querySelectorAll(".tone-pill").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".tone-pill").forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      activeTone = btn.dataset.tone;
+      currentVisible = PAGE_SIZE;
+      applyFilters();
+    });
+  });
+
+  document.getElementById("date-select").addEventListener("change", function() {
+    activeDateRange = this.value;
+    currentVisible = PAGE_SIZE;
     applyFilters();
-  </script>
+  });
+
+  document.getElementById("sort").addEventListener("change", function() {
+    currentVisible = PAGE_SIZE;
+    applyFilters();
+  });
+
+  document.getElementById("reset-filters").addEventListener("click", function() {
+    activeRegion = "all";
+    activeDateRange = "today";
+    activeTone = "all";
+    activeScopeFilter = "all";
+    activeSearch = "";
+    cermaqActive = false;
+    currentVisible = PAGE_SIZE;
+    document.getElementById("search-input").value = "";
+    document.getElementById("date-select").value = "today";
+    document.getElementById("sort").value = "relevance";
+    document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.region === "all");
+    });
+    document.querySelectorAll(".scope-pill").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.scopeFilter === "all");
+    });
+    document.querySelectorAll(".tone-pill").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.tone === "all");
+    });
+    applyFilters();
+  });
+
+  document.getElementById("load-more").addEventListener("click", function() {
+    currentVisible += PAGE_SIZE;
+    applyFilters();
+  });
+
+  var _searchTimer;
+  document.getElementById("search-input").addEventListener("input", function() {
+    clearTimeout(_searchTimer);
+    var val = this.value;
+    _searchTimer = setTimeout(function() {
+      activeSearch = val;
+      currentVisible = PAGE_SIZE;
+      applyFilters();
+    }, 200);
+  });
+
+  /* ─── Boot ───────────────────────────────────────────────── */
+  initRows();
+  applyLang(activeLang);
+  applyFilters();
+</script>
 
 </body>
 </html>
