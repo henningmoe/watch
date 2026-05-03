@@ -299,6 +299,7 @@
     }
     .filter-pill:hover { border-color: #9ca3af; color: #374151; }
     .filter-pill.active { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
+    .pill-count { font-size: 11px; opacity: 0.75; margin-left: 2px; }
 
     .scope-pill.active-cermaq   { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
     .scope-pill.active-core     { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
@@ -306,7 +307,9 @@
 
     .tone-pill[data-tone="positiv"].active { background: #f0fdf4; color: #15803d; border-color: #86efac; }
     .tone-pill[data-tone="noytral"].active { background: #f1f5f9; color: #475569; border-color: #94a3b8; }
-    .tone-pill[data-tone="kritisk"].active { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+    .tone-pill[data-tone="negativ"].active { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
+
+    .tone-negativ { background: #fef2f2; color: #b91c1c; }
 
     .filter-row-3 {
       display: grid;
@@ -513,13 +516,13 @@
     </div>
 
     <div class="nav-section">
-      <div class="nav-section-label">Oversikt</div>
+      <div class="nav-section-label">{{ ui_text.nav_overview }}</div>
 
       <a href="/?lang={{ lang }}" class="nav-item active">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
         </svg>
-        {{ ui_text.page_title }}
+        {{ ui_text.nav_news }}
       </a>
 
       <a href="/alerts?lang={{ lang }}" class="nav-item">
@@ -533,19 +536,19 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        Søk
+        {{ ui_text.nav_search }}
       </a>
 
       <a href="/api/articles" target="_blank" class="nav-item">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-        Rapporter
+        {{ ui_text.nav_reports }}
       </a>
     </div>
 
     <div class="nav-section">
-      <div class="nav-section-label">Konkurrenter</div>
+      <div class="nav-section-label">{{ ui_text.nav_competitors }}</div>
 
       <span class="nav-item">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -573,14 +576,14 @@
     </div>
 
     <div class="nav-section">
-      <div class="nav-section-label">Innstillinger</div>
+      <div class="nav-section-label">{{ ui_text.nav_settings }}</div>
 
       <a href="/api/sources" target="_blank" class="nav-item">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/>
           <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
         </svg>
-        Kilder
+        {{ ui_text.nav_sources }}
       </a>
     </div>
   </aside>
@@ -595,14 +598,14 @@
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         <input class="search-input" id="search-input" type="text"
-               placeholder="Søk i artikler, kilder, personer…" autocomplete="off" />
+               placeholder="{{ ui_text.search_placeholder }}" autocomplete="off" />
       </div>
       <div class="topbar-right">
         <div class="lang-selector">
-          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">🇳🇴 NO</button>
-          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">🇬🇧 EN</button>
-          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">🇨🇱 ES</button>
-          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">🇯🇵 JA</button>
+          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">NO</button>
+          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">EN</button>
+          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">ES</button>
+          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">JA</button>
         </div>
         <div class="avatar">HM</div>
       </div>
@@ -620,24 +623,24 @@
     <!-- Stat cards -->
     <div class="stat-cards">
       <div class="stat-card">
-        <div class="stat-card-label">Artikler</div>
+        <div class="stat-card-label">{{ ui_text.stat_articles }}</div>
         <div class="stat-card-number" id="stat-total">{{ articles | length }}</div>
         <div class="stat-card-sub" id="stat-queue-info">
-          {% if queue_size > 0 %}{{ queue_size }} i kø{% else %}{{ classified_count }} klassifisert{% endif %}
+          {% if queue_size > 0 %}{{ queue_size }} i kø{% else %}{{ ui_text.stat_articles_subtitle | replace('{n}', classified_count | string) }}{% endif %}
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-card-label">Cermaq-omtaler</div>
+        <div class="stat-card-label">{{ ui_text.stat_cermaq }}</div>
         <div class="stat-card-number green" id="stat-cermaq">{{ cermaq_count }}</div>
-        <div class="stat-card-sub">direkte Cermaq-saker</div>
+        <div class="stat-card-sub">{{ ui_text.stat_cermaq_subtitle }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-card-label">Kritisk omtale</div>
-        <div class="stat-card-number{% if kritisk_count > 0 %} red{% endif %}" id="stat-kritisk">{{ kritisk_count }}</div>
-        <div class="stat-card-sub">negativ dekning</div>
+        <div class="stat-card-label">{{ ui_text.stat_negative }}</div>
+        <div class="stat-card-number{% if negative_count > 0 %} red{% endif %}" id="stat-negative">{{ negative_count }}</div>
+        <div class="stat-card-sub">{{ ui_text.stat_negative_subtitle }}</div>
       </div>
       <div class="stat-card">
-        <div class="stat-card-label">Aktive kilder</div>
+        <div class="stat-card-label">{{ ui_text.stat_sources }}</div>
         <div class="stat-card-number" id="stat-sources">–</div>
         <div class="stat-card-sub" id="stat-region-dist">
           NO {{ region_counts.norge }} · CL {{ region_counts.chile }} · CA {{ region_counts.canada }}
@@ -652,6 +655,7 @@
     <span class="stat-hidden" id="stat-global">{{ region_counts.global }}</span>
     <span class="stat-hidden" id="stat-positiv">{{ articles | selectattr('tone', 'equalto', 'positiv') | list | length }}</span>
     <span class="stat-hidden" id="stat-noytral">{{ articles | selectattr('tone', 'equalto', 'noytral') | list | length }}</span>
+    <span class="stat-hidden" id="stat-kritisk">{{ negative_count }}</span>
 
     {% if error %}
     <div class="error-banner"><strong>Feil:</strong> {{ error }}</div>
@@ -685,66 +689,76 @@
     <div class="filter-wrapper">
       <div class="filter-card">
         <div class="filter-card-hd">
-          <span class="filter-card-hd-label">Filtrer artikler</span>
-          <button class="filter-reset" id="reset-filters">Tilbakestill alle</button>
+          <span class="filter-card-hd-label">{{ ui_text.filter_title }}</span>
+          <button class="filter-reset" id="reset-filters">{{ ui_text.filter_reset }}</button>
         </div>
 
         <!-- Scope filter -->
         <div class="filter-group">
-          <div class="filter-group-label">Omtale-nivå</div>
+          <div class="filter-group-label">{{ ui_text.filter_scope }}</div>
           <div class="btn-group">
             <button class="filter-pill scope-pill active" data-scope-filter="all">
-              Alle ({{ articles | length }})
+              {{ ui_text.filter_all }} <span class="pill-count">{{ articles | length }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="cermaq">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#0c4a3e;margin-right:4px;vertical-align:middle"></span>Cermaq direkte ({{ cermaq_count }})
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#0c4a3e;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_cermaq }} <span class="pill-count">{{ cermaq_count }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="industry-core">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1e40af;margin-right:4px;vertical-align:middle"></span>Bransje i Cermaq-områder ({{ industry_core_count }})
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1e40af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_in_regions }} <span class="pill-count">{{ industry_core_count }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="industry-global">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#9ca3af;margin-right:4px;vertical-align:middle"></span>Bransje generelt ({{ industry_global_count }})
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#9ca3af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_general }} <span class="pill-count">{{ industry_global_count }}</span>
             </button>
           </div>
         </div>
 
         <!-- Region filter -->
         <div class="filter-group">
-          <div class="filter-group-label">Land og region</div>
+          <div class="filter-group-label">{{ ui_text.filter_country }}</div>
           <div class="btn-group">
-            <button class="filter-pill active" data-region="all">Alle</button>
-            <button class="filter-pill" data-region="norge">🇳🇴 Norge ({{ region_counts.norge }})</button>
-            <button class="filter-pill" data-region="chile">🇨🇱 Chile ({{ region_counts.chile }})</button>
-            <button class="filter-pill" data-region="canada">🇨🇦 Canada ({{ region_counts.canada }})</button>
-            <button class="filter-pill" data-region="global">🌐 Globalt ({{ region_counts.global }})</button>
+            <button class="filter-pill active" data-region="all">{{ ui_text.filter_all }}</button>
+            <button class="filter-pill" data-region="norge">{{ ui_text.country_norway }} <span class="pill-count">{{ region_counts.norge }}</span></button>
+            <button class="filter-pill" data-region="chile">{{ ui_text.country_chile }} <span class="pill-count">{{ region_counts.chile }}</span></button>
+            <button class="filter-pill" data-region="canada">{{ ui_text.country_canada }} <span class="pill-count">{{ region_counts.canada }}</span></button>
+            <button class="filter-pill" data-region="global">{{ ui_text.country_global }} <span class="pill-count">{{ region_counts.global }}</span></button>
+          </div>
+        </div>
+
+        <!-- Source type filter -->
+        <div class="filter-group">
+          <div class="filter-group-label">{{ ui_text.filter_source }}</div>
+          <div class="btn-group">
+            <button class="filter-pill source-pill active" data-source-filter="all">{{ ui_text.filter_all }}</button>
+            <button class="filter-pill source-pill" data-source-filter="nyheter">{{ ui_text.source_news }} <span class="pill-count"></span></button>
+            <button class="filter-pill source-pill" data-source-filter="some">{{ ui_text.source_some }} <span class="pill-count"></span></button>
           </div>
         </div>
 
         <!-- Tone + date + sort -->
         <div class="filter-row-3">
           <div class="filter-group">
-            <div class="filter-group-label">Tone</div>
+            <div class="filter-group-label">{{ ui_text.filter_tone }}</div>
             <div class="btn-group">
-              <button class="filter-pill tone-pill active" data-tone="all">Alle</button>
-              <button class="filter-pill tone-pill" data-tone="positiv">Positiv</button>
-              <button class="filter-pill tone-pill" data-tone="noytral">Nøytral</button>
-              <button class="filter-pill tone-pill" data-tone="kritisk">Kritisk</button>
+              <button class="filter-pill tone-pill active" data-tone="all">{{ ui_text.filter_all }}</button>
+              <button class="filter-pill tone-pill" data-tone="positiv">{{ ui_text.tone_positive }} <span class="pill-count"></span></button>
+              <button class="filter-pill tone-pill" data-tone="noytral">{{ ui_text.tone_neutral }} <span class="pill-count"></span></button>
+              <button class="filter-pill tone-pill" data-tone="negativ">{{ ui_text.tone_negative }} <span class="pill-count"></span></button>
             </div>
           </div>
           <div class="filter-group">
-            <div class="filter-group-label">Tidsperiode</div>
+            <div class="filter-group-label">{{ ui_text.filter_time }}</div>
             <select class="filter-select" id="date-select">
-              <option value="today">I dag</option>
-              <option value="week">Siste 7 dager</option>
-              <option value="month">Siste 30 dager</option>
+              <option value="today">{{ ui_text.time_today }}</option>
+              <option value="week">{{ ui_text.time_7days }}</option>
+              <option value="month">{{ ui_text.time_30days }}</option>
             </select>
           </div>
           <div class="filter-group">
-            <div class="filter-group-label">Sortér</div>
+            <div class="filter-group-label">{{ ui_text.filter_sort }}</div>
             <select class="filter-select" id="sort">
-              <option value="relevance">Relevans</option>
-              <option value="newest">Nyeste først</option>
-              <option value="oldest">Eldste først</option>
+              <option value="relevance">{{ ui_text.sort_relevance }}</option>
+              <option value="newest">{{ ui_text.sort_newest }}</option>
+              <option value="oldest">{{ ui_text.sort_oldest }}</option>
             </select>
           </div>
         </div>
@@ -753,10 +767,10 @@
 
     <!-- Result header -->
     <div class="result-hd">
-      <span class="result-count" id="result-count">Viser 0 artikler</span>
+      <span class="result-count" id="result-count"></span>
       <div class="result-actions">
-        <button class="result-action-btn" title="Eksporter ikke tilgjengelig i demo">📥 Eksporter</button>
-        <a href="/alerts?lang={{ lang }}" class="result-action-btn">🔔 Lag varsel</a>
+        <button class="result-action-btn" title="{{ ui_text.btn_export }}">📥 {{ ui_text.btn_export }}</button>
+        <a href="/alerts?lang={{ lang }}" class="result-action-btn">🔔 {{ ui_text.btn_create_alert }}</a>
       </div>
     </div>
 
@@ -772,13 +786,13 @@
           {% set sumja = a.summaries.ja or excerpt %}
           {% if a.scope == 'cermaq' %}
             {% set scope_cls = 'scope-cermaq' %}
-            {% set scope_lbl = 'Cermaq direkte' %}
+            {% set scope_lbl = ui_text.scope_cermaq %}
           {% elif a.scope == 'industry' and r in ['norge', 'chile', 'canada'] %}
             {% set scope_cls = 'scope-core' %}
-            {% set scope_lbl = 'Bransje i Cermaq-områder' %}
+            {% set scope_lbl = ui_text.scope_industry_in_regions %}
           {% elif a.scope == 'industry' %}
             {% set scope_cls = 'scope-global' %}
-            {% set scope_lbl = 'Bransje generelt' %}
+            {% set scope_lbl = ui_text.scope_industry_general %}
           {% else %}
             {% set scope_cls = 'scope-pending' %}
             {% set scope_lbl = 'Klassifiseres…' %}
@@ -792,6 +806,7 @@
              data-scope="{{ a.scope or '' }}"
              data-tone="{{ a.tone or '' }}"
              data-source="{{ a.source_name or '' }}"
+             data-fetch-method="{{ a.fetch_method or 'miniflux' }}"
              data-title="{{ a.title | lower }}">
 
             <div class="article-left">
@@ -805,22 +820,16 @@
                 {% endif %}
                 <span class="region-flag">{{ region_flags.get(r, '🌐') }}</span>
                 {% if a.tone == 'positiv' %}
-                  <span class="tone-badge tone-positiv lang-text" data-lang="no">↑ Positiv</span>
-                  <span class="tone-badge tone-positiv lang-text" data-lang="en" style="display:none">↑ Positive</span>
-                  <span class="tone-badge tone-positiv lang-text" data-lang="es" style="display:none">↑ Positivo</span>
-                  <span class="tone-badge tone-positiv lang-text" data-lang="ja" style="display:none">↑ ポジティブ</span>
-                {% elif a.tone == 'kritisk' %}
-                  <span class="tone-badge tone-kritisk lang-text" data-lang="no">↓ Kritisk</span>
-                  <span class="tone-badge tone-kritisk lang-text" data-lang="en" style="display:none">↓ Critical</span>
-                  <span class="tone-badge tone-kritisk lang-text" data-lang="es" style="display:none">↓ Crítico</span>
-                  <span class="tone-badge tone-kritisk lang-text" data-lang="ja" style="display:none">↓ 批判的</span>
+                  <span class="tone-badge tone-positiv">↑ {{ ui_text.tone_positive }}</span>
+                {% elif a.tone in ('kritisk', 'negativ') %}
+                  <span class="tone-badge tone-kritisk tone-negativ">↓ {{ ui_text.tone_negative }}</span>
                 {% elif a.tone == 'noytral' %}
-                  <span class="tone-badge tone-noytral" style="background:#f1f5f9;color:#475569">— <span class="lang-text" data-lang="no" style="display:inline">Nøytral</span><span class="lang-text" data-lang="en" style="display:none">Neutral</span><span class="lang-text" data-lang="es" style="display:none">Neutral</span><span class="lang-text" data-lang="ja" style="display:none">中立</span></span>
+                  <span class="tone-badge tone-noytral">— {{ ui_text.tone_neutral }}</span>
                 {% endif %}
                 {% if a.relevance %}<span class="relevance-star">★ {{ a.relevance }}</span>{% endif %}
               </div>
 
-              <span class="article-title">{{ a.title }}</span>
+              <span class="article-title">{% if a.titles and a.titles.get(lang) %}{{ a.titles[lang] }}{% else %}{{ a.title }}{% endif %}</span>
 
               <div class="summary-container">
                 <p class="article-summary lang-text" data-lang="no">{{ sumno }}</p>
@@ -846,84 +855,62 @@
 
     <!-- Load more -->
     <div class="load-more-wrap" id="load-more-wrap" style="display:none">
-      <button class="load-more-btn" id="load-more">Last flere artikler</button>
+      <button class="load-more-btn" id="load-more">{{ ui_text.load_more }}</button>
     </div>
 
   </div><!-- /main-content -->
 </div><!-- /app-layout -->
 
 <script>
-  /* ─── Language texts ─────────────────────────────────────── */
-  const UI_TEXTS = {
-    no: {
-      all: "Alle", norway: "Norge", chile: "Chile", canada: "Canada", global: "Global",
-      today: "I dag", week: "Siste 7 dager", month: "Siste 30 dager",
-      sort_relevance: "Relevans", sort_newest: "Nyeste først", sort_oldest: "Eldste først",
-      cermaq_only: "Kun Cermaq", scope_cermaq: "Cermaq", scope_industry: "Bransje",
-      classifying: "Klassifiseres…", tone_critical: "Kritisk", tone_positive: "Positiv",
-      all_tones: "Alle toner", positive: "Positiv", neutral: "Nøytral", critical: "Kritisk",
-      digest_title: "Dagens oppsummering", digest_pending: "Dagens oppsummering genereres…",
-      based_on: "Basert på", articles: "artikler", generated_at: "Generert",
-      searches_used: "søk", nav_dashboard: "Dagsoversikt", nav_alerts: "Varsling",
-      page_title: "Nyheter", page_subtitle: "Daglig oversikt over Cermaq og bransjedekning",
-      showing: "Viser", of: "av",
-    },
-    en: {
-      all: "All", norway: "Norway", chile: "Chile", canada: "Canada", global: "Global",
-      today: "Today", week: "Last 7 days", month: "Last 30 days",
-      sort_relevance: "Relevance", sort_newest: "Newest first", sort_oldest: "Oldest first",
-      cermaq_only: "Cermaq only", scope_cermaq: "Cermaq", scope_industry: "Industry",
-      classifying: "Classifying…", tone_critical: "Critical", tone_positive: "Positive",
-      all_tones: "All tones", positive: "Positive", neutral: "Neutral", critical: "Critical",
-      digest_title: "Daily summary", digest_pending: "Daily summary being generated…",
-      based_on: "Based on", articles: "articles", generated_at: "Generated",
-      searches_used: "searches", nav_dashboard: "Dashboard", nav_alerts: "Alerts",
-      page_title: "News", page_subtitle: "Daily overview of Cermaq and industry coverage",
-      showing: "Showing", of: "of",
-    },
-    es: {
-      all: "Todos", norway: "Noruega", chile: "Chile", canada: "Canadá", global: "Global",
-      today: "Hoy", week: "Últimos 7 días", month: "Últimos 30 días",
-      sort_relevance: "Relevancia", sort_newest: "Más recientes", sort_oldest: "Más antiguos",
-      cermaq_only: "Solo Cermaq", scope_cermaq: "Cermaq", scope_industry: "Industria",
-      classifying: "Clasificando…", tone_critical: "Crítico", tone_positive: "Positivo",
-      all_tones: "Todos los tonos", positive: "Positivo", neutral: "Neutral", critical: "Crítico",
-      digest_title: "Resumen del día", digest_pending: "Resumen del día generándose…",
-      based_on: "Basado en", articles: "artículos", generated_at: "Generado",
-      searches_used: "búsquedas", nav_dashboard: "Panel", nav_alerts: "Alertas",
-      page_title: "Noticias", page_subtitle: "Resumen diario de Cermaq y cobertura de la industria",
-      showing: "Mostrando", of: "de",
-    },
-    ja: {
-      all: "すべて", norway: "ノルウェー", chile: "チリ", canada: "カナダ", global: "グローバル",
-      today: "今日", week: "過去7日間", month: "過去30日間",
-      sort_relevance: "関連性", sort_newest: "最新順", sort_oldest: "古い順",
-      cermaq_only: "Cermaqのみ", scope_cermaq: "Cermaq", scope_industry: "業界",
-      classifying: "分類中…", tone_critical: "批判的", tone_positive: "ポジティブ",
-      all_tones: "すべてのトーン", positive: "ポジティブ", neutral: "中立", critical: "批判的",
-      digest_title: "本日のまとめ", digest_pending: "本日のまとめを生成中…",
-      based_on: "対象記事", articles: "件", generated_at: "生成日時",
-      searches_used: "検索", nav_dashboard: "ダッシュボード", nav_alerts: "アラート",
-      page_title: "ニュース", page_subtitle: "Cermaと業界報道の毎日の概要",
-      showing: "表示中", of: "/",
-    },
-  };
+  /* ─── UI texts from server (current language) ───────────── */
+  const UI_TEXTS = {{ ui_text | tojson }};
+
+  /* ─── Translation helpers (backwards-compat) ────────────── */
+  function translateScope(value) {
+    var map = {
+      "cermaq": UI_TEXTS.scope_cermaq,
+      "industry_in_regions": UI_TEXTS.scope_industry_in_regions,
+      "industry": UI_TEXTS.scope_industry_general,
+    };
+    return map[value] || value;
+  }
+
+  function translateTone(value) {
+    var v = (value || "").toLowerCase();
+    if (v === "positiv" || v === "positive") return UI_TEXTS.tone_positive;
+    if (v === "nøytral" || v === "noytral" || v === "neutral") return UI_TEXTS.tone_neutral;
+    if (v === "negativ" || v === "negative" || v === "kritisk" || v === "critical") return UI_TEXTS.tone_negative;
+    return value;
+  }
+
+  function translateCountry(value) {
+    var map = {
+      "norge": UI_TEXTS.country_norway,
+      "norway": UI_TEXTS.country_norway,
+      "chile": UI_TEXTS.country_chile,
+      "canada": UI_TEXTS.country_canada,
+      "global": UI_TEXTS.country_global,
+      "globalt": UI_TEXTS.country_global,
+    };
+    return map[(value || "").toLowerCase()] || value;
+  }
 
   /* ─── Language init ──────────────────────────────────────── */
-  var _urlLang = new URLSearchParams(window.location.search).get("lang");
+  var _urlLang = new URLSearchParams(window.location.search).get("lang") || "no";
   var _savedLang = localStorage.getItem("cermaq_lang");
   if (!_urlLang && _savedLang && _savedLang !== "no") {
     var _u = new URL(window.location);
     _u.searchParams.set("lang", _savedLang);
     window.location.replace(_u.toString());
   }
-  var activeLang = _urlLang || _savedLang || "no";
+  var activeLang = _urlLang;
 
   /* ─── Filter state ───────────────────────────────────────── */
   var activeRegion = "all";
   var activeDateRange = "today";
   var activeTone = "all";
   var activeScopeFilter = "all";
+  var activeSourceFilter = "all";
   var activeSearch = "";
   var cermaqActive = false; // legacy compat
   var currentVisible = 25;
@@ -945,9 +932,119 @@
     var diff = Date.now() - new Date(isoStr).getTime();
     if (diff < 0) return "";
     if (diff < 60000) return "Nå";
-    if (diff < 3600000) return Math.floor(diff / 60000) + " min siden";
-    if (diff < 86400000) return Math.floor(diff / 3600000) + " t siden";
-    return Math.floor(diff / 86400000) + " d siden";
+    if (diff < 3600000) return (UI_TEXTS.time_ago_minutes || "{n} min siden").replace("{n}", Math.floor(diff / 60000));
+    if (diff < 86400000) return (UI_TEXTS.time_ago_hours || "{n} t siden").replace("{n}", Math.floor(diff / 3600000));
+    return (UI_TEXTS.time_ago_days || "{n} dager siden").replace("{n}", Math.floor(diff / 86400000));
+  }
+
+  /* ─── Source category ───────────────────────────────────── */
+  function getSourceCategory(row) {
+    var method = (row.dataset.fetchMethod || "miniflux").toLowerCase();
+    if (method === "some" || method === "social") return "some";
+    return "nyheter";
+  }
+
+  /* ─── Reactive filter counters ("excluding self") ────────── */
+  function updateFilterCounts(allRows) {
+    var now = Date.now();
+    var maxAge = DATE_MS[activeDateRange] || DATE_MS.today;
+    var searchLc = activeSearch.toLowerCase();
+    var coreRegions = ["norge", "chile", "canada"];
+
+    function passesDate(row) {
+      var iso = row.dataset.publishedAt;
+      if (!iso) return true;
+      var age = now - new Date(iso).getTime();
+      return age >= 0 && age <= maxAge;
+    }
+    function passesSearch(row) {
+      if (!searchLc) return true;
+      var title = (row.dataset.title || "").toLowerCase();
+      var src = (row.dataset.source || "").toLowerCase();
+      return title.indexOf(searchLc) > -1 || src.indexOf(searchLc) > -1;
+    }
+    function passesRegion(row) {
+      if (activeRegion === "all") return true;
+      return row.dataset.region === activeRegion;
+    }
+    function passesTone(row) {
+      if (activeTone === "all") return true;
+      var t = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
+      return t === activeTone;
+    }
+    function passesScope(row) {
+      if (activeScopeFilter === "all") return true;
+      var scope = row.dataset.scope;
+      var region = row.dataset.region;
+      if (activeScopeFilter === "cermaq") return scope === "cermaq";
+      if (activeScopeFilter === "industry-core") return scope === "industry" && coreRegions.indexOf(region) > -1;
+      if (activeScopeFilter === "industry-global") return scope === "industry" && coreRegions.indexOf(region) === -1;
+      return true;
+    }
+    function passesSource(row) {
+      if (activeSourceFilter === "all") return true;
+      return getSourceCategory(row) === activeSourceFilter;
+    }
+
+    // Region counts (exclude region filter)
+    var regCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesTone(row) || !passesScope(row) || !passesSource(row)) return;
+      var reg = row.dataset.region || "global";
+      if (reg in regCounts) regCounts[reg]++; else regCounts.global++;
+    });
+    document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(btn) {
+      var r = btn.dataset.region;
+      if (r === "all") return;
+      var span = btn.querySelector(".pill-count");
+      if (span) span.textContent = regCounts[r] !== undefined ? regCounts[r] : 0;
+    });
+
+    // Tone counts (exclude tone filter)
+    var tCounts = { positiv: 0, noytral: 0, negativ: 0 };
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesScope(row) || !passesSource(row)) return;
+      var t = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
+      if (t in tCounts) tCounts[t]++;
+    });
+    document.querySelectorAll(".tone-pill[data-tone]").forEach(function(btn) {
+      var t = btn.dataset.tone;
+      if (t === "all") return;
+      var span = btn.querySelector(".pill-count");
+      if (span) span.textContent = tCounts[t] !== undefined ? tCounts[t] : 0;
+    });
+
+    // Scope counts (exclude scope filter)
+    var cermaqCnt = 0, coreCnt = 0, globalIndCnt = 0, allScopeCnt = 0;
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTone(row) || !passesSource(row)) return;
+      allScopeCnt++;
+      var scope = row.dataset.scope;
+      var region = row.dataset.region;
+      if (scope === "cermaq") cermaqCnt++;
+      else if (scope === "industry" && coreRegions.indexOf(region) > -1) coreCnt++;
+      else globalIndCnt++;
+    });
+    var scopeMap = { "all": allScopeCnt, "cermaq": cermaqCnt, "industry-core": coreCnt, "industry-global": globalIndCnt };
+    document.querySelectorAll(".scope-pill[data-scope-filter]").forEach(function(btn) {
+      var sf = btn.dataset.scopeFilter;
+      var span = btn.querySelector(".pill-count");
+      if (span && scopeMap[sf] !== undefined) span.textContent = scopeMap[sf];
+    });
+
+    // Source counts (exclude source filter)
+    var srcCounts = { nyheter: 0, some: 0 };
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTone(row) || !passesScope(row)) return;
+      var cat = getSourceCategory(row);
+      if (cat in srcCounts) srcCounts[cat]++;
+    });
+    document.querySelectorAll(".source-pill[data-source-filter]").forEach(function(btn) {
+      var sf = btn.dataset.sourceFilter;
+      if (sf === "all") return;
+      var span = btn.querySelector(".pill-count");
+      if (span) span.textContent = srcCounts[sf] !== undefined ? srcCounts[sf] : 0;
+    });
   }
 
   /* ─── Init source favicons and time-ago ──────────────────── */
@@ -983,8 +1080,11 @@
         if (age < 0 || age > maxAge) return false;
       }
 
-      // Tone
-      if (activeTone !== "all" && row.dataset.tone !== activeTone) return false;
+      // Tone (treat legacy "kritisk" as "negativ")
+      if (activeTone !== "all") {
+        var rowTone = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
+        if (rowTone !== activeTone) return false;
+      }
 
       // Scope
       if (activeScopeFilter !== "all") {
@@ -996,6 +1096,11 @@
         if (activeScopeFilter === "industry-global" && !(scope === "industry" && coreRegions.indexOf(region) === -1)) return false;
       }
 
+      // Source type
+      if (activeSourceFilter !== "all") {
+        if (getSourceCategory(row) !== activeSourceFilter) return false;
+      }
+
       // Search
       if (searchLc) {
         var title = (row.dataset.title || "").toLowerCase();
@@ -1005,6 +1110,8 @@
 
       return true;
     });
+
+    updateFilterCounts(allRows);
 
     // Sort
     visible.sort(function(a, b) {
@@ -1031,28 +1138,29 @@
     var remaining = visible.length - currentVisible;
     if (remaining > 0) {
       loadWrap.style.display = "";
-      document.getElementById("load-more").textContent = "Last " + remaining + " flere artikler";
+      document.getElementById("load-more").textContent = UI_TEXTS.load_more || "Last flere artikler";
     } else {
       loadWrap.style.display = "none";
     }
 
     // Stats
     var regionCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
-    var toneCounts = { positiv: 0, noytral: 0, kritisk: 0 };
+    var toneCounts = { positiv: 0, noytral: 0, negativ: 0 };
     var cermaqCount = 0;
     var sources = new Set();
     visible.forEach(function(r) {
       var reg = r.dataset.region;
       if (reg in regionCounts) regionCounts[reg]++; else regionCounts.global++;
       if (r.dataset.scope === "cermaq") cermaqCount++;
-      var t = r.dataset.tone;
+      var t = r.dataset.tone === "kritisk" ? "negativ" : r.dataset.tone;
       if (t in toneCounts) toneCounts[t]++;
       if (r.dataset.source) sources.add(r.dataset.source);
     });
 
     document.getElementById("stat-total").textContent = visible.length;
     document.getElementById("stat-cermaq").textContent = cermaqCount;
-    document.getElementById("stat-kritisk").textContent = toneCounts.kritisk;
+    document.getElementById("stat-negative").textContent = toneCounts.negativ;
+    document.getElementById("stat-kritisk").textContent = toneCounts.negativ;
     document.getElementById("stat-sources").textContent = sources.size || "–";
     document.getElementById("stat-norge").textContent = regionCounts.norge;
     document.getElementById("stat-chile").textContent = regionCounts.chile;
@@ -1061,21 +1169,17 @@
     document.getElementById("stat-positiv").textContent = toneCounts.positiv;
     document.getElementById("stat-noytral").textContent = toneCounts.noytral;
 
-    var t = UI_TEXTS[activeLang] || UI_TEXTS.no;
-    document.getElementById("result-count").textContent =
-      t.showing + " " + Math.min(currentVisible, visible.length) + " " + t.of + " " + visible.length + " artikler";
+    var countText = (UI_TEXTS.showing_articles || "Viser {n} av {total} artikler")
+      .replace("{n}", Math.min(currentVisible, visible.length))
+      .replace("{total}", visible.length);
+    document.getElementById("result-count").textContent = countText;
   }
 
   /* ─── Language apply ─────────────────────────────────────── */
   function applyLang(lang) {
     activeLang = lang;
-    localStorage.setItem("cermaq_lang", lang);
     document.querySelectorAll(".lang-btn").forEach(function(b) {
       b.classList.toggle("active", b.dataset.lang === lang);
-    });
-    var t = UI_TEXTS[lang] || UI_TEXTS.no;
-    document.querySelectorAll("[data-key]").forEach(function(el) {
-      if (t[el.dataset.key] !== undefined) el.textContent = t[el.dataset.key];
     });
     document.querySelectorAll(".lang-text").forEach(function(el) {
       el.style.display = el.dataset.lang === lang ? "" : "none";
@@ -1129,6 +1233,16 @@
     });
   });
 
+  document.querySelectorAll(".source-pill").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".source-pill").forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      activeSourceFilter = btn.dataset.sourceFilter;
+      currentVisible = PAGE_SIZE;
+      applyFilters();
+    });
+  });
+
   document.getElementById("date-select").addEventListener("change", function() {
     activeDateRange = this.value;
     currentVisible = PAGE_SIZE;
@@ -1145,6 +1259,7 @@
     activeDateRange = "today";
     activeTone = "all";
     activeScopeFilter = "all";
+    activeSourceFilter = "all";
     activeSearch = "";
     cermaqActive = false;
     currentVisible = PAGE_SIZE;
@@ -1159,6 +1274,9 @@
     });
     document.querySelectorAll(".tone-pill").forEach(function(b) {
       b.classList.toggle("active", b.dataset.tone === "all");
+    });
+    document.querySelectorAll(".source-pill").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.sourceFilter === "all");
     });
     applyFilters();
   });
