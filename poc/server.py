@@ -132,6 +132,22 @@ _UI_TEXTS: dict = {
         "nav_competitors": "Konkurrenter",
         "nav_settings": "Innstillinger",
         "nav_sources": "Kilder",
+        # reports page
+        "report_weekly_title": "Ukentlig rapport",
+        "report_weekly_subtitle": "Mediedekning siste 7 dager",
+        "report_ai_summary": "AI-skrevet ukentlig sammendrag",
+        "report_ai_loading": "Genererer sammendrag…",
+        "report_top_articles": "Topp 10 mest relevante saker",
+        "report_tone_dist": "Tone-fordeling",
+        "report_period": "Periode",
+        "report_export": "Skriv ut / Eksporter",
+        "report_coming_soon": "Kommer snart",
+        "report_monthly": "Månedlig",
+        "report_crisis": "Krise",
+        "report_theme": "Tema-dypdykk",
+        "report_positiv": "Positiv",
+        "report_noytral": "Nøytral",
+        "report_negativ": "Negativ",
     },
     "en": {
         # legacy / existing
@@ -211,6 +227,22 @@ _UI_TEXTS: dict = {
         "nav_competitors": "Competitors",
         "nav_settings": "Settings",
         "nav_sources": "Sources",
+        # reports page
+        "report_weekly_title": "Weekly report",
+        "report_weekly_subtitle": "Media coverage last 7 days",
+        "report_ai_summary": "AI-written weekly summary",
+        "report_ai_loading": "Generating summary…",
+        "report_top_articles": "Top 10 most relevant stories",
+        "report_tone_dist": "Tone distribution",
+        "report_period": "Period",
+        "report_export": "Print / Export",
+        "report_coming_soon": "Coming soon",
+        "report_monthly": "Monthly",
+        "report_crisis": "Crisis",
+        "report_theme": "Theme deep-dive",
+        "report_positiv": "Positive",
+        "report_noytral": "Neutral",
+        "report_negativ": "Negative",
     },
     "es": {
         # legacy / existing
@@ -290,6 +322,22 @@ _UI_TEXTS: dict = {
         "nav_competitors": "Competidores",
         "nav_settings": "Configuración",
         "nav_sources": "Fuentes",
+        # reports page
+        "report_weekly_title": "Informe semanal",
+        "report_weekly_subtitle": "Cobertura mediática últimos 7 días",
+        "report_ai_summary": "Resumen semanal escrito por IA",
+        "report_ai_loading": "Generando resumen…",
+        "report_top_articles": "Top 10 historias más relevantes",
+        "report_tone_dist": "Distribución de tono",
+        "report_period": "Período",
+        "report_export": "Imprimir / Exportar",
+        "report_coming_soon": "Próximamente",
+        "report_monthly": "Mensual",
+        "report_crisis": "Crisis",
+        "report_theme": "Análisis temático",
+        "report_positiv": "Positivo",
+        "report_noytral": "Neutro",
+        "report_negativ": "Negativo",
     },
     "ja": {
         # legacy / existing
@@ -369,6 +417,22 @@ _UI_TEXTS: dict = {
         "nav_competitors": "競合他社",
         "nav_settings": "設定",
         "nav_sources": "ソース",
+        # reports page
+        "report_weekly_title": "週次レポート",
+        "report_weekly_subtitle": "過去7日間のメディアカバレッジ",
+        "report_ai_summary": "AI作成の週次サマリー",
+        "report_ai_loading": "サマリーを生成中…",
+        "report_top_articles": "最も関連性の高いトップ10記事",
+        "report_tone_dist": "トーン分布",
+        "report_period": "期間",
+        "report_export": "印刷 / エクスポート",
+        "report_coming_soon": "近日公開",
+        "report_monthly": "月次",
+        "report_crisis": "クライシス",
+        "report_theme": "テーマ分析",
+        "report_positiv": "ポジティブ",
+        "report_noytral": "ニュートラル",
+        "report_negativ": "ネガティブ",
     },
 }
 
@@ -1765,6 +1829,139 @@ def delete_alert(alert_id):
         alert.is_active = False
         session.commit()
         return jsonify({"deleted": alert_id})
+
+
+@app.route("/reports")
+def reports_page():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
+    return render_template("reports.html", lang=lang, ui_text=ui_text)
+
+
+@app.route("/api/reports/weekly")
+def api_reports_weekly():
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    relevant = []
+    with _articles_lock:
+        for a in _articles.values():
+            pub_str = a.get("published_at")
+            if pub_str:
+                try:
+                    pub_date = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
+                    if pub_date >= cutoff:
+                        relevant.append(a)
+                except Exception:
+                    pass
+            else:
+                relevant.append(a)
+
+    by_scope: dict = {}
+    by_tone: dict = {}
+    by_country: dict = {}
+    sources: set = set()
+    for a in relevant:
+        scope = a.get("scope") or "unknown"
+        tone = a.get("tone") or "unknown"
+        if tone == "kritisk":
+            tone = "negativ"
+        country = a.get("region") or "global"
+        by_scope[scope] = by_scope.get(scope, 0) + 1
+        by_tone[tone] = by_tone.get(tone, 0) + 1
+        by_country[country] = by_country.get(country, 0) + 1
+        if a.get("source_name"):
+            sources.add(a["source_name"])
+
+    top_articles = sorted(relevant, key=lambda x: x.get("relevance") or 0, reverse=True)[:10]
+
+    return jsonify({
+        "period": {
+            "from": cutoff.isoformat(),
+            "to": datetime.now(timezone.utc).isoformat(),
+            "days": 7,
+        },
+        "stats": {
+            "total": len(relevant),
+            "source_count": len(sources),
+            "by_scope": by_scope,
+            "by_tone": by_tone,
+            "by_country": by_country,
+        },
+        "top_articles": [
+            {
+                "id": a.get("id"),
+                "title": a.get("title"),
+                "url": a.get("url"),
+                "source_name": a.get("source_name"),
+                "scope": a.get("scope"),
+                "tone": "negativ" if a.get("tone") == "kritisk" else a.get("tone"),
+                "region": a.get("region"),
+                "relevance": a.get("relevance"),
+                "summary": (a.get("summaries") or {}).get("no"),
+            }
+            for a in top_articles
+        ],
+    })
+
+
+@app.route("/api/reports/weekly/summary")
+def api_reports_weekly_summary():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+    relevant = []
+    with _articles_lock:
+        for a in _articles.values():
+            pub_str = a.get("published_at")
+            if pub_str:
+                try:
+                    pub_date = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
+                    if pub_date >= cutoff:
+                        relevant.append(a)
+                except Exception:
+                    pass
+            else:
+                relevant.append(a)
+
+    if not relevant:
+        return jsonify({"summary": "", "article_count": 0})
+
+    lang_names = {"no": "norsk", "en": "engelsk", "es": "spansk", "ja": "japansk"}
+    article_context = "\n".join(
+        f"- [{a.get('source_name', '?')}] {a.get('title', '')} (tone: {a.get('tone', '?')}, scope: {a.get('scope', '?')})"
+        for a in relevant[:30]
+    )
+
+    try:
+        from anthropic import Anthropic as _Anthropic
+        client = _Anthropic()
+        response = client.messages.create(
+            model="claude-sonnet-4-6-20250514",
+            max_tokens=1500,
+            messages=[{"role": "user", "content": (
+                f"Lag et ukentlig sammendrag (ca 300 ord på {lang_names[lang]}) av "
+                f"medieaktiviteten rundt Cermaq og lakseoppdrettsbransjen siste 7 dager. "
+                f"Strukturer med:\n"
+                f"1. Hovedtemaer\n2. Cermaq-spesifikke saker\n"
+                f"3. Bransjeutvikling\n4. Hva vi bør følge fremover\n\n"
+                f"Artikler:\n{article_context}"
+            )}],
+        )
+        summary_text = "".join(
+            block.text for block in response.content if getattr(block, "type", "") == "text"
+        )
+    except Exception as exc:
+        log.error("Rapport-sammendrag feilet: %s", exc)
+        summary_text = ""
+
+    return jsonify({
+        "summary": summary_text,
+        "article_count": len(relevant),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    })
 
 
 @app.route("/healthz")
