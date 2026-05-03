@@ -410,7 +410,7 @@
       border-radius: 3px;
       white-space: nowrap;
     }
-    .scope-cermaq, .scope-badge.scope-cermaq, [data-scope="cermaq"] { background: #0096a0 !important; color: #fff !important; }
+    span.scope-badge.scope-cermaq { background: #0096a0 !important; color: #fff !important; }
     .scope-core     { background: #dbeafe; color: #1e40af; }
     .scope-global   { background: #f3f4f6; color: #4b5563; }
     .scope-pending  { background: #f3f4f6; color: #9ca3af; font-style: italic; }
@@ -939,7 +939,16 @@
 
   /* ─── Source category ───────────────────────────────────── */
   function getSourceCategory(row) {
-    var method = (row.dataset.fetchMethod || "miniflux").toLowerCase();
+    var src = (row.dataset.source || "").toLowerCase();
+    if (src.indexOf("linkedin") > -1 ||
+        src.indexOf("twitter") > -1 ||
+        src === "x" || src.indexOf("x /") === 0 ||
+        src.indexOf("facebook") > -1 ||
+        src.indexOf("instagram") > -1 ||
+        src.indexOf("youtube") > -1 ||
+        src.indexOf("tiktok") > -1 ||
+        src.indexOf("reddit") > -1) return "some";
+    var method = (row.dataset.fetchMethod || "").toLowerCase();
     if (method === "some" || method === "social") return "some";
     return "nyheter";
   }
