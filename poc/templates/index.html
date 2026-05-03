@@ -13,8 +13,7 @@
 
     /* ─── Layout ─────────────────────────────────────────────── */
     .app-layout {
-      display: grid;
-      grid-template-columns: 220px 1fr;
+      display: block;
       min-height: 100vh;
     }
 
@@ -94,6 +93,7 @@
     /* ─── Main content ───────────────────────────────────────── */
     .main-content {
       margin-left: 220px;
+      min-width: 0;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -489,7 +489,6 @@
 
     /* ─── Mobile ─────────────────────────────────────────────── */
     @media (max-width: 768px) {
-      .app-layout { grid-template-columns: 1fr; }
       .sidebar { display: none; }
       .main-content { margin-left: 0; }
       .stat-cards { grid-template-columns: repeat(2, 1fr); }
