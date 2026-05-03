@@ -601,10 +601,10 @@
       </div>
       <div class="topbar-right">
         <div class="lang-selector">
-          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">🇳🇴 NO</button>
-          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">🇬🇧 EN</button>
-          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">🇨🇱 ES</button>
-          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">🇯🇵 JA</button>
+          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">NO</button>
+          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">EN</button>
+          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">ES</button>
+          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">JA</button>
         </div>
         <div class="avatar">HM</div>
       </div>
@@ -817,7 +817,7 @@
                 {% if a.relevance %}<span class="relevance-star">★ {{ a.relevance }}</span>{% endif %}
               </div>
 
-              <span class="article-title">{{ a.title }}</span>
+              <span class="article-title">{% if a.titles and a.titles.get(lang) %}{{ a.titles[lang] }}{% else %}{{ a.title }}{% endif %}</span>
 
               <div class="summary-container">
                 <p class="article-summary lang-text" data-lang="no">{{ sumno }}</p>

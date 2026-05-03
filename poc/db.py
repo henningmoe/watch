@@ -74,6 +74,7 @@ if Base is not None:
         category = Column(String(30), index=True)
         relevance = Column(Integer, index=True)
         summaries = Column(JSON)
+        titles = Column(JSON)
         image_url = Column(Text)
         content = Column(Text)
         classified_at = Column(DateTime(timezone=True))
@@ -130,6 +131,21 @@ def init_db() -> None:
     if engine is not None and Base is not None:
         Base.metadata.create_all(engine)
         logger.info("Postgres-tabeller opprettet/verifisert")
+
+
+def ensure_columns() -> None:
+    """Add columns that may not exist in older DB schemas (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text(
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS titles JSONB"
+            ))
+        logger.info("ensure_columns: titles-kolonne verifisert")
+    except Exception as exc:
+        logger.warning("ensure_columns feilet: %s", exc)
 
 
 def is_db_available() -> bool:

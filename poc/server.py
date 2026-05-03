@@ -19,7 +19,7 @@ except ImportError:
 from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
-    init_db, is_db_available, SessionLocal,
+    init_db, ensure_columns, is_db_available, SessionLocal,
     Source, Article, Digest, Alert,
     extract_domain, get_or_create_source,
 )
@@ -372,6 +372,7 @@ def _article_db_to_dict(a) -> dict:
         "category": a.category,
         "relevance": a.relevance,
         "summaries": a.summaries or {},
+        "titles": a.titles or {},
         "image_url": a.image_url,
         "content": a.content,
         "classified_at": a.classified_at.isoformat() if a.classified_at else None,
@@ -465,6 +466,7 @@ def _persist_article(article: dict) -> None:
                 "category": article.get("category"),
                 "relevance": article.get("relevance"),
                 "summaries": article.get("summaries"),
+                "titles": article.get("titles"),
                 "image_url": article.get("image_url"),
                 "content": article.get("content"),
                 "classified_at": classified_at,
@@ -510,6 +512,7 @@ def _persist_digest(lang: str, digest: dict, used_article_ids: list = None) -> N
 # ---------------------------------------------------------------------------
 
 init_db()
+ensure_columns()
 _load_from_db()
 
 

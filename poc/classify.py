@@ -61,6 +61,12 @@ _PROMPT = (
     "Kilde: {source_name}\n\n"
     "Returner JSON med:\n"
     "- region, tone, scope, category, relevance\n"
+    "- titles: dict med fire nøkler (oversett tittelen naturlig; behold egennavn "
+    "som Cermaq, stedsnavn og personalnavn uforandret):\n"
+    '    "no": tittel på norsk\n'
+    '    "en": title in English\n'
+    '    "es": título en español\n'
+    '    "ja": 日本語のタイトル\n'
     "- summaries: dict med fire nøkler:\n"
     '    "no": 2 setninger på norsk\n'
     '    "en": 2 sentences in English\n'
@@ -98,8 +104,10 @@ def classify(article: dict) -> dict:
     plain_text = BeautifulSoup(raw_html, "html.parser").get_text()
     content_truncated = plain_text[:1500]
 
+    _orig_title = article.get("title", "")
     default = {
         **_DEFAULT,
+        "titles": {"no": _orig_title, "en": _orig_title, "es": _orig_title, "ja": _orig_title},
         "summaries": {
             "no": plain_text[:200],
             "en": plain_text[:200],
@@ -112,7 +120,7 @@ def classify(article: dict) -> dict:
         client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         response = client.messages.create(
             model="claude-haiku-4-5",
-            max_tokens=900,
+            max_tokens=1300,
             temperature=0,
             messages=[
                 {
