@@ -299,6 +299,7 @@
     }
     .filter-pill:hover { border-color: #9ca3af; color: #374151; }
     .filter-pill.active { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
+    .pill-count { font-size: 11px; opacity: 0.75; margin-left: 2px; }
 
     .scope-pill.active-cermaq   { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
     .scope-pill.active-core     { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
@@ -697,16 +698,16 @@
           <div class="filter-group-label">{{ ui_text.filter_scope }}</div>
           <div class="btn-group">
             <button class="filter-pill scope-pill active" data-scope-filter="all">
-              {{ ui_text.filter_all }} ({{ articles | length }})
+              {{ ui_text.filter_all }} <span class="pill-count">{{ articles | length }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="cermaq">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#0c4a3e;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_cermaq }} ({{ cermaq_count }})
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#0c4a3e;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_cermaq }} <span class="pill-count">{{ cermaq_count }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="industry-core">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1e40af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_in_regions }} ({{ industry_core_count }})
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1e40af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_in_regions }} <span class="pill-count">{{ industry_core_count }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="industry-global">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#9ca3af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_general }} ({{ industry_global_count }})
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#9ca3af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_general }} <span class="pill-count">{{ industry_global_count }}</span>
             </button>
           </div>
         </div>
@@ -716,10 +717,20 @@
           <div class="filter-group-label">{{ ui_text.filter_country }}</div>
           <div class="btn-group">
             <button class="filter-pill active" data-region="all">{{ ui_text.filter_all }}</button>
-            <button class="filter-pill" data-region="norge">🇳🇴 {{ ui_text.country_norway }} ({{ region_counts.norge }})</button>
-            <button class="filter-pill" data-region="chile">🇨🇱 {{ ui_text.country_chile }} ({{ region_counts.chile }})</button>
-            <button class="filter-pill" data-region="canada">🇨🇦 {{ ui_text.country_canada }} ({{ region_counts.canada }})</button>
-            <button class="filter-pill" data-region="global">🌐 {{ ui_text.country_global }} ({{ region_counts.global }})</button>
+            <button class="filter-pill" data-region="norge">{{ ui_text.country_norway }} <span class="pill-count">{{ region_counts.norge }}</span></button>
+            <button class="filter-pill" data-region="chile">{{ ui_text.country_chile }} <span class="pill-count">{{ region_counts.chile }}</span></button>
+            <button class="filter-pill" data-region="canada">{{ ui_text.country_canada }} <span class="pill-count">{{ region_counts.canada }}</span></button>
+            <button class="filter-pill" data-region="global">{{ ui_text.country_global }} <span class="pill-count">{{ region_counts.global }}</span></button>
+          </div>
+        </div>
+
+        <!-- Source type filter -->
+        <div class="filter-group">
+          <div class="filter-group-label">{{ ui_text.filter_source }}</div>
+          <div class="btn-group">
+            <button class="filter-pill source-pill active" data-source-filter="all">{{ ui_text.filter_all }}</button>
+            <button class="filter-pill source-pill" data-source-filter="nyheter">{{ ui_text.source_news }} <span class="pill-count"></span></button>
+            <button class="filter-pill source-pill" data-source-filter="some">{{ ui_text.source_some }} <span class="pill-count"></span></button>
           </div>
         </div>
 
@@ -729,9 +740,9 @@
             <div class="filter-group-label">{{ ui_text.filter_tone }}</div>
             <div class="btn-group">
               <button class="filter-pill tone-pill active" data-tone="all">{{ ui_text.filter_all }}</button>
-              <button class="filter-pill tone-pill" data-tone="positiv">{{ ui_text.tone_positive }}</button>
-              <button class="filter-pill tone-pill" data-tone="noytral">{{ ui_text.tone_neutral }}</button>
-              <button class="filter-pill tone-pill" data-tone="negativ">{{ ui_text.tone_negative }}</button>
+              <button class="filter-pill tone-pill" data-tone="positiv">{{ ui_text.tone_positive }} <span class="pill-count"></span></button>
+              <button class="filter-pill tone-pill" data-tone="noytral">{{ ui_text.tone_neutral }} <span class="pill-count"></span></button>
+              <button class="filter-pill tone-pill" data-tone="negativ">{{ ui_text.tone_negative }} <span class="pill-count"></span></button>
             </div>
           </div>
           <div class="filter-group">
@@ -795,6 +806,7 @@
              data-scope="{{ a.scope or '' }}"
              data-tone="{{ a.tone or '' }}"
              data-source="{{ a.source_name or '' }}"
+             data-fetch-method="{{ a.fetch_method or 'miniflux' }}"
              data-title="{{ a.title | lower }}">
 
             <div class="article-left">
@@ -898,6 +910,7 @@
   var activeDateRange = "today";
   var activeTone = "all";
   var activeScopeFilter = "all";
+  var activeSourceFilter = "all";
   var activeSearch = "";
   var cermaqActive = false; // legacy compat
   var currentVisible = 25;
@@ -922,6 +935,116 @@
     if (diff < 3600000) return (UI_TEXTS.time_ago_minutes || "{n} min siden").replace("{n}", Math.floor(diff / 60000));
     if (diff < 86400000) return (UI_TEXTS.time_ago_hours || "{n} t siden").replace("{n}", Math.floor(diff / 3600000));
     return (UI_TEXTS.time_ago_days || "{n} dager siden").replace("{n}", Math.floor(diff / 86400000));
+  }
+
+  /* ─── Source category ───────────────────────────────────── */
+  function getSourceCategory(row) {
+    var method = (row.dataset.fetchMethod || "miniflux").toLowerCase();
+    if (method === "some" || method === "social") return "some";
+    return "nyheter";
+  }
+
+  /* ─── Reactive filter counters ("excluding self") ────────── */
+  function updateFilterCounts(allRows) {
+    var now = Date.now();
+    var maxAge = DATE_MS[activeDateRange] || DATE_MS.today;
+    var searchLc = activeSearch.toLowerCase();
+    var coreRegions = ["norge", "chile", "canada"];
+
+    function passesDate(row) {
+      var iso = row.dataset.publishedAt;
+      if (!iso) return true;
+      var age = now - new Date(iso).getTime();
+      return age >= 0 && age <= maxAge;
+    }
+    function passesSearch(row) {
+      if (!searchLc) return true;
+      var title = (row.dataset.title || "").toLowerCase();
+      var src = (row.dataset.source || "").toLowerCase();
+      return title.indexOf(searchLc) > -1 || src.indexOf(searchLc) > -1;
+    }
+    function passesRegion(row) {
+      if (activeRegion === "all") return true;
+      return row.dataset.region === activeRegion;
+    }
+    function passesTone(row) {
+      if (activeTone === "all") return true;
+      var t = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
+      return t === activeTone;
+    }
+    function passesScope(row) {
+      if (activeScopeFilter === "all") return true;
+      var scope = row.dataset.scope;
+      var region = row.dataset.region;
+      if (activeScopeFilter === "cermaq") return scope === "cermaq";
+      if (activeScopeFilter === "industry-core") return scope === "industry" && coreRegions.indexOf(region) > -1;
+      if (activeScopeFilter === "industry-global") return scope === "industry" && coreRegions.indexOf(region) === -1;
+      return true;
+    }
+    function passesSource(row) {
+      if (activeSourceFilter === "all") return true;
+      return getSourceCategory(row) === activeSourceFilter;
+    }
+
+    // Region counts (exclude region filter)
+    var regCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesTone(row) || !passesScope(row) || !passesSource(row)) return;
+      var reg = row.dataset.region || "global";
+      if (reg in regCounts) regCounts[reg]++; else regCounts.global++;
+    });
+    document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(btn) {
+      var r = btn.dataset.region;
+      if (r === "all") return;
+      var span = btn.querySelector(".pill-count");
+      if (span) span.textContent = regCounts[r] !== undefined ? regCounts[r] : 0;
+    });
+
+    // Tone counts (exclude tone filter)
+    var tCounts = { positiv: 0, noytral: 0, negativ: 0 };
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesScope(row) || !passesSource(row)) return;
+      var t = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
+      if (t in tCounts) tCounts[t]++;
+    });
+    document.querySelectorAll(".tone-pill[data-tone]").forEach(function(btn) {
+      var t = btn.dataset.tone;
+      if (t === "all") return;
+      var span = btn.querySelector(".pill-count");
+      if (span) span.textContent = tCounts[t] !== undefined ? tCounts[t] : 0;
+    });
+
+    // Scope counts (exclude scope filter)
+    var cermaqCnt = 0, coreCnt = 0, globalIndCnt = 0, allScopeCnt = 0;
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTone(row) || !passesSource(row)) return;
+      allScopeCnt++;
+      var scope = row.dataset.scope;
+      var region = row.dataset.region;
+      if (scope === "cermaq") cermaqCnt++;
+      else if (scope === "industry" && coreRegions.indexOf(region) > -1) coreCnt++;
+      else globalIndCnt++;
+    });
+    var scopeMap = { "all": allScopeCnt, "cermaq": cermaqCnt, "industry-core": coreCnt, "industry-global": globalIndCnt };
+    document.querySelectorAll(".scope-pill[data-scope-filter]").forEach(function(btn) {
+      var sf = btn.dataset.scopeFilter;
+      var span = btn.querySelector(".pill-count");
+      if (span && scopeMap[sf] !== undefined) span.textContent = scopeMap[sf];
+    });
+
+    // Source counts (exclude source filter)
+    var srcCounts = { nyheter: 0, some: 0 };
+    allRows.forEach(function(row) {
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTone(row) || !passesScope(row)) return;
+      var cat = getSourceCategory(row);
+      if (cat in srcCounts) srcCounts[cat]++;
+    });
+    document.querySelectorAll(".source-pill[data-source-filter]").forEach(function(btn) {
+      var sf = btn.dataset.sourceFilter;
+      if (sf === "all") return;
+      var span = btn.querySelector(".pill-count");
+      if (span) span.textContent = srcCounts[sf] !== undefined ? srcCounts[sf] : 0;
+    });
   }
 
   /* ─── Init source favicons and time-ago ──────────────────── */
@@ -973,6 +1096,11 @@
         if (activeScopeFilter === "industry-global" && !(scope === "industry" && coreRegions.indexOf(region) === -1)) return false;
       }
 
+      // Source type
+      if (activeSourceFilter !== "all") {
+        if (getSourceCategory(row) !== activeSourceFilter) return false;
+      }
+
       // Search
       if (searchLc) {
         var title = (row.dataset.title || "").toLowerCase();
@@ -982,6 +1110,8 @@
 
       return true;
     });
+
+    updateFilterCounts(allRows);
 
     // Sort
     visible.sort(function(a, b) {
@@ -1103,6 +1233,16 @@
     });
   });
 
+  document.querySelectorAll(".source-pill").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".source-pill").forEach(function(b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      activeSourceFilter = btn.dataset.sourceFilter;
+      currentVisible = PAGE_SIZE;
+      applyFilters();
+    });
+  });
+
   document.getElementById("date-select").addEventListener("change", function() {
     activeDateRange = this.value;
     currentVisible = PAGE_SIZE;
@@ -1119,6 +1259,7 @@
     activeDateRange = "today";
     activeTone = "all";
     activeScopeFilter = "all";
+    activeSourceFilter = "all";
     activeSearch = "";
     cermaqActive = false;
     currentVisible = PAGE_SIZE;
@@ -1133,6 +1274,9 @@
     });
     document.querySelectorAll(".tone-pill").forEach(function(b) {
       b.classList.toggle("active", b.dataset.tone === "all");
+    });
+    document.querySelectorAll(".source-pill").forEach(function(b) {
+      b.classList.toggle("active", b.dataset.sourceFilter === "all");
     });
     applyFilters();
   });

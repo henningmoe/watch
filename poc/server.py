@@ -115,6 +115,10 @@ _UI_TEXTS: dict = {
         "time_ago_days": "{n} dager siden",
         "load_more": "Last flere artikler",
         "search_placeholder": "Søk i artikler, kilder, personer…",
+        # source filter
+        "filter_source": "Kilde-type",
+        "source_news": "Nyheter",
+        "source_some": "SoMe",
         # nav
         "nav_alerts": "Varsling",
         "nav_overview": "Oversikt",
@@ -190,6 +194,10 @@ _UI_TEXTS: dict = {
         "time_ago_days": "{n} days ago",
         "load_more": "Load more articles",
         "search_placeholder": "Search articles, sources, people…",
+        # source filter
+        "filter_source": "Source type",
+        "source_news": "News",
+        "source_some": "SoMe",
         # nav
         "nav_alerts": "Alerts",
         "nav_overview": "Overview",
@@ -265,6 +273,10 @@ _UI_TEXTS: dict = {
         "time_ago_days": "hace {n} días",
         "load_more": "Cargar más artículos",
         "search_placeholder": "Buscar artículos, fuentes, personas…",
+        # source filter
+        "filter_source": "Tipo de fuente",
+        "source_news": "Noticias",
+        "source_some": "SoMe",
         # nav
         "nav_alerts": "Alertas",
         "nav_overview": "Resumen",
@@ -340,6 +352,10 @@ _UI_TEXTS: dict = {
         "time_ago_days": "{n}日前",
         "load_more": "さらに記事を読み込む",
         "search_placeholder": "記事、ソース、人物を検索…",
+        # source filter
+        "filter_source": "ソース種別",
+        "source_news": "ニュース",
+        "source_some": "SoMe",
         # nav
         "nav_alerts": "アラート",
         "nav_overview": "概要",
