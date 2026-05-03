@@ -116,7 +116,7 @@ _UI_TEXTS: dict = {
         "load_more": "Last flere artikler",
         "search_placeholder": "Søk i artikler, kilder, personer…",
         # source filter
-        "filter_source": "Kilde-type",
+        "filter_source": "Kilde",
         "source_news": "Nyheter",
         "source_some": "SoMe",
         # nav
@@ -195,7 +195,7 @@ _UI_TEXTS: dict = {
         "load_more": "Load more articles",
         "search_placeholder": "Search articles, sources, people…",
         # source filter
-        "filter_source": "Source type",
+        "filter_source": "Source",
         "source_news": "News",
         "source_some": "SoMe",
         # nav
@@ -274,7 +274,7 @@ _UI_TEXTS: dict = {
         "load_more": "Cargar más artículos",
         "search_placeholder": "Buscar artículos, fuentes, personas…",
         # source filter
-        "filter_source": "Tipo de fuente",
+        "filter_source": "Fuente",
         "source_news": "Noticias",
         "source_some": "SoMe",
         # nav
@@ -353,7 +353,7 @@ _UI_TEXTS: dict = {
         "load_more": "さらに記事を読み込む",
         "search_placeholder": "記事、ソース、人物を検索…",
         # source filter
-        "filter_source": "ソース種別",
+        "filter_source": "ソース",
         "source_news": "ニュース",
         "source_some": "SoMe",
         # nav
@@ -1157,6 +1157,65 @@ def admin_migrate_tone():
 
     log.info("Tone-migrering: %d artikler oppdatert fra 'kritisk' til 'negativ'", affected)
     return jsonify({"migrated": affected, "status": "ok"})
+
+
+@app.route("/admin/fix-source-names")
+def admin_fix_source_names():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+
+    fixed = 0
+    with SessionLocal() as session:
+        articles = session.query(Article).all()
+        for a in articles:
+            url = (a.url or "").lower()
+            name = (a.source_name or "").lower()
+            if "linkedin.com" in url and "linkedin" not in name:
+                a.source_name = "LinkedIn"
+                a.source_domain = "linkedin.com"
+                fixed += 1
+            elif "twitter.com" in url or "x.com" in url:
+                if "twitter" not in name and "x.com" not in name:
+                    a.source_name = "X / Twitter"
+                    a.source_domain = "x.com"
+                    fixed += 1
+            elif "facebook.com" in url and "facebook" not in name:
+                a.source_name = "Facebook"
+                a.source_domain = "facebook.com"
+                fixed += 1
+        session.commit()
+
+    with _articles_lock:
+        for art in list(_articles.values()):
+            url = (art.get("url") or "").lower()
+            name = (art.get("source_name") or "").lower()
+            if "linkedin.com" in url and "linkedin" not in name:
+                art["source_name"] = "LinkedIn"
+            elif ("twitter.com" in url or "x.com" in url) and "twitter" not in name:
+                art["source_name"] = "X / Twitter"
+            elif "facebook.com" in url and "facebook" not in name:
+                art["source_name"] = "Facebook"
+
+    return jsonify({"fixed": fixed, "status": "ok"})
+
+
+@app.route("/admin/search-articles")
+def admin_search_articles():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+
+    q = request.args.get("q", "")
+    with SessionLocal() as session:
+        from sqlalchemy import text as _text
+        rows = session.execute(
+            _text("SELECT id, title, source_name, url FROM articles WHERE url ILIKE :q OR title ILIKE :q LIMIT 20"),
+            {"q": f"%{q}%"}
+        ).fetchall()
+    return jsonify([{"id": r[0], "title": r[1], "source_name": r[2], "url": r[3]} for r in rows])
 
 
 @app.route("/admin/")
