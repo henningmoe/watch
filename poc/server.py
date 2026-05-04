@@ -23,8 +23,8 @@ except ImportError:
 from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
-    init_db, ensure_columns, is_db_available, SessionLocal,
-    Source, Article, Digest, Alert,
+    init_db, ensure_columns, migrate_id_to_bigint, is_db_available, SessionLocal,
+    Source, Article, Digest, Alert, WeeklyDigest,
     extract_domain, get_or_create_source,
 )
 
@@ -49,9 +49,13 @@ _counters_lock = threading.Lock()
 
 _CLASSIFY_RATE = 1.0  # minimum seconds between classify calls
 
-# Digest cache
+# Digest cache (daily)
 _digest_cache: dict = {}  # lang -> digest dict
 _digest_lock = threading.Lock()
+
+# Weekly digest cache
+_weekly_digest_cache: dict = {}  # lang -> weekly digest dict
+_weekly_digest_lock = threading.Lock()
 
 _UI_TEXTS: dict = {
     "no": {
@@ -148,6 +152,12 @@ _UI_TEXTS: dict = {
         "report_positiv": "Positiv",
         "report_noytral": "Nøytral",
         "report_negativ": "Negativ",
+        # weekly digest page
+        "daily_update": "Dagens AI-oppdatering",
+        "nav_weekly": "Uken oppsummert",
+        "weekly_summary": "Uken oppsummert",
+        "see_weekly": "Se ukens oppsummering →",
+        "weekly_not_generated": "Ingen ukentlig oppsummering generert ennå. Kjør den fra admin-siden.",
     },
     "en": {
         # legacy / existing
@@ -243,6 +253,12 @@ _UI_TEXTS: dict = {
         "report_positiv": "Positive",
         "report_noytral": "Neutral",
         "report_negativ": "Negative",
+        # weekly digest page
+        "daily_update": "Today's AI update",
+        "nav_weekly": "Week in review",
+        "weekly_summary": "Week in review",
+        "see_weekly": "View weekly summary →",
+        "weekly_not_generated": "No weekly summary generated yet. Run it from the admin page.",
     },
     "es": {
         # legacy / existing
@@ -338,6 +354,12 @@ _UI_TEXTS: dict = {
         "report_positiv": "Positivo",
         "report_noytral": "Neutro",
         "report_negativ": "Negativo",
+        # weekly digest page
+        "daily_update": "Actualización IA del día",
+        "nav_weekly": "Resumen semanal",
+        "weekly_summary": "Resumen semanal",
+        "see_weekly": "Ver resumen semanal →",
+        "weekly_not_generated": "No hay resumen semanal generado aún. Ejecútalo desde el panel de administración.",
     },
     "ja": {
         # legacy / existing
@@ -433,6 +455,12 @@ _UI_TEXTS: dict = {
         "report_positiv": "ポジティブ",
         "report_noytral": "ニュートラル",
         "report_negativ": "ネガティブ",
+        # weekly digest page
+        "daily_update": "本日のAIアップデート",
+        "nav_weekly": "週間まとめ",
+        "weekly_summary": "週間まとめ",
+        "see_weekly": "週間まとめを見る →",
+        "weekly_not_generated": "まだ週間サマリーが生成されていません。管理画面から実行してください。",
     },
 }
 
@@ -496,6 +524,27 @@ def _load_from_db() -> None:
                             "lang": lang,
                         }
             log.info("Lastet %d digester fra Postgres", len(_digest_cache))
+
+            for lang in ("no", "en", "es", "ja"):
+                latest_weekly = (
+                    session.query(WeeklyDigest)
+                    .filter_by(lang=lang)
+                    .order_by(WeeklyDigest.generated_at.desc())
+                    .first()
+                )
+                if latest_weekly:
+                    with _weekly_digest_lock:
+                        _weekly_digest_cache[lang] = {
+                            "headline": latest_weekly.headline,
+                            "body": latest_weekly.body,
+                            "sources": latest_weekly.sources or [],
+                            "article_count": latest_weekly.article_count or 0,
+                            "cermaq_count": latest_weekly.cermaq_count or 0,
+                            "search_count": latest_weekly.search_count or 0,
+                            "generated_at": latest_weekly.generated_at.isoformat(),
+                            "lang": lang,
+                        }
+            log.info("Lastet %d ukentlige digester fra Postgres", len(_weekly_digest_cache))
     except Exception as exc:
         log.error("Feil ved lasting fra Postgres: %s", exc)
 
@@ -568,6 +617,28 @@ def _persist_article(article: dict) -> None:
         log.error("Persist-feil for artikkel %s: %s", article.get("id"), exc)
 
 
+def _persist_weekly_digest(lang: str, digest: dict) -> None:
+    if not is_db_available():
+        return
+
+    try:
+        with SessionLocal() as session:
+            d = WeeklyDigest(
+                lang=lang,
+                headline=digest.get("headline", ""),
+                body=digest.get("body", ""),
+                sources=digest.get("sources", []),
+                article_count=digest.get("article_count", 0),
+                cermaq_count=digest.get("cermaq_count", 0),
+                search_count=digest.get("search_count", 0),
+            )
+            session.add(d)
+            session.commit()
+            log.info("Ukentlig digest persistert for %s", lang)
+    except Exception as exc:
+        log.error("Ukentlig digest-persist-feil for %s: %s", lang, exc)
+
+
 def _persist_digest(lang: str, digest: dict, used_article_ids: list = None) -> None:
     if not is_db_available():
         return
@@ -597,6 +668,7 @@ def _persist_digest(lang: str, digest: dict, used_article_ids: list = None) -> N
 
 init_db()
 ensure_columns()
+migrate_id_to_bigint()
 _load_from_db()
 
 
@@ -1829,6 +1901,60 @@ def delete_alert(alert_id):
         alert.is_active = False
         session.commit()
         return jsonify({"deleted": alert_id})
+
+
+@app.route("/uken")
+def weekly_digest_page():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
+    with _weekly_digest_lock:
+        digest = _weekly_digest_cache.get(lang)
+    return render_template("weekly.html", lang=lang, ui_text=ui_text, digest=digest)
+
+
+@app.route("/api/weekly")
+def api_weekly():
+    lang = request.args.get("lang", "no")
+    with _weekly_digest_lock:
+        digest = _weekly_digest_cache.get(lang)
+    if not digest:
+        return jsonify({"error": "No weekly digest available"}), 404
+    return jsonify(digest)
+
+
+@app.route("/admin/generate-weekly", methods=["POST"])
+def admin_generate_weekly():
+    token = request.args.get("token") or (request.get_json(silent=True) or {}).get("token")
+    if token != os.environ.get("ADMIN_TOKEN") or not token:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    def _run_weekly():
+        from poc.digest import generate_weekly_digest
+        cutoff = datetime.now(timezone.utc) - timedelta(days=7)
+        with _articles_lock:
+            recent = [
+                a for a in _articles.values()
+                if a.get("scope") in ("cermaq", "industry")
+                and _parse_dt(a.get("published_at")) >= cutoff
+            ]
+        for lang in ("no", "en", "es", "ja"):
+            try:
+                digest = generate_weekly_digest(recent, lang=lang)
+                if digest:
+                    with _weekly_digest_lock:
+                        _weekly_digest_cache[lang] = digest
+                    _persist_weekly_digest(lang, digest)
+                    log.info("Ukentlig digest klar lang=%s", lang)
+            except Exception as exc:
+                log.error("Ukentlig digest feilet lang=%s: %s", lang, exc)
+
+    threading.Thread(target=_run_weekly, daemon=True).start()
+    return jsonify({
+        "status": "Ukentlig digest startet",
+        "note": "Tar 4-8 minutter for 4 språk. Sjekk /uken-siden om noen minutter.",
+    })
 
 
 @app.route("/reports")

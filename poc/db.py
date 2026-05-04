@@ -18,7 +18,7 @@ SessionLocal = None
 if DATABASE_URL:
     try:
         from sqlalchemy import (
-            create_engine, Column, Integer, String, Boolean,
+            create_engine, Column, Integer, BigInteger, String, Boolean,
             DateTime, JSON, Text, ForeignKey,
         )
         from sqlalchemy.orm import declarative_base, sessionmaker
@@ -35,7 +35,7 @@ if DATABASE_URL:
 # Define models only when SQLAlchemy is available
 if Base is not None:
     from sqlalchemy import (
-        create_engine, Column, Integer, String, Boolean,
+        create_engine, Column, Integer, BigInteger, String, Boolean,
         DateTime, JSON, Text, ForeignKey,
     )
 
@@ -56,7 +56,7 @@ if Base is not None:
 
     class Article(Base):
         __tablename__ = "articles"
-        id = Column(Integer, primary_key=True)
+        id = Column(BigInteger, primary_key=True)
         title = Column(Text)
         url = Column(Text, index=True)
         source_id = Column(Integer, ForeignKey("sources.id"), nullable=True, index=True)
@@ -112,6 +112,21 @@ if Base is not None:
             default=lambda: datetime.now(timezone.utc),
         )
 
+    class WeeklyDigest(Base):
+        __tablename__ = "weekly_digests"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        lang = Column(String(2), nullable=False, index=True)
+        headline = Column(Text)
+        body = Column(Text)
+        sources = Column(JSON)
+        article_count = Column(Integer)
+        cermaq_count = Column(Integer)
+        search_count = Column(Integer)
+        generated_at = Column(
+            DateTime(timezone=True),
+            default=lambda: datetime.now(timezone.utc),
+        )
+
 else:
     # Stub classes so imports don't fail when DB is unavailable
     class Source:  # type: ignore[no-redef]
@@ -125,6 +140,22 @@ else:
 
     class Alert:  # type: ignore[no-redef]
         pass
+
+    class WeeklyDigest:  # type: ignore[no-redef]
+        pass
+
+
+def migrate_id_to_bigint() -> None:
+    """Migrate articles.id column from INTEGER to BIGINT (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text("ALTER TABLE articles ALTER COLUMN id TYPE BIGINT"))
+        logger.info("Migrert articles.id til BIGINT")
+    except Exception as e:
+        logger.warning("Kunne ikke migrere id-kolonne (kanskje allerede BIGINT): %s", e)
 
 
 def init_db() -> None:

@@ -1,4 +1,4 @@
-"""Daily AI digest generation for Cermaq Watch — web-search powered."""
+"""AI digest generation for Cermaq Watch — daily and weekly, web-search powered."""
 
 import json
 import logging
@@ -55,29 +55,130 @@ SECTION_TITLES = {
 
 
 def _extract_json(text: str) -> str:
-    text = text.strip()
-    text = re.sub(r"^```(?:json)?\s*", "", text)
-    text = re.sub(r"\s*```$", "", text)
-    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not text:
+        raise ValueError("Tom respons")
+
+    text_stripped = text.strip()
+    if text_stripped.startswith("{") and text_stripped.endswith("}"):
+        return text_stripped
+
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
     if match:
-        return match.group(0)
+        return match.group(1)
+
+    first_brace = text.find("{")
+    last_brace = text.rfind("}")
+    if first_brace != -1 and last_brace > first_brace:
+        return text[first_brace : last_brace + 1]
+
     raise ValueError(f"Kunne ikke finne JSON i: {text[:200]!r}")
 
 
 def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | None:
-    """Generate daily digest by letting Claude search the web actively.
+    """Generate SHORT daily digest focused on last 24 hours.
 
-    Uses miniflux_articles as context but supplements with live web_search
-    calls. Returns dict with headline, body (HTML), metadata — or None on failure.
+    Uses 2-3 web searches. Returns plain-text body (not markdown).
     """
+    cermaq_count = sum(1 for a in miniflux_articles if a.get("scope") == "cermaq")
+
+    miniflux_context = ""
+    for a in miniflux_articles[:20]:
+        summary = (a.get("summaries") or {}).get(lang) or (a.get("summaries") or {}).get("no", "")
+        miniflux_context += f"- [{a.get('source_name', 'Ukjent')}] {a.get('title', '')}\n"
+        if summary:
+            miniflux_context += f"  {summary}\n"
+        if a.get("url"):
+            miniflux_context += f"  {a['url']}\n"
+        miniflux_context += "\n"
+
+    lang_instr = LANG_INSTRUCTIONS.get(lang, LANG_INSTRUCTIONS["no"])
+
+    system_prompt = (
+        "Du er en kommunikasjonsassistent for Cermaq. Lag en kort, "
+        "daglig medieoppdatering basert på artikler fra siste 24 timer.\n\n"
+        "Bruk web_search 2-3 ganger for å finne ferske Cermaq-saker.\n\n"
+        "OUTPUT-FORMAT:\n"
+        "Returner KUN gyldig JSON. Start med { og slutt med }. "
+        "Ingen markdown-overskrifter eller prosa før JSON.\n\n"
+        "{\n"
+        '  "headline": "Én setning som fanger dagens tema",\n'
+        '  "body": "2-3 setninger som oppsummerer dagens nyhetsbilde '
+        'fra Cermaq-perspektiv. Direkte språk, ingen markdown.",\n'
+        '  "sources": ["url1", "url2"]\n'
+        "}\n\n"
+        f"TONE: Direkte, konsist, profesjonelt.\n\n"
+        f"{lang_instr}"
+    )
+
+    user_prompt = (
+        f"Lag en kort daglig medieoppdatering for Cermaq, siste 24 timer.\n\n"
+        f"Bruk web_search 2-3 ganger for ferske Cermaq-saker.\n\n"
+        f"Miniflux-artikler ({len(miniflux_articles)} totalt, {cermaq_count} Cermaq-spesifikke):\n\n"
+        f"{miniflux_context}"
+    )
+
+    log.info("Genererer daglig digest lang=%s", lang)
+
+    try:
+        client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=800,
+            temperature=0.3,
+            tools=[
+                {
+                    "type": "web_search_20250305",
+                    "name": "web_search",
+                    "max_uses": 3,
+                }
+            ],
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+
+        search_count = sum(
+            1 for block in response.content
+            if getattr(block, "type", "") == "server_tool_use"
+            and getattr(block, "name", "") == "web_search"
+        )
+        log.info("Daglig digest lang=%s brukte web_search %d ganger", lang, search_count)
+
+        text_parts = [
+            block.text
+            for block in response.content
+            if getattr(block, "type", "") == "text"
+        ]
+        full_text = "\n".join(text_parts)
+
+        result = json.loads(_extract_json(full_text))
+
+        sources = result.get("sources") or []
+
+        log.info("Daglig digest klar lang=%s: %s", lang, result.get("headline", "")[:60])
+        return {
+            "headline": result.get("headline", ""),
+            "body": result.get("body", ""),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "lang": lang,
+            "article_count": len(miniflux_articles),
+            "cermaq_count": cermaq_count,
+            "search_count": search_count,
+            "sources": sources,
+        }
+
+    except Exception as exc:
+        log.error("Daglig digest feilet lang=%s: %s", lang, exc, exc_info=True)
+        return None
+
+
+def generate_weekly_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | None:
+    """Generate full weekly digest with markdown sections, 4-8 web searches."""
     cermaq_count = sum(1 for a in miniflux_articles if a.get("scope") == "cermaq")
 
     miniflux_context = ""
     for a in miniflux_articles:
         summary = (a.get("summaries") or {}).get(lang) or (a.get("summaries") or {}).get("no", "")
-        miniflux_context += (
-            f"- [{a.get('source_name', 'Ukjent')}] {a.get('title', '')}\n"
-        )
+        miniflux_context += f"- [{a.get('source_name', 'Ukjent')}] {a.get('title', '')}\n"
         if summary:
             miniflux_context += f"  {summary}\n"
         if a.get("url"):
@@ -110,12 +211,12 @@ def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | N
         "Prioriter Cermaq-spesifikke søk først.\n\n"
         "OUTPUT-FORMAT:\n"
         "Returner KUN gyldig JSON, ingen markdown-wrapping, ingen kode-blokker.\n\n"
-        '{{\n'
-        '  "headline": "Én setning som fanger dagens viktigste sak",\n'
+        "{{\n"
+        '  "headline": "Én setning som fanger ukens viktigste sak",\n'
         '  "body": "Markdown-tekst med seksjoner",\n'
         '  "sources": ["url1", "url2"]\n'
         "}}\n\n"
-        f"I \"body\", strukturer slik (hopp over tomme seksjoner):\n\n"
+        f'I "body", strukturer slik (hopp over tomme seksjoner):\n\n'
         f"### {titles['cermaq']}\n"
         "2-4 setninger om Cermaq-spesifikke saker. "
         "Inkluder lenker som [tittel](url) der det er naturlig.\n\n"
@@ -135,17 +236,15 @@ def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | N
     )
 
     user_prompt = (
-        f"Lag en daglig medie-briefing om Cermaq og lakseoppdrett-bransjen "
-        f"basert på siste 24 timers nyheter.\n\n"
+        f"Lag en ukentlig medie-briefing om Cermaq og lakseoppdrett-bransjen "
+        f"basert på siste 7 dagers nyheter.\n\n"
         f"Bruk web_search aktivt for å finne ferske Cermaq-saker.\n\n"
         f"Miniflux-artikler som kontekst "
         f"({len(miniflux_articles)} totalt, {cermaq_count} merket som Cermaq-spesifikke):\n\n"
         f"{miniflux_context}"
     )
 
-    # Estimated cost per call: ~6 searches × $0.01 + ~5k tokens × $3/M + ~800 tokens × $15/M
-    # ≈ $0.06 + $0.015 + $0.012 = ~$0.087 per language, ~$0.35 for all four
-    log.info("Estimert digest-kostnad per språk: ~$0.09 (~0.85 kr)")
+    log.info("Genererer ukentlig digest lang=%s", lang)
 
     try:
         client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
@@ -169,7 +268,7 @@ def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | N
             if getattr(block, "type", "") == "server_tool_use"
             and getattr(block, "name", "") == "web_search"
         )
-        log.info("Digest lang=%s brukte web_search %d ganger", lang, search_count)
+        log.info("Ukentlig digest lang=%s brukte web_search %d ganger", lang, search_count)
 
         text_parts = [
             block.text
@@ -190,7 +289,7 @@ def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | N
             )
             body_html += f"<h3>{titles['sources']}</h3><ul>{items}</ul>"
 
-        log.info("Digest klar lang=%s: %s", lang, result.get("headline", "")[:60])
+        log.info("Ukentlig digest klar lang=%s: %s", lang, result.get("headline", "")[:60])
         return {
             "headline": result.get("headline", ""),
             "body": body_html,
@@ -203,5 +302,5 @@ def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | N
         }
 
     except Exception as exc:
-        log.error("Digest-generering feilet for lang=%s: %s", lang, exc, exc_info=True)
+        log.error("Ukentlig digest feilet lang=%s: %s", lang, exc, exc_info=True)
         return None

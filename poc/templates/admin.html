@@ -207,6 +207,7 @@
   </div>
   <div class="admin-header-right">
     <a href="/" class="header-link">← Tilbake til nyheter</a>
+    <a href="/uken" class="header-link">Uken oppsummert</a>
     <a href="/alerts" class="header-link">Varsling</a>
   </div>
 </header>
@@ -298,14 +299,24 @@
     <div id="reclassify-feedback" class="feedback"></div>
   </div>
 
-  <!-- Card 5: Regenerer digest -->
+  <!-- Card 5: Regenerer daglig digest -->
   <div class="card">
-    <div class="card-title">AI-digest</div>
-    <div class="card-desc">Generer daglig oppsummering på nytt for alle fire språk (NO/EN/ES/JA). Tar ca. 30–60 sek.</div>
+    <div class="card-title">Daglig AI-oppdatering</div>
+    <div class="card-desc">Generer daglig oppsummering på nytt for alle fire språk (NO/EN/ES/JA). Tar ca. 30–60 sek. Kjøres automatisk kl. 06:00.</div>
     <div class="btn-row">
-      <button class="btn btn-primary" onclick="regenerateDigest()">Generer digest på nytt</button>
+      <button class="btn btn-primary" onclick="regenerateDigest()">Generer daglig digest</button>
     </div>
     <div id="digest-feedback" class="feedback"></div>
+  </div>
+
+  <!-- Card 5b: Ukentlig digest -->
+  <div class="card">
+    <div class="card-title">Uken oppsummert</div>
+    <div class="card-desc">Generer ukentlig medieoppsummering. Bruker web-søk for bredere kontekst. Tar 1–3 minutter per språk (4 språk). Vises på <a href="/uken" style="color:#0c4a3e">/uken</a>-siden.</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btn-weekly-digest" onclick="generateWeekly()">Generer ukens oppsummering</button>
+    </div>
+    <div id="weekly-feedback" class="feedback"></div>
   </div>
 
   <!-- Card 6: Migrer tone -->
@@ -531,6 +542,31 @@
       );
     } catch (e) {
       showFeedback("digest-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  /* ─── Card 5b: Ukentlig digest ──────────────────────────── */
+  async function generateWeekly() {
+    if (!requireToken("weekly-feedback")) return;
+    var btn = document.getElementById("btn-weekly-digest");
+    btn.disabled = true;
+    btn.textContent = "Genererer…";
+    showFeedback("weekly-feedback", "Starter ukentlig digest-generering for alle 4 språk…", "loading", true);
+    try {
+      var resp = await fetch("/admin/generate-weekly?" + tokenParam(), {method: "POST"});
+      var data = await resp.json();
+      if (!resp.ok) {
+        showFeedback("weekly-feedback", data.error || "Feil", "error", true);
+      } else {
+        showFeedback("weekly-feedback",
+          "✓ " + data.status + "\n" + (data.note || ""), "success", true
+        );
+      }
+    } catch (e) {
+      showFeedback("weekly-feedback", "Nettverksfeil: " + e.message, "error", true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Generer ukens oppsummering";
     }
   }
 
