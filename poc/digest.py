@@ -232,7 +232,19 @@ def generate_weekly_digest(miniflux_articles: list[dict], lang: str = "no") -> d
         "påstander på (web_search og Miniflux).\n\n"
         f"{lang_instr}\n\n"
         "TONE: Kortfattet, profesjonelt, analytisk. En mediekonsulent "
-        "som rapporterer til ledergruppen — ikke salgsorientert."
+        "som rapporterer til ledergruppen — ikke salgsorientert.\n\n"
+        "---\n\n"
+        "KRITISK: Returner BARE gyldig JSON. Start svaret med { og slutt "
+        "med }. Ikke skriv noen prosa, overskrifter, eller introduksjoner "
+        "før JSON-en. Hele svaret skal kunne parses av json.loads().\n\n"
+        "Format:\n"
+        "{\n"
+        '  "headline": "...",\n'
+        '  "body": "### Seksjon\\n...\\n\\n### Neste seksjon\\n...",\n'
+        '  "sources": ["url1", "url2"]\n'
+        "}\n\n"
+        'body skal inneholde markdown-seksjonene, men SELVE SVARET skal være '
+        "ren JSON. Ikke skriv 'Her er...' eller andre prosa-introduksjoner."
     )
 
     user_prompt = (
@@ -277,7 +289,17 @@ def generate_weekly_digest(miniflux_articles: list[dict], lang: str = "no") -> d
         ]
         full_text = "\n".join(text_parts)
 
-        result = json.loads(_extract_json(full_text))
+        try:
+            result = json.loads(_extract_json(full_text))
+        except (ValueError, json.JSONDecodeError) as parse_err:
+            log.warning(
+                "Ukentlig digest JSON-parsing feilet, bruker rå tekst: %s", parse_err
+            )
+            result = {
+                "headline": (full_text.split("\n")[0] or "Ukens oppsummering")[:120],
+                "body": full_text,
+                "sources": [],
+            }
 
         body_html = md.markdown(result.get("body", ""), extensions=["nl2br"])
 
