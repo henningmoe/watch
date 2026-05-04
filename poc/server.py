@@ -986,7 +986,7 @@ def _run_backfill(days: int, max_articles: int) -> None:
             break
         try:
             response = client.messages.create(
-                model="claude-sonnet-4-6-20250514",
+                model="claude-sonnet-4-6",
                 max_tokens=4000,
                 tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
                 messages=[{
@@ -1551,7 +1551,7 @@ def admin_run_websearch():
             for query in queries:
                 try:
                     resp = client.messages.create(
-                        model="claude-sonnet-4-6-20250514",
+                        model="claude-sonnet-4-6",
                         max_tokens=2000,
                         tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 2}],
                         messages=[{"role": "user", "content": (
@@ -1939,7 +1939,7 @@ def api_reports_weekly_summary():
         from anthropic import Anthropic as _Anthropic
         client = _Anthropic()
         response = client.messages.create(
-            model="claude-sonnet-4-6-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=1500,
             messages=[{"role": "user", "content": (
                 f"Lag et ukentlig sammendrag (ca 300 ord på {lang_names[lang]}) av "

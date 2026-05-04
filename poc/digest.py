@@ -150,7 +150,7 @@ def generate_digest(miniflux_articles: list[dict], lang: str = "no") -> dict | N
     try:
         client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
         response = client.messages.create(
-            model="claude-sonnet-4-6-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=3000,
             temperature=0.3,
             tools=[
