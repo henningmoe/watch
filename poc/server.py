@@ -33,6 +33,55 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__, template_folder="templates")
 
+_THEMES_LIST = ["Sjø", "Landbasert", "Fôr", "Fiskehelse", "Teknologi", "Digitalisering", "Finans"]
+_REGIONS_LIST = ["norge", "chile", "canada", "global"]
+
+
+@app.context_processor
+def inject_sidebar_counts():
+    """Sidebar counts (theme/region) available in all templates."""
+    from flask import request as _req
+
+    active_region = _req.args.get("region", "")
+    active_theme = _req.args.get("theme", "")
+
+    theme_counts = {t: 0 for t in _THEMES_LIST}
+    region_counts = {r: 0 for r in _REGIONS_LIST}
+    total_classified = 0
+
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                rows = (
+                    session.query(Article.region, Article.themes)
+                    .filter(
+                        Article.classified_at.isnot(None),
+                        Article.scope != "irrelevant",
+                    )
+                    .all()
+                )
+                total_classified = len(rows)
+                for row in rows:
+                    reg = row.region or "global"
+                    if reg in region_counts:
+                        region_counts[reg] += 1
+                    else:
+                        region_counts["global"] += 1
+                    for t in (row.themes or []):
+                        if t in theme_counts:
+                            theme_counts[t] += 1
+        except Exception as exc:
+            log.warning("inject_sidebar_counts feilet: %s", exc)
+
+    return dict(
+        theme_counts=theme_counts,
+        region_counts=region_counts,
+        total_classified=total_classified,
+        active_region=active_region,
+        active_theme=active_theme,
+    )
+
+
 # Articles keyed by ID; never shrinks (accumulates over time)
 _articles: dict = {}
 _articles_lock = threading.Lock()
