@@ -969,11 +969,19 @@ def index():
     if lang not in ("no", "en", "es", "ja"):
         lang = "no"
 
+    active_region = request.args.get("region")  # e.g. "norge"
+    active_theme = request.args.get("theme")    # e.g. "Sjø"
+
     digest = get_digest(lang)
     ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
 
     articles, error = _get_articles()
-    articles_sorted = sorted(articles, key=_sort_key)
+    # Sort newest first by default
+    articles_sorted = sorted(
+        articles,
+        key=lambda a: _parse_dt(a.get("published_at")),
+        reverse=True,
+    )
     formatted = [
         {**a, "published_at_iso": a.get("published_at") or "", "published_at": _fmt_dt(a.get("published_at"))}
         for a in articles_sorted
@@ -1022,6 +1030,12 @@ def index():
         1 for a in formatted if a.get("tone") in ("kritisk", "negativ")
     )
 
+    _all_themes = ["Sjø", "Landbasert", "Fôr", "Fiskehelse", "Teknologi", "Digitalisering", "Finans"]
+    theme_counts = {
+        t: sum(1 for a in formatted if t in (a.get("themes") or []))
+        for t in _all_themes
+    }
+
     return render_template(
         "index.html",
         articles=formatted,
@@ -1034,13 +1048,34 @@ def index():
         queue_size=_classify_queue.qsize(),
         cermaq_count=cermaq_count,
         region_counts=region_counts,
+        theme_counts=theme_counts,
         industry_core_count=industry_core_count,
         industry_global_count=industry_global_count,
         negative_count=negative_count,
         digest=digest,
         lang=lang,
         ui_text=ui_text,
+        active_region=active_region or "",
+        active_theme=active_theme or "",
     )
+
+
+@app.route("/analytics")
+def analytics_page():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
+    return render_template("analytics.html", lang=lang, ui_text=ui_text)
+
+
+@app.route("/finance")
+def finance_page():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
+    return render_template("finance.html", lang=lang, ui_text=ui_text)
 
 
 # ---------------------------------------------------------------------------
