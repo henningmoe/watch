@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 
 app = Flask(__name__, template_folder="templates")
 
-_THEMES_LIST = ["Sjø", "Landbasert", "Fôr", "Fiskehelse", "Teknologi", "Digitalisering", "Finans"]
+_THEMES_LIST = ["Sjø", "Landbasert", "Fôr", "Fiskehelse", "Teknologi", "Digitalisering", "Finans", "Marked"]
 _REGIONS_LIST = ["norge", "chile", "canada", "global"]
 
 

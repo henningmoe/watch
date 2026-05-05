@@ -280,6 +280,7 @@
     .theme-tag[data-theme="Teknologi"]      { background: #ede9fe; color: #6d28d9; }
     .theme-tag[data-theme="Digitalisering"] { background: #f1f5f9; color: #475569; }
     .theme-tag[data-theme="Finans"]         { background: #fff7ed; color: #c2410c; }
+    .theme-tag[data-theme="Marked"]         { background: #fde2d3; color: #a14820; }
 
     .theme-dot {
       width: 8px; height: 8px;
@@ -293,6 +294,7 @@
     .theme-dot[data-theme="Teknologi"]      { background: #6d28d9; }
     .theme-dot[data-theme="Digitalisering"] { background: #475569; }
     .theme-dot[data-theme="Finans"]         { background: #c2410c; }
+    .theme-dot[data-theme="Marked"]         { background: #a14820; }
 
     /* ─── Main content ───────────────────────────────────────── */
     .main-content {
@@ -640,7 +642,7 @@
       <span class="coll-arrow">&#9660;</span>
     </button>
     <div class="sidebar-collapsible-body{% if not active_theme %} collapsed{% endif %}" id="tema-body">
-      {% set _themes_list = ['Sjø','Landbasert','Fôr','Fiskehelse','Teknologi','Digitalisering','Finans'] %}
+      {% set _themes_list = ['Sjø','Landbasert','Fôr','Fiskehelse','Teknologi','Digitalisering','Finans','Marked'] %}
       {% for t in _themes_list %}
       <a href="/?theme={{ t | urlencode }}&lang={{ lang }}"
          class="nav-item{% if active_theme == t %} active{% endif %}"
