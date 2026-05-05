@@ -87,6 +87,7 @@
     .kpi-change { font-size: 12px; font-weight: 500; }
     .kpi-change.positive { color: #2d6e4a; }
     .kpi-change.negative { color: var(--coral); }
+    .kpi-change.neutral { color: #888; font-style: italic; }
     .kpi-sublabel { font-size: 11px; color: #888; }
 
     /* ─── Chart grid ──────────────────────────────────────── */
@@ -318,7 +319,11 @@
     document.getElementById('kpi-sources').textContent = d.active_sources != null ? d.active_sources : '—';
     function setChange(id, pct) {
       var el = document.getElementById(id);
-      if (pct == null) { el.textContent = ''; return; }
+      if (pct == null) {
+        el.textContent = 'For lite data';
+        el.className = 'kpi-change neutral';
+        return;
+      }
       var sign = pct >= 0 ? '+' : '';
       el.textContent = sign + pct + '% vs forrige periode';
       el.className = 'kpi-change ' + (pct >= 0 ? 'positive' : 'negative');

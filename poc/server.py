@@ -2156,6 +2156,14 @@ def admin_generate_weekly():
     })
 
 
+@app.route("/analytics")
+def analytics_page():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    return render_template("analytics.html", lang=lang)
+
+
 @app.route("/reports")
 def reports_page():
     lang = request.args.get("lang", "no")
@@ -2373,8 +2381,8 @@ def api_analytics_kpis():
         active_sources = src_q.scalar() or 0
 
         def _pct(now, prev):
-            if prev == 0:
-                return 100.0 if now > 0 else 0.0
+            if prev < 5:
+                return None
             return round((now - prev) / prev * 100, 1)
 
         return jsonify({
