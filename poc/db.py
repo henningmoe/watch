@@ -152,6 +152,20 @@ if Base is not None:
             default=lambda: datetime.now(timezone.utc),
         )
 
+    class CalendarEvent(Base):
+        __tablename__ = "calendar_events"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        title = Column(String(255), nullable=False)
+        description = Column(Text, nullable=True)
+        event_date = Column(DateTime(timezone=True), nullable=False, index=True)
+        event_type = Column(String(50), nullable=True, index=True)
+        company = Column(String(100), nullable=True)
+        source_url = Column(String(500), nullable=True)
+        created_at = Column(
+            DateTime(timezone=True),
+            default=lambda: datetime.now(timezone.utc),
+        )
+
 else:
     # Stub classes so imports don't fail when DB is unavailable
     class Source:  # type: ignore[no-redef]
@@ -173,6 +187,9 @@ else:
         pass
 
     class SalmonPrice:  # type: ignore[no-redef]
+        pass
+
+    class CalendarEvent:  # type: ignore[no-redef]
         pass
 
 
@@ -225,6 +242,36 @@ def migrate_add_salmon_prices() -> None:
         logger.info("migrate_add_salmon_prices: tabell OK")
     except Exception as e:
         logger.warning("migrate_add_salmon_prices: %s", e)
+
+
+def migrate_add_calendar_events() -> None:
+    """Create calendar_events table (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text("""
+                CREATE TABLE IF NOT EXISTS calendar_events (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT,
+                    event_date TIMESTAMPTZ NOT NULL,
+                    event_type VARCHAR(50),
+                    company VARCHAR(100),
+                    source_url VARCHAR(500),
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_calendar_events_event_date ON calendar_events (event_date)"
+            ))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_calendar_events_event_type ON calendar_events (event_type)"
+            ))
+        logger.info("migrate_add_calendar_events: tabell OK")
+    except Exception as e:
+        logger.warning("migrate_add_calendar_events: %s", e)
 
 
 def migrate_add_themes() -> None:

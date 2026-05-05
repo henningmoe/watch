@@ -156,6 +156,81 @@ def fetch_all_stocks() -> Dict:
     return result
 
 
+def fetch_stock_quote_history(ticker: str, days: int = 90) -> Optional[Dict]:
+    """Fetch historical daily closing prices for a ticker via Yahoo Finance."""
+    if days <= 30:
+        range_str, interval = "1mo", "1d"
+    elif days <= 90:
+        range_str, interval = "3mo", "1d"
+    elif days <= 180:
+        range_str, interval = "6mo", "1d"
+    else:
+        range_str, interval = "1y", "1wk"
+
+    url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}"
+    params = {"range": range_str, "interval": interval, "includePrePost": "false"}
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; CermaqWatch/1.0)"}
+    try:
+        resp = requests.get(url, params=params, headers=headers, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+
+        results = data.get("chart", {}).get("result", [])
+        if not results:
+            return None
+        result = results[0]
+        timestamps = result.get("timestamp", [])
+        closes = result.get("indicators", {}).get("quote", [{}])[0].get("close", [])
+
+        valid = [(t, c) for t, c in zip(timestamps, closes) if c is not None]
+        if not valid:
+            return None
+
+        return {
+            "ticker": ticker,
+            "dates": [
+                datetime.fromtimestamp(t, tz=timezone.utc).date().isoformat()
+                for t, _ in valid
+            ],
+            "prices": [round(c, 2) for _, c in valid],
+        }
+    except Exception as exc:
+        log.warning("History fetch feilet for %s: %s", ticker, exc)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Commodity futures via Yahoo Finance
+# ---------------------------------------------------------------------------
+
+COMMODITY_TICKERS = {
+    "Soya": "ZS=F",
+    "Soyamel": "ZM=F",
+    "Hvete": "ZW=F",
+}
+
+COMMODITY_CURRENCY = {
+    "ZS=F": "USd/bu",   # US cents per bushel
+    "ZM=F": "USD/ton",
+    "ZW=F": "USd/bu",
+}
+
+
+def fetch_commodities() -> Dict:
+    """Fetch futures prices for feed-input commodities via Yahoo Finance."""
+    result: Dict = {}
+    for name, ticker in COMMODITY_TICKERS.items():
+        quote = fetch_stock_quote(ticker)
+        if quote:
+            result[name] = {
+                **quote,
+                "ticker": ticker,
+                "commodity_currency": COMMODITY_CURRENCY.get(ticker, "USD"),
+            }
+    log.info("Råvarer hentet: %d av %d", len(result), len(COMMODITY_TICKERS))
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Salmon price indices
 # ---------------------------------------------------------------------------

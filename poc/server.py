@@ -24,9 +24,9 @@ from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
     init_db, ensure_columns, migrate_id_to_bigint, migrate_add_themes,
-    migrate_add_finance_digests, migrate_add_salmon_prices,
+    migrate_add_finance_digests, migrate_add_salmon_prices, migrate_add_calendar_events,
     is_db_available, SessionLocal,
-    Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest, SalmonPrice,
+    Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest, SalmonPrice, CalendarEvent,
     extract_domain, get_or_create_source,
 )
 
@@ -725,7 +725,95 @@ migrate_id_to_bigint()
 migrate_add_themes()
 migrate_add_finance_digests()
 migrate_add_salmon_prices()
+migrate_add_calendar_events()
 _load_from_db()
+
+
+def seed_calendar_events() -> None:
+    """Seed the calendar with known industry events for 2026-2027 (idempotent)."""
+    if not is_db_available():
+        return
+    from sqlalchemy import text as _text
+
+    _SEED: list[dict] = [
+        # --- Q1 2026 results (typical release windows) ---
+        {"title": "Mowi Q1 2026 kvartalsrapport", "event_date": "2026-05-07T06:00:00+00:00", "event_type": "q-report", "company": "Mowi"},
+        {"title": "Lerøy Q1 2026 kvartalsrapport", "event_date": "2026-05-13T06:00:00+00:00", "event_type": "q-report", "company": "Lerøy"},
+        {"title": "SalMar Q1 2026 kvartalsrapport", "event_date": "2026-05-14T06:00:00+00:00", "event_type": "q-report", "company": "SalMar"},
+        {"title": "Grieg Seafood Q1 2026 kvartalsrapport", "event_date": "2026-05-20T06:00:00+00:00", "event_type": "q-report", "company": "Grieg Seafood"},
+        {"title": "Bakkafrost Q1 2026 kvartalsrapport", "event_date": "2026-05-28T06:00:00+00:00", "event_type": "q-report", "company": "Bakkafrost"},
+        # --- Q2 2026 results ---
+        {"title": "Lerøy Q2 2026 kvartalsrapport", "event_date": "2026-08-19T06:00:00+00:00", "event_type": "q-report", "company": "Lerøy"},
+        {"title": "Mowi Q2 2026 kvartalsrapport", "event_date": "2026-08-20T06:00:00+00:00", "event_type": "q-report", "company": "Mowi"},
+        {"title": "Bakkafrost Q2 2026 kvartalsrapport", "event_date": "2026-08-25T06:00:00+00:00", "event_type": "q-report", "company": "Bakkafrost"},
+        {"title": "Grieg Seafood Q2 2026 kvartalsrapport", "event_date": "2026-08-26T06:00:00+00:00", "event_type": "q-report", "company": "Grieg Seafood"},
+        {"title": "SalMar Q2 2026 kvartalsrapport", "event_date": "2026-08-27T06:00:00+00:00", "event_type": "q-report", "company": "SalMar"},
+        # --- Q3 2026 results ---
+        {"title": "Mowi Q3 2026 kvartalsrapport", "event_date": "2026-11-05T06:00:00+00:00", "event_type": "q-report", "company": "Mowi"},
+        {"title": "Lerøy Q3 2026 kvartalsrapport", "event_date": "2026-11-10T06:00:00+00:00", "event_type": "q-report", "company": "Lerøy"},
+        {"title": "SalMar Q3 2026 kvartalsrapport", "event_date": "2026-11-12T06:00:00+00:00", "event_type": "q-report", "company": "SalMar"},
+        {"title": "Bakkafrost Q3 2026 kvartalsrapport", "event_date": "2026-11-17T06:00:00+00:00", "event_type": "q-report", "company": "Bakkafrost"},
+        {"title": "Grieg Seafood Q3 2026 kvartalsrapport", "event_date": "2026-11-18T06:00:00+00:00", "event_type": "q-report", "company": "Grieg Seafood"},
+        # --- Norges Bank rentebeslutninger 2026 ---
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-01-22T10:00:00+01:00", "event_type": "regulatory", "company": "Norges Bank"},
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-03-26T10:00:00+01:00", "event_type": "regulatory", "company": "Norges Bank"},
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-05-07T10:00:00+02:00", "event_type": "regulatory", "company": "Norges Bank"},
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-06-18T10:00:00+02:00", "event_type": "regulatory", "company": "Norges Bank"},
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-08-20T10:00:00+02:00", "event_type": "regulatory", "company": "Norges Bank"},
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-09-17T10:00:00+02:00", "event_type": "regulatory", "company": "Norges Bank"},
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-10-29T10:00:00+01:00", "event_type": "regulatory", "company": "Norges Bank"},
+        {"title": "Norges Bank rentebeslutning", "event_date": "2026-12-17T10:00:00+01:00", "event_type": "regulatory", "company": "Norges Bank"},
+        # --- Norske helligdager 2026 ---
+        {"title": "Skjærtorsdag", "event_date": "2026-04-02T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "Langfredag", "event_date": "2026-04-03T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "1. påskedag", "event_date": "2026-04-05T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "2. påskedag", "event_date": "2026-04-06T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "Arbeidernes dag", "event_date": "2026-05-01T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "Kristi himmelfartsdag", "event_date": "2026-05-14T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "Grunnlovsdagen", "event_date": "2026-05-17T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "1. pinsedag", "event_date": "2026-05-24T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "2. pinsedag", "event_date": "2026-05-25T00:00:00+02:00", "event_type": "holiday"},
+        {"title": "1. juledag", "event_date": "2026-12-25T00:00:00+01:00", "event_type": "holiday"},
+        {"title": "2. juledag", "event_date": "2026-12-26T00:00:00+01:00", "event_type": "holiday"},
+        # --- Bransjehendelser ---
+        {"title": "Sjømatdagene 2027", "event_date": "2027-01-26T09:00:00+01:00", "event_type": "industry-event", "description": "Norges største sjømatkonferanse, Tromsø"},
+        {"title": "AquaNor 2027", "event_date": "2027-08-19T09:00:00+02:00", "event_type": "industry-event", "description": "Verdens største havbruksmesse, Trondheim. Annet hvert år."},
+        {"title": "Seafood Expo Global 2026", "event_date": "2026-04-21T09:00:00+02:00", "event_type": "industry-event", "description": "Barcelona, verdens største sjømatmesse"},
+        {"title": "Fish International 2026", "event_date": "2026-02-16T09:00:00+01:00", "event_type": "industry-event", "description": "Bremen, internasjonal sjømatmesse"},
+        # --- Cermaq ---
+        {"title": "Cermaq generalforsamling 2026", "event_date": "2026-04-30T10:00:00+02:00", "event_type": "agm", "company": "Cermaq"},
+    ]
+
+    try:
+        with SessionLocal() as session:
+            existing_titles = {
+                r[0]
+                for r in session.execute(
+                    _text("SELECT title FROM calendar_events")
+                ).fetchall()
+            }
+            added = 0
+            for ev in _SEED:
+                if ev["title"] in existing_titles:
+                    continue
+                dt = datetime.fromisoformat(ev["event_date"])
+                row = CalendarEvent(
+                    title=ev["title"],
+                    description=ev.get("description"),
+                    event_date=dt,
+                    event_type=ev.get("event_type"),
+                    company=ev.get("company"),
+                )
+                session.add(row)
+                added += 1
+            if added:
+                session.commit()
+                log.info("seed_calendar_events: la til %d hendelser", added)
+    except Exception as exc:
+        log.warning("seed_calendar_events feilet: %s", exc)
+
+
+seed_calendar_events()
 
 
 # ---------------------------------------------------------------------------
@@ -2585,6 +2673,163 @@ def api_finance_news():
             "results": [_article_db_to_dict(a) for a in finance_articles],
             "total": len(finance_articles),
         })
+
+
+@app.route("/api/finance/commodities")
+def api_finance_commodities():
+    from poc.finance import fetch_commodities
+    return jsonify(fetch_commodities())
+
+
+@app.route("/api/finance/calendar")
+def api_finance_calendar():
+    days_ahead = min(int(request.args.get("days", 60)), 365)
+    if not is_db_available():
+        return jsonify({"events": []})
+    now = datetime.now(timezone.utc)
+    end = now + timedelta(days=days_ahead)
+    with SessionLocal() as session:
+        rows = (
+            session.query(CalendarEvent)
+            .filter(CalendarEvent.event_date >= now, CalendarEvent.event_date <= end)
+            .order_by(CalendarEvent.event_date)
+            .all()
+        )
+        return jsonify({
+            "events": [
+                {
+                    "id": e.id,
+                    "title": e.title,
+                    "description": e.description,
+                    "event_date": e.event_date.isoformat(),
+                    "event_type": e.event_type,
+                    "company": e.company,
+                    "source_url": e.source_url,
+                }
+                for e in rows
+            ]
+        })
+
+
+@app.route("/admin/calendar", methods=["GET", "POST"])
+def admin_calendar():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    if request.method == "POST":
+        if not is_db_available():
+            return jsonify({"error": "Database utilgjengelig"}), 503
+        data = request.get_json() or request.form.to_dict()
+        title = (data.get("title") or "").strip()
+        event_date_str = (data.get("event_date") or "").strip()
+        if not title or not event_date_str:
+            return jsonify({"error": "title og event_date er påkrevd"}), 400
+        try:
+            event_date = datetime.fromisoformat(event_date_str)
+            if event_date.tzinfo is None:
+                event_date = event_date.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return jsonify({"error": "Ugyldig dato-format (ISO 8601)"}), 400
+        with SessionLocal() as session:
+            ev = CalendarEvent(
+                title=title,
+                description=(data.get("description") or "").strip() or None,
+                event_date=event_date,
+                event_type=(data.get("event_type") or "").strip() or None,
+                company=(data.get("company") or "").strip() or None,
+                source_url=(data.get("source_url") or "").strip() or None,
+            )
+            session.add(ev)
+            session.commit()
+            return jsonify({"id": ev.id, "title": ev.title, "event_date": ev.event_date.isoformat()})
+
+    # GET — return all upcoming events
+    if not is_db_available():
+        return jsonify({"events": []})
+    now = datetime.now(timezone.utc)
+    with SessionLocal() as session:
+        rows = (
+            session.query(CalendarEvent)
+            .filter(CalendarEvent.event_date >= now)
+            .order_by(CalendarEvent.event_date)
+            .all()
+        )
+        return jsonify({
+            "events": [
+                {
+                    "id": e.id,
+                    "title": e.title,
+                    "description": e.description,
+                    "event_date": e.event_date.isoformat(),
+                    "event_type": e.event_type,
+                    "company": e.company,
+                }
+                for e in rows
+            ]
+        })
+
+
+@app.route("/admin/calendar/<int:event_id>", methods=["DELETE"])
+def admin_calendar_delete(event_id):
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+    with SessionLocal() as session:
+        ev = session.get(CalendarEvent, event_id)
+        if not ev:
+            return jsonify({"error": "Ikke funnet"}), 404
+        session.delete(ev)
+        session.commit()
+    return jsonify({"deleted": event_id})
+
+
+@app.route("/api/finance/prices/timeseries")
+def api_finance_prices_timeseries():
+    """Return historical salmon price data from the salmon_prices table."""
+    days = min(int(request.args.get("days", 90)), 365)
+    if not is_db_available():
+        return jsonify({"series": []})
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    with SessionLocal() as session:
+        rows = (
+            session.query(SalmonPrice)
+            .filter(SalmonPrice.fetched_at >= cutoff)
+            .order_by(SalmonPrice.fetched_at)
+            .all()
+        )
+    series: dict = {}
+    for row in rows:
+        src = row.source
+        date_str = row.fetched_at.date().isoformat()
+        data = row.price_data or {}
+        price = None
+        if src == "fish_pool" and data.get("forward_prices"):
+            price = data["forward_prices"][0].get("price")
+        elif src == "nasdaq":
+            price = data.get("spot_price")
+        if price is None:
+            continue
+        if src not in series:
+            series[src] = {"dates": [], "prices": [], "label": data.get("source", src)}
+        if not series[src]["dates"] or series[src]["dates"][-1] != date_str:
+            series[src]["dates"].append(date_str)
+            series[src]["prices"].append(round(float(price), 2))
+
+    return jsonify({"series": list(series.values()), "days": days})
+
+
+@app.route("/api/finance/stocks/timeseries")
+def api_finance_stocks_timeseries():
+    """Return historical stock prices for all competitor tickers."""
+    days = min(int(request.args.get("days", 90)), 365)
+    from poc.finance import STOCK_TICKERS, fetch_stock_quote_history
+    result = {}
+    for name, ticker in STOCK_TICKERS.items():
+        hist = fetch_stock_quote_history(ticker, days=days)
+        if hist:
+            result[name] = {"dates": hist["dates"], "prices": hist["prices"], "ticker": ticker}
+    return jsonify(result)
 
 
 @app.route("/healthz")
