@@ -1328,25 +1328,57 @@ def index():
     if lang not in ("no", "en", "es", "ja"):
         lang = "no"
 
+    theme = request.args.get("theme", "").strip() or None
+    region = request.args.get("region", "").strip() or None
+    log.info("[index] theme=%r, region=%r, lang=%r", theme, region, lang)
+
     digest = get_digest(lang)
     ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
 
-    articles, error = _get_articles()
+    error = None
+
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                q = session.query(Article).filter(
+                    Article.classified_at.isnot(None),
+                    Article.scope != "irrelevant",
+                )
+                if region:
+                    q = q.filter(Article.region == region)
+                q = q.order_by(Article.published_at.desc())
+                db_rows = q.all()
+                log.info("[index] etter SQL-filter: %d artikler", len(db_rows))
+                if theme:
+                    before = len(db_rows)
+                    db_rows = [a for a in db_rows if a.themes and theme in a.themes]
+                    log.info("[index] theme-filter '%s': %d -> %d artikler", theme, before, len(db_rows))
+                articles = [_article_db_to_dict(a) for a in db_rows]
+        except Exception as exc:
+            log.error("[index] DB-feil: %s", exc)
+            articles, error = _get_articles()
+            articles = [a for a in articles if a.get("classified_at") and a.get("scope") != "irrelevant"]
+            if region:
+                articles = [a for a in articles if a.get("region") == region]
+            if theme:
+                before = len(articles)
+                articles = [a for a in articles if a.get("themes") and theme in a.get("themes")]
+                log.info("[index] theme-filter (mem) '%s': %d -> %d artikler", theme, before, len(articles))
+    else:
+        articles, error = _get_articles()
+        articles = [a for a in articles if a.get("classified_at") and a.get("scope") != "irrelevant"]
+        if region:
+            articles = [a for a in articles if a.get("region") == region]
+        if theme:
+            before = len(articles)
+            articles = [a for a in articles if a.get("themes") and theme in a.get("themes")]
+            log.info("[index] theme-filter (mem) '%s': %d -> %d artikler", theme, before, len(articles))
+
     articles_sorted = sorted(articles, key=_sort_key)
     formatted = [
         {**a, "published_at_iso": a.get("published_at") or "", "published_at": _fmt_dt(a.get("published_at"))}
         for a in articles_sorted
     ]
-
-    # Only show classified, non-irrelevant articles
-    formatted = [
-        a for a in formatted
-        if a.get("classified_at") and a.get("scope") != "irrelevant"
-    ]
-
-    irrelevant_count = sum(1 for a in articles if a.get("scope") == "irrelevant")
-    if irrelevant_count:
-        log.info("%d artikler filtrert som irrelevant", irrelevant_count)
 
     for article in formatted:
         if "summaries" not in article:
@@ -1368,23 +1400,6 @@ def index():
         classified = _classified_count
         total = _total_count or len(articles)
 
-    cermaq_count = sum(1 for a in formatted if a.get("scope") == "cermaq")
-    region_counts = {
-        r: sum(1 for a in formatted if a.get("region") == r)
-        for r in ("norge", "chile", "canada", "global")
-    }
-    industry_core_count = sum(
-        1 for a in formatted
-        if a.get("scope") == "industry" and a.get("region") in ("norge", "chile", "canada")
-    )
-    industry_global_count = sum(
-        1 for a in formatted
-        if a.get("scope") == "industry" and a.get("region") not in ("norge", "chile", "canada")
-    )
-    negative_count = sum(
-        1 for a in formatted if a.get("tone") in ("kritisk", "negativ")
-    )
-
     return render_template(
         "index.html",
         articles=formatted,
@@ -1395,11 +1410,6 @@ def index():
         classified_count=classified,
         total_count=total,
         queue_size=_classify_queue.qsize(),
-        cermaq_count=cermaq_count,
-        region_counts=region_counts,
-        industry_core_count=industry_core_count,
-        industry_global_count=industry_global_count,
-        negative_count=negative_count,
         digest=digest,
         lang=lang,
         ui_text=ui_text,
@@ -1853,8 +1863,6 @@ def api_articles():
             q = q.filter(Article.region == region)
         if tone:
             q = q.filter(Article.tone == tone)
-        if theme:
-            q = q.filter(Article.themes.contains([theme]))
         if source_domain:
             q = q.filter(Article.source_domain == source_domain)
         if since:
@@ -1863,10 +1871,13 @@ def api_articles():
                 q = q.filter(Article.published_at >= cutoff)
             except Exception:
                 pass
-        total = q.count()
-        articles = q.order_by(Article.published_at.desc()).offset(offset).limit(limit).all()
+        all_articles = q.order_by(Article.published_at.desc()).all()
+        if theme:
+            all_articles = [a for a in all_articles if a.themes and theme in a.themes]
+        total = len(all_articles)
+        paginated = all_articles[offset:offset + limit]
         return jsonify({
-            "results": [_article_db_to_dict(a) for a in articles],
+            "results": [_article_db_to_dict(a) for a in paginated],
             "total": total,
             "limit": limit,
             "offset": offset,
@@ -1898,8 +1909,6 @@ def api_articles_search():
             Article.classified_at.isnot(None),
             Article.scope != "irrelevant",
         )
-        if theme:
-            q = q.filter(Article.themes.contains([theme]))
         if since:
             try:
                 cutoff = datetime.fromisoformat(since)
@@ -1907,6 +1916,8 @@ def api_articles_search():
             except Exception:
                 pass
         articles = q.order_by(Article.published_at.desc()).limit(limit).all()
+        if theme:
+            articles = [a for a in articles if a.themes and theme in a.themes]
         return jsonify({
             "results": [_article_db_to_dict(a) for a in articles],
             "query": query,
