@@ -14,8 +14,10 @@
       --deep-blue: #324664;
       --bg-page: #f5f4ef;
       --border: #e5e7eb;
+      --scale-grey: #d2d2cd;
       --text-secondary: #6b7280;
       --text-muted: #9ca3af;
+      --coral: #fa6e5a;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -24,6 +26,7 @@
     .app-outer { min-height: 100vh; display: flex; justify-content: center; background: var(--bg-page); }
     .app-container { width: 100%; max-width: 1440px; display: flex; min-height: 100vh; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.06); }
 
+    /* ─── Sidebar ─────────────────────────────────────────── */
     .sidebar {
       width: 240px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border);
       display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 100;
@@ -45,6 +48,7 @@
     .nav-item.active { background: var(--aqua-light); color: var(--aqua); border-left-color: var(--aqua); font-weight: 500; }
     .nav-item svg { flex-shrink: 0; opacity: 0.6; }
 
+    /* ─── Main ────────────────────────────────────────────── */
     .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .topbar {
       background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px;
@@ -54,27 +58,59 @@
     .topbar-title { font-size: 14px; font-weight: 500; color: #374151; }
     .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--deep-blue); color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 
-    .content-area { padding: 40px 24px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .content-area { padding: 24px; flex: 1; }
 
-    .coming-soon {
-      text-align: center;
-      max-width: 400px;
+    /* ─── Page header ─────────────────────────────────────── */
+    .page-hd { margin-bottom: 20px; }
+    .page-hd h1 { font-size: 20px; font-weight: 600; color: var(--deep-blue); }
+    .page-hd p { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+    /* ─── Filters ─────────────────────────────────────────── */
+    .analytics-filters {
+      display: flex; gap: 16px; margin-bottom: 24px;
+      padding: 14px 16px; background: #fafaf7; border-radius: 8px;
+      border: 1px solid var(--scale-grey);
     }
-    .coming-soon-icon {
-      width: 64px; height: 64px;
-      background: var(--aqua-light);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      margin: 0 auto 20px;
-      color: var(--aqua);
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #888; }
+    .filter-group select {
+      padding: 6px 10px; border: 1px solid var(--scale-grey); border-radius: 6px;
+      background: white; font-size: 13px; cursor: pointer; font-family: inherit;
     }
-    .coming-soon h2 { font-size: 22px; font-weight: 600; color: var(--deep-blue); margin-bottom: 10px; }
-    .coming-soon p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
-    .back-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      margin-top: 24px; color: var(--aqua); font-size: 13px; text-decoration: none; font-weight: 500;
+    .filter-group select:focus { outline: none; border-color: var(--aqua); }
+
+    /* ─── KPI grid ────────────────────────────────────────── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+    .kpi-card { padding: 18px 20px; background: white; border: 1px solid var(--border); border-radius: 8px; }
+    .kpi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 8px; }
+    .kpi-value { font-size: 34px; font-weight: 700; color: var(--deep-blue); line-height: 1; margin-bottom: 6px; font-variant-numeric: tabular-nums; }
+    .kpi-change { font-size: 12px; font-weight: 500; }
+    .kpi-change.positive { color: #2d6e4a; }
+    .kpi-change.negative { color: var(--coral); }
+    .kpi-sublabel { font-size: 11px; color: #888; }
+
+    /* ─── Chart grid ──────────────────────────────────────── */
+    .chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+    .chart-card { padding: 22px; background: white; border: 1px solid var(--border); border-radius: 8px; }
+    .chart-card-wide { grid-column: span 2; }
+    .chart-card h2 { font-size: 15px; font-weight: 600; margin: 0 0 3px 0; color: var(--deep-blue); }
+    .chart-sublabel { font-size: 12px; color: #888; margin: 0 0 16px 0; }
+    .chart-card canvas { max-height: 280px; }
+
+    .sentiment-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .sentiment-block { text-align: center; }
+    .sentiment-block h3 { font-size: 12px; font-weight: 600; color: #555; margin: 0 0 10px 0; }
+
+    @media (max-width: 1024px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .chart-card-wide { grid-column: span 1; }
     }
-    .back-link:hover { text-decoration: underline; }
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .app-container { display: block; }
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -136,24 +172,256 @@
     </header>
 
     <div class="content-area">
-      <div class="coming-soon">
-        <div class="coming-soon-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-          </svg>
+      <div class="page-hd">
+        <h1>Analytics</h1>
+        <p>Innsikt og analyse av medieoppmerksomhet over tid</p>
+      </div>
+
+      <div class="analytics-filters">
+        <div class="filter-group">
+          <label>Tidsperiode</label>
+          <select id="period-filter">
+            <option value="7d">Siste 7 dager</option>
+            <option value="30d" selected>Siste 30 dager</option>
+            <option value="90d">Siste 90 dager</option>
+          </select>
         </div>
-        <h2>Analytics — kommer snart</h2>
-        <p>Dybdeanalyse av mediedekning, trender over tid, kildefordeling og tema-statistikk er under utvikling.</p>
-        <a href="/?lang={{ lang }}" class="back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-          Tilbake til nyheter
-        </a>
+        <div class="filter-group">
+          <label>Region</label>
+          <select id="region-filter">
+            <option value="">Alle regioner</option>
+            <option value="norge">Norge</option>
+            <option value="chile">Chile</option>
+            <option value="canada">Canada</option>
+            <option value="global">Globalt</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Totalt artikler</div>
+          <div class="kpi-value" id="kpi-total">—</div>
+          <div class="kpi-change" id="kpi-total-change"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Cermaq-omtaler</div>
+          <div class="kpi-value" id="kpi-cermaq">—</div>
+          <div class="kpi-change" id="kpi-cermaq-change"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Negativ andel</div>
+          <div class="kpi-value" id="kpi-negative">—</div>
+          <div class="kpi-sublabel">av Cermaq-omtaler</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Aktive kilder</div>
+          <div class="kpi-value" id="kpi-sources">—</div>
+          <div class="kpi-sublabel">unike publikasjoner</div>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+
+        <div class="chart-card chart-card-wide">
+          <h2>Aktivitetstrend over tid</h2>
+          <p class="chart-sublabel">Antall artikler per dag</p>
+          <canvas id="chart-timeline"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h2>Sentiment: Cermaq vs. Bransje</h2>
+          <p class="chart-sublabel">Tone-fordeling</p>
+          <div class="sentiment-comparison">
+            <div class="sentiment-block">
+              <h3>Cermaq direkte</h3>
+              <canvas id="chart-sentiment-cermaq"></canvas>
+            </div>
+            <div class="sentiment-block">
+              <h3>Bransje generelt</h3>
+              <canvas id="chart-sentiment-industry"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <h2>Tema-fordeling</h2>
+          <p class="chart-sublabel">Antall artikler per tema</p>
+          <canvas id="chart-themes"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h2>Region-fordeling</h2>
+          <p class="chart-sublabel">Tone-fordeling per region</p>
+          <canvas id="chart-regions"></canvas>
+        </div>
+
+        <div class="chart-card">
+          <h2>Topp 10 aktive kilder</h2>
+          <p class="chart-sublabel">Mest publiserende publikasjoner</p>
+          <canvas id="chart-sources"></canvas>
+        </div>
+
       </div>
     </div>
   </div>
+
 </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  var TONE_COLORS = { positiv: '#2d6e4a', noytral: '#888888', negativ: '#fa6e5a' };
+  var TONE_LABELS = { positiv: 'Positiv', noytral: 'Nøytral', negativ: 'Negativ' };
+  var THEME_COLORS = {
+    'Sjø': '#0096a0', 'Landbasert': '#a18a5e', 'Fôr': '#c2a043',
+    'Fiskehelse': '#5a9e76', 'Teknologi': '#7a6db8', 'Digitalisering': '#4a8a9e',
+    'Finans': '#324664', 'Marked': '#a14820'
+  };
+
+  var _charts = {};
+
+  function _buildParams() {
+    var p = new URLSearchParams({ period: document.getElementById('period-filter').value });
+    var r = document.getElementById('region-filter').value;
+    if (r) p.append('region', r);
+    return p.toString();
+  }
+
+  function _destroyChart(key) {
+    if (_charts[key]) { _charts[key].destroy(); delete _charts[key]; }
+  }
+
+  function loadAnalytics() {
+    var qs = _buildParams();
+    Promise.all([
+      fetch('/api/analytics/kpis?' + qs).then(function(r) { return r.json(); }),
+      fetch('/api/analytics/timeline?' + qs).then(function(r) { return r.json(); }),
+      fetch('/api/analytics/sentiment?' + qs).then(function(r) { return r.json(); }),
+      fetch('/api/analytics/themes?' + qs).then(function(r) { return r.json(); }),
+      fetch('/api/analytics/regions?' + qs).then(function(r) { return r.json(); }),
+      fetch('/api/analytics/sources?' + qs).then(function(r) { return r.json(); })
+    ]).then(function(res) {
+      renderKPIs(res[0]);
+      renderTimeline(res[1]);
+      renderSentiment(res[2]);
+      renderThemes(res[3]);
+      renderRegions(res[4]);
+      renderSources(res[5]);
+    }).catch(function(err) { console.error('Analytics load feil:', err); });
+  }
+
+  function renderKPIs(d) {
+    document.getElementById('kpi-total').textContent = d.total_articles != null ? d.total_articles : '—';
+    document.getElementById('kpi-cermaq').textContent = d.cermaq_articles != null ? d.cermaq_articles : '—';
+    document.getElementById('kpi-negative').textContent = d.negative_cermaq_pct != null ? d.negative_cermaq_pct.toFixed(1) + '%' : '—';
+    document.getElementById('kpi-sources').textContent = d.active_sources != null ? d.active_sources : '—';
+    function setChange(id, pct) {
+      var el = document.getElementById(id);
+      if (pct == null) { el.textContent = ''; return; }
+      var sign = pct >= 0 ? '+' : '';
+      el.textContent = sign + pct + '% vs forrige periode';
+      el.className = 'kpi-change ' + (pct >= 0 ? 'positive' : 'negative');
+    }
+    setChange('kpi-total-change', d.total_change_pct);
+    setChange('kpi-cermaq-change', d.cermaq_change_pct);
+  }
+
+  function renderTimeline(d) {
+    _destroyChart('timeline');
+    var labels = (d.labels || []).map(function(s) {
+      var dt = new Date(s + 'T12:00:00Z');
+      return dt.toLocaleDateString('no-NO', { day: '2-digit', month: 'short' });
+    });
+    _charts.timeline = new Chart(document.getElementById('chart-timeline'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Alle artikler', data: d.all_articles || [], borderColor: '#888', backgroundColor: 'rgba(136,136,136,0.08)', borderWidth: 2, tension: 0.3, fill: true, pointRadius: 2 },
+          { label: 'Cermaq-omtaler', data: d.cermaq_articles || [], borderColor: '#0096a0', backgroundColor: 'rgba(0,150,160,0.12)', borderWidth: 2, tension: 0.3, fill: true, pointRadius: 2 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { position: 'bottom' } } }
+    });
+  }
+
+  function renderSentiment(d) {
+    function makeDoughnut(canvasId, data) {
+      _destroyChart(canvasId);
+      var keys = ['positiv', 'noytral', 'negativ'];
+      var vals = keys.map(function(t) { return (data && data[t]) || 0; });
+      var total = vals.reduce(function(a, b) { return a + b; }, 0);
+      if (total === 0) vals = [0, 1, 0];
+      _charts[canvasId] = new Chart(document.getElementById(canvasId), {
+        type: 'doughnut',
+        data: {
+          labels: keys.map(function(t) { return TONE_LABELS[t]; }),
+          datasets: [{ data: vals, backgroundColor: keys.map(function(t) { return TONE_COLORS[t]; }), borderWidth: 0 }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { padding: 10, font: { size: 11 } } } } }
+      });
+    }
+    makeDoughnut('chart-sentiment-cermaq', d.cermaq);
+    makeDoughnut('chart-sentiment-industry', d.industry);
+  }
+
+  function renderThemes(d) {
+    _destroyChart('themes');
+    var themes = d.themes || [];
+    _charts.themes = new Chart(document.getElementById('chart-themes'), {
+      type: 'bar',
+      data: {
+        labels: themes,
+        datasets: [{ label: 'Antall artikler', data: d.counts || [], backgroundColor: themes.map(function(t) { return THEME_COLORS[t] || '#888'; }), borderWidth: 0 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } }
+    });
+  }
+
+  function renderRegions(d) {
+    _destroyChart('regions');
+    _charts.regions = new Chart(document.getElementById('chart-regions'), {
+      type: 'bar',
+      data: {
+        labels: d.regions || [],
+        datasets: [
+          { label: 'Positiv', data: d.positiv || [], backgroundColor: TONE_COLORS.positiv },
+          { label: 'Nøytral', data: d.noytral || [], backgroundColor: TONE_COLORS.noytral },
+          { label: 'Negativ', data: d.negativ || [], backgroundColor: TONE_COLORS.negativ }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  function renderSources(d) {
+    _destroyChart('sources');
+    var sources = d.sources || [];
+    _charts.sources = new Chart(document.getElementById('chart-sources'), {
+      type: 'bar',
+      data: {
+        labels: sources.map(function(s) { return s.name; }),
+        datasets: [
+          { label: 'Cermaq-omtaler', data: sources.map(function(s) { return s.cermaq; }), backgroundColor: '#0096a0' },
+          { label: 'Bransje', data: sources.map(function(s) { return s.total - s.cermaq; }), backgroundColor: '#9ca3af' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+        plugins: { legend: { position: 'bottom' } },
+        scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } }
+      }
+    });
+  }
+
+  document.getElementById('period-filter').addEventListener('change', loadAnalytics);
+  document.getElementById('region-filter').addEventListener('change', loadAnalytics);
+  loadAnalytics();
+</script>
 </body>
 </html>

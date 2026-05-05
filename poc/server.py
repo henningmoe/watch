@@ -2295,6 +2295,243 @@ def healthz():
 
 
 # ---------------------------------------------------------------------------
+# Analytics API
+# ---------------------------------------------------------------------------
+
+def _analytics_time_window(period_str: str):
+    """Return (start_dt, end_dt) based on period string."""
+    days = {"7d": 7, "30d": 30, "90d": 90}.get(period_str, 30)
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=days)
+    return start, end
+
+
+def _analytics_base_query(session, period: str, region: str | None):
+    """Shared base query for analytics: classified, non-irrelevant, within window."""
+    from sqlalchemy import func as _func
+    start, _ = _analytics_time_window(period)
+    q = session.query(Article).filter(
+        Article.classified_at.isnot(None),
+        Article.scope != "irrelevant",
+        _func.coalesce(Article.published_at, Article.fetched_at) >= start,
+    )
+    if region:
+        q = q.filter(Article.region == region)
+    return q
+
+
+@app.route("/api/analytics/kpis")
+def api_analytics_kpis():
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+    from sqlalchemy import func as _func
+    period = request.args.get("period", "30d")
+    region = request.args.get("region", "").strip() or None
+    days = {"7d": 7, "30d": 30, "90d": 90}.get(period, 30)
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=days)
+    prev_start = start - timedelta(days=days)
+
+    with SessionLocal() as session:
+        def _count(win_start, win_end, scope=None):
+            q = session.query(Article).filter(
+                Article.classified_at.isnot(None),
+                Article.scope != "irrelevant",
+                _func.coalesce(Article.published_at, Article.fetched_at) >= win_start,
+                _func.coalesce(Article.published_at, Article.fetched_at) < win_end,
+            )
+            if region:
+                q = q.filter(Article.region == region)
+            if scope:
+                q = q.filter(Article.scope == scope)
+            return q.count()
+
+        total_now = _count(start, end)
+        total_prev = _count(prev_start, start)
+        cermaq_now = _count(start, end, scope="cermaq")
+        cermaq_prev = _count(prev_start, start, scope="cermaq")
+
+        neg_q = session.query(Article).filter(
+            Article.classified_at.isnot(None),
+            Article.scope == "cermaq",
+            Article.tone == "negativ",
+            _func.coalesce(Article.published_at, Article.fetched_at) >= start,
+        )
+        if region:
+            neg_q = neg_q.filter(Article.region == region)
+        negative_cermaq = neg_q.count()
+
+        src_q = session.query(
+            _func.count(_func.distinct(Article.source_domain))
+        ).filter(
+            Article.classified_at.isnot(None),
+            Article.scope != "irrelevant",
+            _func.coalesce(Article.published_at, Article.fetched_at) >= start,
+        )
+        if region:
+            src_q = src_q.filter(Article.region == region)
+        active_sources = src_q.scalar() or 0
+
+        def _pct(now, prev):
+            if prev == 0:
+                return 100.0 if now > 0 else 0.0
+            return round((now - prev) / prev * 100, 1)
+
+        return jsonify({
+            "total_articles": total_now,
+            "total_change_pct": _pct(total_now, total_prev),
+            "cermaq_articles": cermaq_now,
+            "cermaq_change_pct": _pct(cermaq_now, cermaq_prev),
+            "negative_cermaq_pct": round(negative_cermaq / cermaq_now * 100, 1) if cermaq_now > 0 else 0.0,
+            "active_sources": active_sources,
+        })
+
+
+@app.route("/api/analytics/timeline")
+def api_analytics_timeline():
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+    period = request.args.get("period", "30d")
+    region = request.args.get("region", "").strip() or None
+    days = {"7d": 7, "30d": 30, "90d": 90}.get(period, 30)
+
+    with SessionLocal() as session:
+        articles = _analytics_base_query(session, period, region).all()
+
+    end_date = datetime.now(timezone.utc).date()
+    buckets: dict = {}
+    cermaq_buckets: dict = {}
+    for i in range(days):
+        d = (end_date - timedelta(days=days - 1 - i)).isoformat()
+        buckets[d] = 0
+        cermaq_buckets[d] = 0
+
+    for a in articles:
+        dt = a.published_at or a.fetched_at
+        if not dt:
+            continue
+        d = dt.date().isoformat()
+        if d in buckets:
+            buckets[d] += 1
+            if a.scope == "cermaq":
+                cermaq_buckets[d] += 1
+
+    labels = sorted(buckets.keys())
+    return jsonify({
+        "labels": labels,
+        "all_articles": [buckets[d] for d in labels],
+        "cermaq_articles": [cermaq_buckets[d] for d in labels],
+    })
+
+
+@app.route("/api/analytics/sentiment")
+def api_analytics_sentiment():
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+    period = request.args.get("period", "30d")
+    region = request.args.get("region", "").strip() or None
+
+    with SessionLocal() as session:
+        articles = _analytics_base_query(session, period, region).all()
+
+    result = {
+        "cermaq": {"positiv": 0, "noytral": 0, "negativ": 0},
+        "industry": {"positiv": 0, "noytral": 0, "negativ": 0},
+    }
+    for a in articles:
+        tone = a.tone or "noytral"
+        if tone not in result["cermaq"]:
+            continue
+        bucket = "cermaq" if a.scope == "cermaq" else "industry"
+        result[bucket][tone] += 1
+
+    return jsonify(result)
+
+
+@app.route("/api/analytics/themes")
+def api_analytics_themes():
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+    period = request.args.get("period", "30d")
+    region = request.args.get("region", "").strip() or None
+
+    with SessionLocal() as session:
+        articles = _analytics_base_query(session, period, region).all()
+
+    counts = {t: 0 for t in _THEMES_LIST}
+    for a in articles:
+        for theme in (a.themes or []):
+            if theme in counts:
+                counts[theme] += 1
+
+    return jsonify({
+        "themes": _THEMES_LIST,
+        "counts": [counts[t] for t in _THEMES_LIST],
+    })
+
+
+@app.route("/api/analytics/regions")
+def api_analytics_regions():
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+    from sqlalchemy import func as _func
+    period = request.args.get("period", "30d")
+    start, _ = _analytics_time_window(period)
+
+    with SessionLocal() as session:
+        articles = session.query(Article).filter(
+            Article.classified_at.isnot(None),
+            Article.scope != "irrelevant",
+            _func.coalesce(Article.published_at, Article.fetched_at) >= start,
+        ).all()
+
+    region_keys = ["norge", "chile", "canada", "global"]
+    region_labels = ["Norge", "Chile", "Canada", "Globalt"]
+    result = {
+        "regions": region_labels,
+        "positiv": [0] * 4,
+        "noytral": [0] * 4,
+        "negativ": [0] * 4,
+    }
+    for a in articles:
+        reg = a.region or "global"
+        if reg not in region_keys:
+            reg = "global"
+        idx = region_keys.index(reg)
+        tone = a.tone or "noytral"
+        if tone in result:
+            result[tone][idx] += 1
+
+    return jsonify(result)
+
+
+@app.route("/api/analytics/sources")
+def api_analytics_sources():
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+    period = request.args.get("period", "30d")
+    region = request.args.get("region", "").strip() or None
+
+    with SessionLocal() as session:
+        articles = _analytics_base_query(session, period, region).all()
+
+    sources: dict = {}
+    for a in articles:
+        domain = a.source_domain or "ukjent"
+        if domain not in sources:
+            sources[domain] = {"name": a.source_name or domain, "domain": domain, "total": 0, "cermaq": 0}
+        sources[domain]["total"] += 1
+        if a.scope == "cermaq":
+            sources[domain]["cermaq"] += 1
+
+    top = sorted(sources.values(), key=lambda s: s["total"], reverse=True)[:10]
+    return jsonify({"sources": top})
+
+
+
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
