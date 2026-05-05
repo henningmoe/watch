@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cermaq Media Watch — Finans</title>
+  <title>Cermaq Media Watch — Finans &amp; Marked</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --aqua: #0096a0;
@@ -16,6 +17,8 @@
       --border: #e5e7eb;
       --text-secondary: #6b7280;
       --text-muted: #9ca3af;
+      --green: #059669;
+      --red: #dc2626;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -24,10 +27,8 @@
     .app-outer { min-height: 100vh; display: flex; justify-content: center; background: var(--bg-page); }
     .app-container { width: 100%; max-width: 1440px; display: flex; min-height: 100vh; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.06); }
 
-    .sidebar {
-      width: 240px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 100;
-    }
+    /* Sidebar */
+    .sidebar { width: 240px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 100; }
     .sidebar-logo { padding: 20px 20px 18px; border-bottom: 1px solid var(--border); }
     .sidebar-logo .brand-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); font-weight: 500; }
     .sidebar-logo .brand-name { font-size: 16px; font-weight: 600; color: var(--deep-blue); margin-top: 3px; }
@@ -37,37 +38,176 @@
     .sidebar-group { padding: 8px 0 2px; }
     .sidebar-group-label { padding: 0 20px 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #b0b8c4; }
     .sidebar-divider { height: 1px; background: var(--border); margin: 6px 20px; }
-    .nav-item {
-      display: flex; align-items: center; gap: 9px; padding: 7px 20px; font-size: 13px; color: var(--text-secondary);
-      text-decoration: none; border-left: 3px solid transparent; transition: background 0.1s, color 0.1s;
-    }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 20px; font-size: 13px; color: var(--text-secondary); text-decoration: none; border-left: 3px solid transparent; transition: background 0.1s, color 0.1s; }
     .nav-item:hover { background: #f9fafb; color: #111827; }
     .nav-item.active { background: var(--aqua-light); color: var(--aqua); border-left-color: var(--aqua); font-weight: 500; }
     .nav-item svg { flex-shrink: 0; opacity: 0.6; }
+    .sidebar-count { margin-left: auto; font-size: 10px; color: var(--text-muted); background: #f3f4f6; padding: 1px 6px; border-radius: 10px; }
+    .lang-switcher { display: flex; gap: 4px; padding: 12px 20px; border-top: 1px solid var(--border); margin-top: auto; flex-wrap: wrap; }
+    .lang-btn { font-size: 11px; padding: 3px 8px; border-radius: 4px; text-decoration: none; color: var(--text-secondary); border: 1px solid var(--border); }
+    .lang-btn.active { background: var(--aqua); color: #fff; border-color: var(--aqua); }
 
+    /* Main */
     .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-    .topbar {
-      background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px;
-      display: flex; align-items: center; justify-content: space-between;
-      position: sticky; top: 0; z-index: 50;
-    }
+    .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
     .topbar-title { font-size: 14px; font-weight: 500; color: #374151; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .topbar-refresh { font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; }
+    .topbar-refresh:hover { background: #f9fafb; }
     .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--deep-blue); color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+    .content-area { padding: 28px 24px; flex: 1; }
 
-    .content-area { padding: 40px 24px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    /* Section */
+    .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .section-title { font-size: 15px; font-weight: 600; color: var(--deep-blue); }
+    .section-subtitle { font-size: 12px; color: var(--text-muted); }
+    .section-block { margin-bottom: 32px; }
 
-    .coming-soon { text-align: center; max-width: 400px; }
-    .coming-soon-icon {
-      width: 64px; height: 64px; background: #fff7ed; border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #c2410c;
+    /* AI digest */
+    .digest-card { background: linear-gradient(135deg, #f0f9ff 0%, #e8f5f6 100%); border: 1px solid #bae6fd; border-radius: 12px; padding: 20px 24px; }
+    .digest-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .ai-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--aqua); background: #fff; border: 1px solid #bae6fd; border-radius: 20px; padding: 2px 10px; }
+    .digest-timestamp { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+    .digest-content { font-size: 13.5px; line-height: 1.7; color: #1e3a5f; }
+    .digest-loading { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    /* Salmon price cards */
+    .salmon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .price-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px; transition: box-shadow 0.15s; }
+    .price-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .price-card.unavailable { background: #fafafa; }
+    .price-source { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--aqua); margin-bottom: 2px; }
+    .price-sublabel { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+    .price-value { font-size: 28px; font-weight: 700; color: var(--deep-blue); line-height: 1.1; }
+    .price-value.na { font-size: 18px; color: var(--text-muted); font-weight: 400; }
+    .price-currency { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .price-meta { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    .price-forward { margin-top: 10px; }
+    .price-forward-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px solid #f3f4f6; }
+    .price-forward-row:last-child { border-bottom: none; }
+    .price-forward-period { color: var(--text-secondary); }
+    .price-forward-value { font-weight: 600; color: var(--deep-blue); }
+
+    /* Currency grid */
+    .currency-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .currency-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; transition: box-shadow 0.15s; }
+    .currency-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .currency-code { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+    .currency-rate { font-size: 20px; font-weight: 600; color: var(--deep-blue); line-height: 1.2; }
+    .currency-unit { font-size: 10px; color: var(--text-muted); }
+    .currency-change { font-size: 11px; font-weight: 500; margin-top: 6px; }
+    .currency-change.up { color: var(--green); }
+    .currency-change.down { color: var(--red); }
+    .currency-change.flat { color: var(--text-muted); }
+    .currency-date { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .currency-loading { grid-column: 1/-1; padding: 20px; text-align: center; font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    /* Stocks table */
+    .stocks-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .stocks-table th { padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+    .stocks-table th.num { text-align: right; }
+    .stocks-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    .stocks-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .stocks-table tr:hover td { background: #fafafa; }
+    .stocks-table .company-name { font-weight: 500; color: var(--deep-blue); }
+    .stocks-table .ticker { font-size: 11px; color: var(--text-muted); }
+    .stocks-table .price { font-weight: 600; }
+    .chg { font-weight: 500; font-size: 12px; }
+    .chg.up { color: var(--green); }
+    .chg.down { color: var(--red); }
+    .chg.flat { color: var(--text-muted); }
+
+    /* Commodity cards */
+    .commodity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+    .commodity-card { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .commodity-name { font-size: 12px; font-weight: 600; color: var(--deep-blue); margin-bottom: 2px; }
+    .commodity-ticker { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; }
+    .commodity-price { font-size: 18px; font-weight: 600; color: var(--deep-blue); }
+    .commodity-currency { font-size: 10px; color: var(--text-muted); }
+    .commodity-changes { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+    .commodity-chg-label { font-size: 10px; color: var(--text-muted); }
+
+    /* Two-column charts layout */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .finance-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+    .finance-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+    .finance-card-title { font-size: 14px; font-weight: 600; color: var(--deep-blue); }
+    .period-select { font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 3px 8px; background: none; cursor: pointer; }
+    .chart-container { position: relative; height: 220px; }
+    .chart-loading { display: flex; align-items: center; justify-content: center; height: 220px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    /* Calendar widget */
+    .calendar-list { display: flex; flex-direction: column; gap: 0; }
+    .calendar-group-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); padding: 8px 0 6px; margin-top: 4px; border-bottom: 1px solid var(--border); }
+    .calendar-item { display: flex; align-items: flex-start; gap: 12px; padding: 9px 0; border-bottom: 1px solid #f3f4f6; }
+    .calendar-item:last-child { border-bottom: none; }
+    .cal-date { flex-shrink: 0; width: 38px; text-align: center; }
+    .cal-day { font-size: 18px; font-weight: 700; color: var(--deep-blue); line-height: 1; }
+    .cal-mon { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+    .cal-body { flex: 1; min-width: 0; }
+    .cal-title { font-size: 13px; font-weight: 500; color: #111827; }
+    .cal-meta { display: flex; gap: 6px; margin-top: 3px; flex-wrap: wrap; }
+    .cal-badge { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; text-transform: uppercase; }
+    .cal-badge.q-report { background: #dbeafe; color: #1d4ed8; }
+    .cal-badge.regulatory { background: #fef3c7; color: #92400e; }
+    .cal-badge.industry-event { background: #f0fdf4; color: var(--green); }
+    .cal-badge.agm { background: #ede9fe; color: #5b21b6; }
+    .cal-badge.holiday { background: #f3f4f6; color: var(--text-muted); }
+    .cal-company { font-size: 11px; color: var(--text-muted); }
+    .calendar-empty { padding: 16px 0; font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    /* News list */
+    .news-list { display: flex; flex-direction: column; gap: 10px; }
+    .news-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; transition: box-shadow 0.15s; }
+    .news-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .news-title { font-size: 13.5px; font-weight: 500; color: #111827; text-decoration: none; line-height: 1.4; }
+    .news-title:hover { color: var(--aqua); }
+    .news-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .news-summary { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
+    .scope-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .scope-cermaq { background: #dbeafe; color: #1d4ed8; }
+    .scope-industry { background: #f0fdf4; color: var(--green); }
+    .news-loading { text-align: center; padding: 20px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Anomaly banner */
+    .anomaly-banner { display: none; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
+    .anomaly-banner.visible { display: flex; align-items: flex-start; gap: 10px; }
+    .anomaly-icon { color: var(--red); flex-shrink: 0; margin-top: 1px; }
+    .anomaly-title { font-size: 12px; font-weight: 700; color: #991b1b; margin-bottom: 4px; }
+    .anomaly-items { list-style: none; padding: 0; margin: 0; }
+    .anomaly-items li { font-size: 12px; color: #7f1d1d; padding: 2px 0; }
+    .anomaly-items li::before { content: "⚠ "; }
+
+    /* Scenarios widget */
+    .scenarios-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .scenario-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: #fff; }
+    .scenario-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500; }
+    .scenario-impact { font-size: 18px; font-weight: 700; }
+    .scenario-impact.pos { color: var(--green); }
+    .scenario-impact.neg { color: var(--red); }
+    .scenario-note { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .scenarios-disclaimer { font-size: 10px; color: var(--text-muted); margin-top: 10px; font-style: italic; }
+
+    /* Export row */
+    .export-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
+    .export-btn { font-size: 12px; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--text-secondary); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .export-btn:hover { background: #f9fafb; border-color: var(--aqua); color: var(--aqua); }
+
+    @media (max-width: 1100px) { .charts-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .salmon-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 768px) { .sidebar { display: none; } .currency-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    @media print {
+      .sidebar, .topbar, .export-row, .topbar-refresh, .lang-switcher { display: none !important; }
+      .app-outer, .app-container { box-shadow: none; }
+      .main-content { padding: 0; }
+      .content-area { padding: 16px; }
+      .section-block, .finance-card { break-inside: avoid; }
+      body { font-size: 11px; }
     }
-    .coming-soon h2 { font-size: 22px; font-weight: 600; color: var(--deep-blue); margin-bottom: 10px; }
-    .coming-soon p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
-    .back-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      margin-top: 24px; color: var(--aqua); font-size: 13px; text-decoration: none; font-weight: 500;
-    }
-    .back-link:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
@@ -83,24 +223,41 @@
       <div class="sidebar-pillar-label">News Watch</div>
     </div>
     <a href="/?lang={{ lang }}" class="nav-item">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-      </svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
       Alle nyheter
     </a>
+    {% if theme_counts %}
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Tema</div>
+      {% for t, cnt in theme_counts.items() %}
+      <a href="/?lang={{ lang }}&theme={{ t | urlencode }}" class="nav-item {% if active_theme == t %}active{% endif %}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+        {{ t }}<span class="sidebar-count">{{ cnt }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% if region_counts %}
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Region</div>
+      {% for r, cnt in region_counts.items() %}
+      <a href="/?lang={{ lang }}&region={{ r }}" class="nav-item {% if active_region == r %}active{% endif %}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        {{ r | capitalize }}<span class="sidebar-count">{{ cnt }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
     <div class="sidebar-divider"></div>
     <div class="sidebar-group">
       <div class="sidebar-group-label">Innsikt</div>
       <a href="/uken?lang={{ lang }}" class="nav-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Uken oppsummert
       </a>
       <a href="/analytics?lang={{ lang }}" class="nav-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         Analytics
       </a>
     </div>
@@ -109,44 +266,702 @@
       <div class="sidebar-pillar-label">Finance Watch</div>
     </div>
     <a href="/finance?lang={{ lang }}" class="nav-item active">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
-      </svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
       Finans &amp; Marked
     </a>
     <a href="/alerts?lang={{ lang }}" class="nav-item">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       Varsling
     </a>
+    <div class="lang-switcher">
+      {% for l, label in [('no','NO'),('en','EN'),('es','ES'),('ja','JP')] %}
+      <a href="/finance?lang={{ l }}" class="lang-btn {% if lang == l %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
   </aside>
 
   <div class="main-content">
     <header class="topbar">
       <span class="topbar-title">Finans &amp; Marked</span>
-      <div class="avatar">HM</div>
+      <div class="topbar-right">
+        <button class="topbar-refresh" onclick="loadAll()">↻ Oppdater</button>
+        <div class="avatar">HM</div>
+      </div>
     </header>
 
     <div class="content-area">
-      <div class="coming-soon">
-        <div class="coming-soon-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+
+      <!-- Anomaly banner (hidden until anomalies found) -->
+      <div class="anomaly-banner" id="anomaly-banner">
+        <div class="anomaly-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
         </div>
-        <h2>Finance Watch — kommer snart</h2>
-        <p>Laksepris-tracker, kvartalsresultater, aksjekurser og markedsanalyse for norsk oppdrettsbransje er under utvikling.</p>
-        <a href="/?lang={{ lang }}" class="back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-          Tilbake til nyheter
-        </a>
+        <div>
+          <div class="anomaly-title">Uvanlige markedsbevegelser detektert</div>
+          <ul class="anomaly-items" id="anomaly-items"></ul>
+        </div>
       </div>
-    </div>
-  </div>
+
+      <!-- Export row -->
+      <div class="export-row">
+        <a href="/api/finance/export/csv" class="export-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Last ned CSV
+        </a>
+        <button class="export-btn" onclick="window.print()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Skriv ut / PDF
+        </button>
+      </div>
+
+      <!-- Lakseprisindekser -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Lakseprisindekser</span>
+          <span class="section-subtitle">Fish Pool · Nasdaq Salmon · Urner Barry</span>
+        </div>
+        <div class="salmon-grid">
+          <div class="price-card" id="card-fish-pool">
+            <div class="price-source">Fish Pool Index</div>
+            <div class="price-sublabel">Forward-priser · NOK/kg</div>
+            <div class="price-value na" id="fp-value">Laster…</div>
+            <div class="price-currency" id="fp-currency"></div>
+            <div class="price-forward" id="fp-forward"></div>
+            <div class="price-meta" id="fp-meta"></div>
+          </div>
+          <div class="price-card" id="card-nasdaq">
+            <div class="price-source">Nasdaq Salmon Index</div>
+            <div class="price-sublabel">Spot-pris · NOK/kg</div>
+            <div class="price-value na" id="ns-value">Laster…</div>
+            <div class="price-currency" id="ns-currency"></div>
+            <div class="price-meta" id="ns-meta"></div>
+          </div>
+          <div class="price-card unavailable">
+            <div class="price-source">Urner Barry</div>
+            <div class="price-sublabel">US import-pris · USD/lb</div>
+            <div class="price-value na">—</div>
+            <div class="price-meta">Krever abonnement · Phase 3+</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Markedsanalyse -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">AI Markedsanalyse</span>
+          <span class="section-subtitle" id="digest-subtitle"></span>
+        </div>
+        <div class="digest-card">
+          <div class="digest-card-header">
+            <span class="ai-badge">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+              AI-analyse
+            </span>
+            <span class="digest-timestamp" id="digest-ts"></span>
+          </div>
+          <div id="digest-content" class="digest-loading">Laster markedsanalyse…</div>
+        </div>
+      </div>
+
+      <!-- Valutakurser -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Valutakurser mot NOK</span>
+          <span class="section-subtitle">Norges Bank — siste bankdag</span>
+        </div>
+        <div class="currency-grid" id="currency-grid">
+          <div class="currency-loading skeleton" style="height:80px;border-radius:10px;">&nbsp;</div>
+        </div>
+      </div>
+
+      <!-- Hva-om scenarier -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Hva betyr dette for Cermaq?</span>
+          <span class="section-subtitle">Direktionale marginscenarior — NOK/kg estimert</span>
+        </div>
+        <div class="scenarios-grid" id="scenarios-grid">
+          <div style="grid-column:1/-1;color:var(--text-muted);font-size:13px;font-style:italic;">Laster scenarier…</div>
+        </div>
+        <div class="scenarios-disclaimer" id="scenarios-disclaimer"></div>
+      </div>
+
+      <!-- Råvarer -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Råvarer</span>
+          <span class="section-subtitle">Yahoo Finance futures — fôrinput-priser</span>
+        </div>
+        <div class="commodity-grid" id="commodity-grid">
+          <div class="currency-loading" style="grid-column:1/-1;padding:12px 0;">Laster råvarepriser…</div>
+        </div>
+      </div>
+
+      <!-- Trend-grafer -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Prisutvikling</span>
+          <span class="section-subtitle">Historisk trend</span>
+        </div>
+        <div class="charts-grid">
+          <div class="finance-card">
+            <div class="finance-card-header">
+              <span class="finance-card-title">Laksepristrender</span>
+              <select class="period-select" id="price-period" onchange="loadPriceChart()">
+                <option value="30">Siste 30 dager</option>
+                <option value="90" selected>Siste 90 dager</option>
+                <option value="180">Siste 180 dager</option>
+              </select>
+            </div>
+            <div class="chart-container" id="chart-prices-wrap">
+              <div class="chart-loading" id="chart-prices-msg">Laster prisdata…</div>
+              <canvas id="chart-prices" style="display:none;"></canvas>
+            </div>
+          </div>
+          <div class="finance-card">
+            <div class="finance-card-header">
+              <span class="finance-card-title">Konkurrent-aksjer</span>
+              <select class="period-select" id="stocks-period" onchange="loadStocksChart()">
+                <option value="30">Siste 30 dager</option>
+                <option value="90" selected>Siste 90 dager</option>
+                <option value="180">Siste 180 dager</option>
+              </select>
+            </div>
+            <div class="chart-container" id="chart-stocks-wrap">
+              <div class="chart-loading" id="chart-stocks-msg">Laster aksjedata…</div>
+              <canvas id="chart-stocks" style="display:none;"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Markedsverdi -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Markedsverdi — konkurrenter</span>
+          <span class="section-subtitle">Estimert fra aksjekurs × antall aksjer</span>
+        </div>
+        <div class="finance-card">
+          <div class="chart-container" id="chart-mktcap-wrap">
+            <div class="chart-loading" id="chart-mktcap-msg">Laster markedsverdi…</div>
+            <canvas id="chart-mktcap" style="display:none;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Konkurrentaksjer-tabell -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Konkurrentaksjer</span>
+          <span class="section-subtitle">Yahoo Finance — Oslo Børs</span>
+        </div>
+        <div style="overflow-x:auto; background:#fff; border:1px solid var(--border); border-radius:10px;">
+          <table class="stocks-table">
+            <thead>
+              <tr>
+                <th>Selskap</th><th class="num">Kurs</th><th class="num">1D %</th><th class="num">7D %</th><th class="num">30D %</th>
+              </tr>
+            </thead>
+            <tbody id="stocks-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);font-style:italic;">Laster aksjedata…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Kalender og nyheter side ved side -->
+      <div class="charts-grid" style="margin-bottom:32px;">
+        <div class="finance-card">
+          <div class="finance-card-header">
+            <span class="finance-card-title">Kommende hendelser</span>
+            <span style="font-size:11px;color:var(--text-muted);">Neste 60 dager</span>
+          </div>
+          <div class="calendar-list" id="calendar-list">
+            <div class="calendar-empty">Laster kalender…</div>
+          </div>
+        </div>
+        <div class="finance-card">
+          <div class="finance-card-header">
+            <span class="finance-card-title">Finansnyheter</span>
+            <span style="font-size:11px;color:var(--text-muted);">Artikler tagget Finans</span>
+          </div>
+          <div class="news-list" id="finance-news">
+            <div class="news-loading">Laster finansnyheter…</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-content -->
 </div>
 </div>
+
+<script>
+const LANG = '{{ lang }}';
+const CURRENCY_LABELS = { USD:'US Dollar', EUR:'Euro', CLP:'Chilensk Peso', CAD:'Kanadisk Dollar', JPY:'Japansk Yen', CNY:'Kinesisk Yuan' };
+const CURRENCY_UNITS  = { CLP:'per 100 CLP', JPY:'per 100 JPY' };
+const CHART_COLORS = ['#0096a0','#324664','#059669','#7c3aed','#d97706'];
+
+// ---------- helpers ----------
+function fmtChange(pct) {
+  if (pct === null || pct === undefined) return { text:'—', cls:'flat' };
+  const abs = Math.abs(pct).toFixed(2);
+  if (pct >  0.05) return { text:`▲ ${abs}%`, cls:'up'   };
+  if (pct < -0.05) return { text:`▼ ${abs}%`, cls:'down' };
+  return { text:`${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`, cls:'flat' };
+}
+
+function fmtTs(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('no-NO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  } catch (e) { return iso; }
+}
+
+function fmtEventDate(iso) {
+  if (!iso) return { day:'—', mon:'' };
+  const d = new Date(iso);
+  return {
+    day: d.getDate(),
+    mon: d.toLocaleString('no-NO', { month:'short' }),
+    time: d.toLocaleTimeString('no-NO', { hour:'2-digit', minute:'2-digit' }),
+  };
+}
+
+// ---------- anomaly check ----------
+async function loadAnomalies() {
+  try {
+    const r = await fetch('/api/finance/anomalies');
+    if (!r.ok) return;
+    const data = await r.json();
+    const anomalies = (data.anomalies || []).filter(a => a.severity === 'high' || a.severity === 'medium');
+    if (!anomalies.length) return;
+    const banner = document.getElementById('anomaly-banner');
+    const list = document.getElementById('anomaly-items');
+    list.innerHTML = anomalies.map(a => `<li>${a.description}</li>`).join('');
+    banner.classList.add('visible');
+  } catch (e) { /* silent */ }
+}
+
+// ---------- scenarios ----------
+async function loadScenarios() {
+  const grid = document.getElementById('scenarios-grid');
+  try {
+    const r = await fetch('/api/finance/scenarios');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const scenarios = data.scenarios || [];
+    if (!scenarios.length) { grid.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Ingen scenariodata tilgjengelig.</div>'; return; }
+    grid.innerHTML = scenarios.map(s => {
+      const cls = s.positive ? 'pos' : 'neg';
+      return `<div class="scenario-card">
+        <div class="scenario-label">${s.label}</div>
+        <div class="scenario-impact ${cls}">${s.impact_fmt}</div>
+        ${s.note ? `<div class="scenario-note">${s.note}</div>` : ''}
+      </div>`;
+    }).join('');
+    if (data.disclaimer) {
+      document.getElementById('scenarios-disclaimer').textContent = data.disclaimer;
+    }
+  } catch (e) { grid.innerHTML = '<div style="color:var(--text-muted);font-size:13px;font-style:italic;">Feil ved henting av scenarier.</div>'; }
+}
+
+// ---------- market cap chart ----------
+let chartMktCap = null;
+async function loadMarketCap() {
+  const msg = document.getElementById('chart-mktcap-msg');
+  const canvas = document.getElementById('chart-mktcap');
+  try {
+    const r = await fetch('/api/finance/market-cap');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const entries = Object.entries(data).sort((a, b) => b[1].market_cap_bnok - a[1].market_cap_bnok);
+    if (!entries.length) { msg.textContent = 'Ingen markedsverdidata.'; return; }
+    if (chartMktCap) chartMktCap.destroy();
+    const labels = entries.map(([n]) => n);
+    const caps = entries.map(([,v]) => v.market_cap_bnok);
+    const changes = entries.map(([,v]) => v.change_1d);
+    const barColors = changes.map(c => c === null ? '#94a3b8' : (c >= 0 ? '#059669' : '#dc2626'));
+    msg.style.display = 'none';
+    canvas.style.display = 'block';
+    chartMktCap = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Markedsverdi (mrd NOK)',
+          data: caps,
+          backgroundColor: barColors,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const change = changes[ctx.dataIndex];
+                const chgStr = change !== null ? ` · 1D: ${change >= 0 ? '+' : ''}${change}%` : '';
+                return `${ctx.parsed.y.toFixed(1)} mrd NOK${chgStr}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+          y: { ticks: { font: { size: 10 } }, title: { display: true, text: 'mrd NOK', font: { size: 10 } } }
+        }
+      }
+    });
+  } catch (e) { msg.textContent = 'Feil ved henting av markedsverdi.'; }
+}
+
+// ---------- salmon prices ----------
+async function loadSalmonPrices() {
+  try {
+    const r = await fetch('/api/finance/salmon_prices');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+
+    const fp = data.fish_pool;
+    if (fp && fp.forward_prices && fp.forward_prices.length > 0) {
+      document.getElementById('fp-value').textContent = fp.forward_prices[0].price.toFixed(2);
+      document.getElementById('fp-value').className = 'price-value';
+      document.getElementById('fp-currency').textContent = 'NOK/kg';
+      document.getElementById('fp-forward').innerHTML = fp.forward_prices.slice(0,5).map(p =>
+        `<div class="price-forward-row"><span class="price-forward-period">${p.period}</span><span class="price-forward-value">${p.price.toFixed(2)}</span></div>`
+      ).join('');
+      document.getElementById('fp-meta').textContent = fp.fetched_at ? 'Oppdatert ' + fmtTs(fp.fetched_at) : '';
+    } else {
+      document.getElementById('fp-value').textContent = 'Ikke tilgjengelig';
+      document.getElementById('fp-meta').textContent = fp && fp.fetched_at ? 'Sist forsøkt: ' + fmtTs(fp.fetched_at) : 'Hentes tirsdager kl. 16:00';
+    }
+
+    const ns = data.nasdaq;
+    if (ns && ns.spot_price) {
+      document.getElementById('ns-value').textContent = ns.spot_price.toFixed(2);
+      document.getElementById('ns-value').className = 'price-value';
+      document.getElementById('ns-currency').textContent = 'NOK/kg';
+      const parts = [];
+      if (ns.week) parts.push(`Uke ${ns.week}`);
+      if (ns.fetched_at) parts.push('Oppdatert ' + fmtTs(ns.fetched_at));
+      document.getElementById('ns-meta').textContent = parts.join(' · ');
+    } else {
+      document.getElementById('ns-value').textContent = 'Ikke tilgjengelig';
+      document.getElementById('ns-meta').textContent = ns && ns.fetched_at ? 'Sist forsøkt: ' + fmtTs(ns.fetched_at) : 'Hentes fredager kl. 17:00';
+    }
+  } catch (e) {
+    ['fp-value','ns-value'].forEach(id => { document.getElementById(id).textContent = 'Ikke tilgjengelig'; });
+  }
+}
+
+// ---------- digest ----------
+async function loadDigest() {
+  try {
+    const r = await fetch(`/api/finance/digest?lang=${LANG}`);
+    if (!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    const el = document.getElementById('digest-content');
+    el.textContent = d.content || '';
+    el.className = 'digest-content';
+    document.getElementById('digest-ts').textContent = fmtTs(d.generated_at);
+  } catch (e) {
+    const el = document.getElementById('digest-content');
+    el.textContent = 'Ingen markedsanalyse tilgjengelig ennå. Genereres kl. 09:00, 12:00 og 18:00.';
+    el.style.fontStyle = 'italic';
+    el.style.color = 'var(--text-muted)';
+  }
+}
+
+// ---------- FX rates ----------
+async function loadRates() {
+  const grid = document.getElementById('currency-grid');
+  try {
+    const r = await fetch('/api/finance/rates');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const order = ['USD','EUR','CAD','CNY','CLP','JPY'];
+    const currencies = order.filter(c => data[c]).concat(Object.keys(data).filter(c => !order.includes(c)));
+    if (!currencies.length) { grid.innerHTML = '<div class="currency-loading">Ingen valutadata.</div>'; return; }
+    grid.innerHTML = currencies.map(cur => {
+      const v = data[cur];
+      const chg = fmtChange(v.change_pct);
+      return `<div class="currency-card">
+        <div class="currency-code">${cur} <span style="font-weight:400;font-size:10px;color:var(--text-muted);">${CURRENCY_LABELS[cur]||cur}</span></div>
+        <div class="currency-rate">${v.rate.toFixed(4)}</div>
+        <div class="currency-unit">NOK ${CURRENCY_UNITS[cur]?'('+CURRENCY_UNITS[cur]+')':''}</div>
+        <div class="currency-change ${chg.cls}">${chg.text}</div>
+        ${v.date ? `<div class="currency-date">${v.date}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) { grid.innerHTML = '<div class="currency-loading">Feil ved henting av valutakurser.</div>'; }
+}
+
+// ---------- commodities ----------
+async function loadCommodities() {
+  const grid = document.getElementById('commodity-grid');
+  try {
+    const r = await fetch('/api/finance/commodities');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const entries = Object.entries(data);
+    if (!entries.length) { grid.innerHTML = '<div class="currency-loading" style="grid-column:1/-1">Ingen råvaredata.</div>'; return; }
+    grid.innerHTML = entries.map(([name, v]) => {
+      const c1 = fmtChange(v.change_1d);
+      const c7 = fmtChange(v.change_7d);
+      return `<div class="commodity-card">
+        <div class="commodity-name">${name}</div>
+        <div class="commodity-ticker">${v.ticker || ''} · ${v.commodity_currency || v.currency || ''}</div>
+        <div class="commodity-price">${v.price ? v.price.toFixed(2) : '—'}</div>
+        <div class="commodity-changes">
+          <span class="commodity-chg-label">1D:</span><span class="chg ${c1.cls}" style="font-size:11px;">${c1.text}</span>
+          <span class="commodity-chg-label">7D:</span><span class="chg ${c7.cls}" style="font-size:11px;">${c7.text}</span>
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) { grid.innerHTML = '<div style="color:var(--text-muted);font-size:13px;font-style:italic;grid-column:1/-1">Feil ved henting av råvaredata.</div>'; }
+}
+
+// ---------- stocks table ----------
+async function loadStocks() {
+  const tbody = document.getElementById('stocks-tbody');
+  try {
+    const r = await fetch('/api/finance/stocks');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const entries = Object.entries(data);
+    if (!entries.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted);font-style:italic;">Ingen aksjedata.</td></tr>'; return; }
+    tbody.innerHTML = entries.map(([name, v]) => {
+      const c1 = fmtChange(v.change_1d), c7 = fmtChange(v.change_7d), c30 = fmtChange(v.change_30d);
+      return `<tr>
+        <td><div class="company-name">${name}</div><div class="ticker">${v.ticker||''}</div></td>
+        <td class="num price">${v.price?v.price.toFixed(2):'—'} <span style="font-size:10px;color:var(--text-muted);">${v.currency||'NOK'}</span></td>
+        <td class="num"><span class="chg ${c1.cls}">${c1.text}</span></td>
+        <td class="num"><span class="chg ${c7.cls}">${c7.text}</span></td>
+        <td class="num"><span class="chg ${c30.cls}">${c30.text}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted);">Feil ved henting.</td></tr>'; }
+}
+
+// ---------- charts ----------
+let chartPrices = null;
+let chartStocks = null;
+
+function makeChartConfig(labels, datasets, yLabel) {
+  return {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12, padding: 10 } },
+        tooltip: { bodyFont: { size: 11 }, titleFont: { size: 11 } },
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 10 }, maxTicksLimit: 8,
+            callback: function(val, idx) {
+              const lbl = this.getLabelForValue(val);
+              if (!lbl) return '';
+              const d = new Date(lbl);
+              return `${d.getDate()}. ${d.toLocaleString('no-NO',{month:'short'})}`;
+            }
+          },
+          grid: { display: false },
+        },
+        y: {
+          position: 'right',
+          ticks: { font: { size: 10 } },
+          title: { display: !!yLabel, text: yLabel, font: { size: 10 } },
+        },
+      },
+    },
+  };
+}
+
+async function loadPriceChart() {
+  const days = document.getElementById('price-period').value;
+  const msg = document.getElementById('chart-prices-msg');
+  const canvas = document.getElementById('chart-prices');
+  msg.style.display = 'flex';
+  canvas.style.display = 'none';
+  try {
+    const r = await fetch(`/api/finance/prices/timeseries?days=${days}`);
+    const data = await r.json();
+    const series = data.series || [];
+    if (!series.length) { msg.textContent = 'Ingen prisdata ennå — hentes tirsdager og fredager.'; return; }
+    if (chartPrices) chartPrices.destroy();
+    // Merge all date axes into a single sorted label set
+    const allDates = [...new Set(series.flatMap(s => s.dates))].sort();
+    const datasets = series.map((s, i) => {
+      const priceByDate = Object.fromEntries(s.dates.map((d,j) => [d, s.prices[j]]));
+      return {
+        label: s.label || s.source || `Serie ${i+1}`,
+        data: allDates.map(d => priceByDate[d] ?? null),
+        borderColor: CHART_COLORS[i % CHART_COLORS.length],
+        backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '18',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false,
+        spanGaps: true,
+      };
+    });
+    msg.style.display = 'none';
+    canvas.style.display = 'block';
+    chartPrices = new Chart(canvas, makeChartConfig(allDates, datasets, 'NOK/kg'));
+  } catch (e) { msg.textContent = 'Feil ved lasting av prisdata.'; }
+}
+
+async function loadStocksChart() {
+  const days = document.getElementById('stocks-period').value;
+  const msg = document.getElementById('chart-stocks-msg');
+  const canvas = document.getElementById('chart-stocks');
+  msg.style.display = 'flex';
+  canvas.style.display = 'none';
+  msg.textContent = 'Laster aksjedata…';
+  try {
+    const r = await fetch(`/api/finance/stocks/timeseries?days=${days}`);
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const entries = Object.entries(data);
+    if (!entries.length) { msg.textContent = 'Ingen aksjedata tilgjengelig.'; return; }
+    if (chartStocks) chartStocks.destroy();
+    const allDates = [...new Set(entries.flatMap(([,s]) => s.dates))].sort();
+    const datasets = entries.map(([name, s], i) => {
+      const priceByDate = Object.fromEntries(s.dates.map((d,j) => [d, s.prices[j]]));
+      return {
+        label: name,
+        data: allDates.map(d => priceByDate[d] ?? null),
+        borderColor: CHART_COLORS[i % CHART_COLORS.length],
+        backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '18',
+        borderWidth: 2,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: false,
+        spanGaps: true,
+      };
+    });
+    msg.style.display = 'none';
+    canvas.style.display = 'block';
+    chartStocks = new Chart(canvas, makeChartConfig(allDates, datasets, 'NOK'));
+  } catch (e) { msg.textContent = 'Feil ved lasting av aksjedata.'; }
+}
+
+// ---------- calendar ----------
+const CAL_TYPE_LABELS = {
+  'q-report': 'Kvartalsrapport',
+  'regulatory': 'Regulatorisk',
+  'industry-event': 'Bransjehendelse',
+  'agm': 'Generalforsamling',
+  'holiday': 'Helligdag',
+};
+
+async function loadCalendar() {
+  const container = document.getElementById('calendar-list');
+  try {
+    const r = await fetch('/api/finance/calendar?days=60');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const events = data.events || [];
+    if (!events.length) { container.innerHTML = '<div class="calendar-empty">Ingen kommende hendelser.</div>'; return; }
+
+    const today = new Date(); today.setHours(0,0,0,0);
+    const groups = [
+      { label: 'Denne uken', items: [] },
+      { label: 'Neste uke',  items: [] },
+      { label: 'Senere',     items: [] },
+    ];
+    events.forEach(e => {
+      const dt = new Date(e.event_date); dt.setHours(0,0,0,0);
+      const daysAway = Math.round((dt - today) / 86400000);
+      if (daysAway < 7)       groups[0].items.push(e);
+      else if (daysAway < 14) groups[1].items.push(e);
+      else                    groups[2].items.push(e);
+    });
+
+    let html = '';
+    for (const g of groups) {
+      if (!g.items.length) continue;
+      html += `<div class="calendar-group-label">${g.label}</div>`;
+      for (const e of g.items) {
+        const fd = fmtEventDate(e.event_date);
+        const typeLabel = CAL_TYPE_LABELS[e.event_type] || e.event_type || '';
+        const badgeCls  = e.event_type || 'industry-event';
+        html += `<div class="calendar-item">
+          <div class="cal-date"><div class="cal-day">${fd.day}</div><div class="cal-mon">${fd.mon}</div></div>
+          <div class="cal-body">
+            <div class="cal-title">${e.title}</div>
+            <div class="cal-meta">
+              ${typeLabel ? `<span class="cal-badge ${badgeCls}">${typeLabel}</span>` : ''}
+              ${e.company ? `<span class="cal-company">${e.company}</span>` : ''}
+            </div>
+            ${e.description ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${e.description}</div>` : ''}
+          </div>
+        </div>`;
+      }
+    }
+    container.innerHTML = html || '<div class="calendar-empty">Ingen hendelser denne perioden.</div>';
+  } catch (e) { container.innerHTML = '<div class="calendar-empty">Feil ved lasting av kalender.</div>'; }
+}
+
+// ---------- news ----------
+async function loadNews() {
+  const container = document.getElementById('finance-news');
+  try {
+    const r = await fetch(`/api/finance/news?lang=${LANG}&limit=10`);
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const articles = data.results || [];
+    if (!articles.length) { container.innerHTML = '<div class="news-loading">Ingen finansnyheter funnet.</div>'; return; }
+    container.innerHTML = articles.map(a => {
+      const title = (a.titles && a.titles[LANG]) || a.title || '(Ingen tittel)';
+      const summary = (a.summaries && a.summaries[LANG]) || '';
+      const scopeCls = a.scope === 'cermaq' ? 'scope-cermaq' : 'scope-industry';
+      const scopeLabel = a.scope === 'cermaq' ? 'Cermaq' : 'Bransje';
+      const pub = a.published_at ? new Date(a.published_at).toLocaleDateString('no-NO', { day:'2-digit', month:'short', year:'numeric' }) : '';
+      return `<div class="news-item">
+        <a href="${a.url}" target="_blank" rel="noopener" class="news-title">${title}</a>
+        <div class="news-meta">
+          <span class="scope-badge ${scopeCls}">${scopeLabel}</span>
+          ${a.source_name ? `<span>${a.source_name}</span>` : ''}
+          ${pub ? `<span>${pub}</span>` : ''}
+        </div>
+        ${summary ? `<div class="news-summary">${summary}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) { container.innerHTML = '<div class="news-loading">Feil ved lasting av nyheter.</div>'; }
+}
+
+// ---------- bootstrap ----------
+function loadAll() {
+  loadAnomalies();
+  loadScenarios();
+  loadSalmonPrices();
+  loadDigest();
+  loadRates();
+  loadCommodities();
+  loadStocks();
+  loadPriceChart();
+  loadStocksChart();
+  loadMarketCap();
+  loadCalendar();
+  loadNews();
+}
+
+// Chart.js time adapter (required for time scale)
+// Use built-in date adapter via luxon or the default; with Chart.js 4.x the
+// built-in adapter is sufficient for ISO date strings on the x-axis.
+loadAll();
+</script>
 </body>
 </html>
