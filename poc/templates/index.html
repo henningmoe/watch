@@ -14,10 +14,10 @@
       --deep-blue: #324664;
       --bg-page: #f5f4ef;
       --border: #e5e7eb;
+      --scale-grey: #d2d2cd;
       --text-primary: #111827;
       --text-secondary: #6b7280;
       --text-muted: #9ca3af;
-      --green-dark: #0c4a3e;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,14 +28,13 @@
       color: var(--text-primary);
     }
 
-    /* ─── Outer wrapper ──────────────────────────────────────── */
+    /* ─── Layout ────────────────────────────────────────────── */
     .app-outer {
       min-height: 100vh;
       display: flex;
       justify-content: center;
       background: var(--bg-page);
     }
-
     .app-container {
       width: 100%;
       max-width: 1440px;
@@ -61,7 +60,7 @@
     }
 
     .sidebar-logo {
-      padding: 20px 20px 18px;
+      padding: 16px 20px 12px;
       border-bottom: 1px solid var(--border);
     }
     .sidebar-logo .brand-eyebrow {
@@ -72,17 +71,72 @@
       font-weight: 500;
     }
     .sidebar-logo .brand-name {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 600;
       color: var(--deep-blue);
-      margin-top: 3px;
-      letter-spacing: -0.3px;
+      margin-top: 2px;
     }
     .sidebar-logo .brand-name span { color: var(--aqua); }
 
-    .sidebar-pillar {
-      padding: 16px 20px 4px;
+    /* Search in sidebar */
+    .sidebar-search {
+      margin: 12px 16px;
+      position: relative;
     }
+    .sidebar-search input {
+      width: 100%;
+      padding: 8px 12px 8px 32px;
+      border: 1px solid var(--scale-grey);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      background: white;
+      box-sizing: border-box;
+    }
+    .sidebar-search input:focus {
+      outline: none;
+      border-color: var(--aqua);
+    }
+    .sidebar-search::before {
+      content: '🔍';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    /* Lang buttons in sidebar */
+    .sidebar-langs {
+      display: flex;
+      gap: 4px;
+      padding: 0 16px;
+      margin-bottom: 14px;
+    }
+    .sidebar-langs a {
+      flex: 1;
+      text-align: center;
+      padding: 5px 0;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--scale-grey);
+      border-radius: 6px;
+      color: var(--deep-blue);
+      text-decoration: none;
+      background: white;
+      transition: all 0.15s;
+    }
+    .sidebar-langs a:hover { border-color: var(--aqua); }
+    .sidebar-langs a.active {
+      background: var(--aqua);
+      color: white;
+      border-color: var(--aqua);
+    }
+
+    /* Pillar label */
+    .sidebar-pillar { padding: 12px 20px 4px; }
     .sidebar-pillar-label {
       font-size: 9px;
       font-weight: 700;
@@ -91,6 +145,7 @@
       color: var(--text-muted);
     }
 
+    /* Group label */
     .sidebar-group { padding: 8px 0 2px; }
     .sidebar-group-label {
       padding: 0 20px 4px;
@@ -101,6 +156,7 @@
       color: #b0b8c4;
     }
 
+    /* Nav items */
     .nav-item {
       display: flex;
       align-items: center;
@@ -132,12 +188,12 @@
       margin-left: auto;
       font-size: 11px;
       color: var(--text-muted);
-      font-weight: 400;
       min-width: 20px;
       text-align: right;
     }
-    .nav-item.active .nav-count { color: var(--aqua); opacity: 0.75; }
+    .nav-item.active .nav-count { color: var(--aqua); opacity: 0.8; }
 
+    /* Collapsible TEMA */
     .sidebar-collapsible-toggle {
       display: flex;
       align-items: center;
@@ -165,10 +221,46 @@
     .sidebar-collapsible-toggle.collapsed .coll-arrow { transform: rotate(-90deg); }
     .sidebar-collapsible-body.collapsed { display: none; }
 
-    .sidebar-divider {
-      height: 1px;
-      background: var(--border);
-      margin: 6px 20px;
+    .sidebar-divider { height: 1px; background: var(--border); margin: 6px 20px; }
+
+    /* FILTRE section */
+    .sidebar-filters {
+      padding: 0 16px;
+      margin-top: 12px;
+      border-top: 1px solid var(--scale-grey);
+      padding-top: 14px;
+    }
+    .sidebar-filters h3 {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin: 0 0 10px 0;
+    }
+    .sidebar-filter-group { margin-bottom: 10px; }
+    .sidebar-filter-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+      font-weight: 500;
+    }
+    .sidebar-filter-group select {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 12px;
+      border: 1px solid var(--scale-grey);
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      box-sizing: border-box;
+      font-family: inherit;
+      color: var(--text-primary);
+    }
+    .sidebar-filter-group select:focus {
+      outline: none;
+      border-color: var(--aqua);
     }
 
     /* Theme tags */
@@ -181,26 +273,26 @@
       white-space: nowrap;
       cursor: pointer;
     }
-    .theme-tag[data-theme="Sj\00F8"]            { background: #e0f2fe; color: #0369a1; }
-    .theme-tag[data-theme="Landbasert"]          { background: #dcfce7; color: #15803d; }
-    .theme-tag[data-theme="F\00F4r"]             { background: #fef9c3; color: #854d0e; }
-    .theme-tag[data-theme="Fiskehelse"]          { background: #fce7f3; color: #9d174d; }
-    .theme-tag[data-theme="Teknologi"]           { background: #ede9fe; color: #6d28d9; }
-    .theme-tag[data-theme="Digitalisering"]      { background: #f1f5f9; color: #475569; }
-    .theme-tag[data-theme="Finans"]              { background: #fff7ed; color: #c2410c; }
+    .theme-tag[data-theme="Sjø"]            { background: #e0f2fe; color: #0369a1; }
+    .theme-tag[data-theme="Landbasert"]     { background: #dcfce7; color: #15803d; }
+    .theme-tag[data-theme="Fôr"]            { background: #fef9c3; color: #854d0e; }
+    .theme-tag[data-theme="Fiskehelse"]     { background: #fce7f3; color: #9d174d; }
+    .theme-tag[data-theme="Teknologi"]      { background: #ede9fe; color: #6d28d9; }
+    .theme-tag[data-theme="Digitalisering"] { background: #f1f5f9; color: #475569; }
+    .theme-tag[data-theme="Finans"]         { background: #fff7ed; color: #c2410c; }
 
     .theme-dot {
       width: 8px; height: 8px;
       border-radius: 2px;
       flex-shrink: 0;
     }
-    .theme-dot[data-theme="Sj\00F8"]            { background: #0369a1; }
-    .theme-dot[data-theme="Landbasert"]          { background: #15803d; }
-    .theme-dot[data-theme="F\00F4r"]             { background: #854d0e; }
-    .theme-dot[data-theme="Fiskehelse"]          { background: #9d174d; }
-    .theme-dot[data-theme="Teknologi"]           { background: #6d28d9; }
-    .theme-dot[data-theme="Digitalisering"]      { background: #475569; }
-    .theme-dot[data-theme="Finans"]              { background: #c2410c; }
+    .theme-dot[data-theme="Sjø"]            { background: #0369a1; }
+    .theme-dot[data-theme="Landbasert"]     { background: #15803d; }
+    .theme-dot[data-theme="Fôr"]            { background: #854d0e; }
+    .theme-dot[data-theme="Fiskehelse"]     { background: #9d174d; }
+    .theme-dot[data-theme="Teknologi"]      { background: #6d28d9; }
+    .theme-dot[data-theme="Digitalisering"] { background: #475569; }
+    .theme-dot[data-theme="Finans"]         { background: #c2410c; }
 
     /* ─── Main content ───────────────────────────────────────── */
     .main-content {
@@ -210,66 +302,19 @@
       flex-direction: column;
     }
 
-    /* ─── Top bar ────────────────────────────────────────────── */
+    /* Minimal topbar — avatar only */
     .topbar {
       background: #fff;
       border-bottom: 1px solid var(--border);
-      padding: 12px 24px;
+      padding: 9px 20px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
+      justify-content: flex-end;
       position: sticky;
       top: 0;
       z-index: 50;
+      min-height: 48px;
     }
-
-    .search-wrap {
-      position: relative;
-      flex: 1;
-      max-width: 400px;
-    }
-    .search-wrap svg {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      pointer-events: none;
-    }
-    .search-input {
-      width: 100%;
-      padding: 7px 12px 7px 32px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: #f9fafb;
-      font-family: inherit;
-      font-size: 13px;
-      color: var(--text-primary);
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .search-input:focus { border-color: var(--aqua); box-shadow: 0 0 0 3px rgba(0,150,160,0.1); }
-    .search-input::placeholder { color: var(--text-muted); }
-
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
-
-    .lang-selector { display: flex; gap: 4px; }
-    .lang-btn {
-      background: #fff;
-      border: 1px solid var(--border);
-      color: var(--text-secondary);
-      font-family: inherit;
-      font-size: 11px;
-      padding: 5px 9px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: background 0.1s, color 0.1s, border-color 0.1s;
-    }
-    .lang-btn.active { background: var(--aqua-light); color: var(--aqua); border-color: var(--aqua); }
-    .lang-btn:hover:not(.active) { border-color: var(--text-muted); }
-
     .avatar {
       width: 30px; height: 30px;
       border-radius: 50%;
@@ -283,9 +328,9 @@
       flex-shrink: 0;
     }
 
-    /* ─── Page header ────────────────────────────────────────── */
+    /* Page header */
     .page-hd {
-      padding: 20px 24px 0;
+      padding: 18px 24px 0;
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
@@ -296,26 +341,7 @@
     .page-hd-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
     .page-hd-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; padding-top: 4px; }
 
-    /* ─── Stat cards ─────────────────────────────────────────── */
-    .stat-cards {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      padding: 16px 24px 0;
-    }
-    .stat-card {
-      background: #f9fafb;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 12px 14px;
-    }
-    .stat-card-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card-number { font-size: 22px; font-weight: 600; margin-top: 3px; color: var(--text-primary); }
-    .stat-card-number.teal { color: var(--aqua); }
-    .stat-card-number.red { color: #b91c1c; }
-    .stat-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-    /* ─── Active filter chip ─────────────────────────────────── */
+    /* Active filter chip */
     .active-filter-bar {
       display: none;
       padding: 10px 24px 0;
@@ -348,7 +374,7 @@
     }
     .filter-chip-remove:hover { opacity: 1; }
 
-    /* ─── Error banner ───────────────────────────────────────── */
+    /* Error banner */
     .error-banner {
       margin: 12px 24px 0;
       background: #fff0f0;
@@ -359,25 +385,25 @@
       color: #7b2318;
     }
 
-    /* ─── Digest card ────────────────────────────────────────── */
+    /* Digest card */
     .digest-wrapper { padding: 16px 24px 0; }
     .digest-card {
       background: #f0fafa;
       border: 1px solid #b2dfe3;
       border-left: 3px solid var(--aqua);
       border-radius: 6px;
-      padding: 18px 22px;
+      padding: 16px 20px;
     }
     .digest-card-hd {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
     .digest-card-hd-left { display: flex; align-items: center; gap: 8px; }
     .ai-badge {
-      width: 20px; height: 20px;
-      border-radius: 4px;
+      width: 18px; height: 18px;
+      border-radius: 3px;
       background: var(--aqua);
       color: #fff;
       font-size: 8px;
@@ -386,86 +412,17 @@
       align-items: center;
       justify-content: center;
     }
-    .digest-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--aqua); font-weight: 600; }
+    .digest-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--aqua); font-weight: 600; }
     .digest-timestamp { font-size: 11px; color: var(--text-muted); }
-    .digest-headline { font-size: 15px; font-weight: 500; color: var(--deep-blue); line-height: 1.4; margin-bottom: 6px; }
-    .digest-body { font-size: 13px; line-height: 1.65; color: #374151; }
-    .digest-empty { background: #f9fafb; border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 6px; padding: 16px 22px; font-size: 13px; color: var(--text-muted); font-style: italic; }
-
-    /* ─── Filter card ────────────────────────────────────────── */
-    .filter-wrapper { padding: 14px 24px 0; }
-    .filter-card {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 18px;
-    }
-    .filter-card-hd {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .filter-card-hd-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; }
-    .filter-reset {
-      font-size: 11px;
-      color: var(--text-secondary);
-      text-decoration: underline;
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-family: inherit;
-    }
-    .filter-reset:hover { color: var(--text-primary); }
-
-    .filter-group { margin-bottom: 12px; }
-    .filter-group:last-child { margin-bottom: 0; }
-    .filter-group-label { font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
-
-    .btn-group { display: flex; flex-wrap: wrap; gap: 5px; }
-
-    .filter-pill {
-      padding: 4px 11px;
-      border-radius: 20px;
-      border: 1px solid var(--border);
-      background: #fff;
-      color: var(--text-secondary);
-      font-family: inherit;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.1s, color 0.1s, border-color 0.1s;
-      white-space: nowrap;
-    }
-    .filter-pill:hover { border-color: var(--text-muted); color: var(--text-primary); }
-    .filter-pill.active { background: var(--aqua); color: #fff; border-color: var(--aqua); }
-    .pill-count { font-size: 11px; opacity: 0.75; margin-left: 2px; }
-
-    .tone-pill[data-tone="positiv"].active { background: #15803d; border-color: #15803d; }
-    .tone-pill[data-tone="noytral"].active { background: #475569; border-color: #475569; }
-    .tone-pill[data-tone="negativ"].active { background: #b91c1c; border-color: #b91c1c; }
-
-    .filter-row-3 {
-      display: grid;
-      grid-template-columns: 1fr 1fr 1fr;
-      gap: 12px;
+    .digest-headline { font-size: 14px; font-weight: 500; color: var(--deep-blue); line-height: 1.4; margin-bottom: 5px; }
+    .digest-body { font-size: 13px; line-height: 1.6; color: #374151; }
+    .digest-empty {
+      background: #f9fafb; border: 1px solid var(--border);
+      border-left: 3px solid var(--border); border-radius: 6px;
+      padding: 14px 20px; font-size: 13px; color: var(--text-muted); font-style: italic;
     }
 
-    .filter-select {
-      width: 100%;
-      padding: 6px 10px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      background: #fff;
-      font-family: inherit;
-      font-size: 12px;
-      color: #374151;
-      cursor: pointer;
-      outline: none;
-    }
-    .filter-select:focus { border-color: var(--aqua); }
-
-    /* ─── Result header ──────────────────────────────────────── */
+    /* Result header */
     .result-hd {
       padding: 12px 24px 6px;
       display: flex;
@@ -488,18 +445,16 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      transition: border-color 0.1s, background 0.1s;
     }
     .result-action-btn:hover { border-color: var(--text-muted); background: #f9fafb; }
 
-    /* ─── Article feed ───────────────────────────────────────── */
+    /* Article feed */
     .article-feed {
       padding: 0 24px;
       display: flex;
       flex-direction: column;
       gap: 6px;
     }
-
     .article-row {
       background: #fff;
       border: 1px solid var(--border);
@@ -521,7 +476,6 @@
       gap: 5px;
       margin-bottom: 6px;
     }
-
     .source-favicon {
       width: 15px; height: 15px;
       border-radius: 3px;
@@ -538,11 +492,8 @@
     .time-ago { font-size: 11px; color: var(--text-muted); }
 
     .scope-badge {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 1px 5px;
-      border-radius: 3px;
-      white-space: nowrap;
+      font-size: 10px; font-weight: 600;
+      padding: 1px 5px; border-radius: 3px; white-space: nowrap;
     }
     .scope-cermaq  { background: var(--aqua); color: #fff; }
     .scope-core    { background: #dbeafe; color: #1e40af; }
@@ -550,10 +501,8 @@
     .scope-pending { background: #f3f4f6; color: var(--text-muted); font-style: italic; }
 
     .tone-badge {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 1px 5px;
-      border-radius: 3px;
+      font-size: 10px; font-weight: 600;
+      padding: 1px 5px; border-radius: 3px;
     }
     .tone-positiv { background: #f0fdf4; color: #15803d; }
     .tone-noytral { background: #f1f5f9; color: #475569; }
@@ -562,50 +511,30 @@
     .relevance-star { font-size: 10px; color: var(--text-muted); }
 
     .article-title {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-primary);
-      line-height: 1.4;
-      text-decoration: none;
-      display: block;
-      margin-bottom: 5px;
+      font-size: 14px; font-weight: 500; color: var(--text-primary);
+      line-height: 1.4; text-decoration: none; display: block; margin-bottom: 5px;
     }
     .article-row:hover .article-title { color: var(--aqua); }
 
     .article-summary {
-      font-size: 12px;
-      color: var(--text-secondary);
-      line-height: 1.5;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
     }
 
     .article-img-wrap { align-self: start; }
     .article-img-wrap img {
       width: 110px; height: 74px;
-      object-fit: cover;
-      border-radius: 4px;
-      display: block;
+      object-fit: cover; border-radius: 4px; display: block;
     }
-    .article-img-placeholder {
-      width: 110px; height: 74px;
-      border-radius: 4px;
-    }
+    .article-img-placeholder { width: 110px; height: 74px; border-radius: 4px; }
 
     .empty-feed {
-      text-align: center;
-      padding: 48px 0;
-      font-size: 14px;
-      color: var(--text-muted);
+      text-align: center; padding: 48px 0;
+      font-size: 14px; color: var(--text-muted);
     }
 
-    /* ─── Load more ──────────────────────────────────────────── */
-    .load-more-wrap {
-      padding: 16px 24px 28px;
-      text-align: center;
-    }
+    /* Load more */
+    .load-more-wrap { padding: 16px 24px 28px; text-align: center; }
     .load-more-btn {
       padding: 7px 18px;
       border: 1px solid var(--border);
@@ -615,24 +544,17 @@
       font-size: 12px;
       color: #374151;
       cursor: pointer;
-      transition: border-color 0.1s, background 0.1s;
     }
     .load-more-btn:hover { border-color: var(--text-muted); background: #f9fafb; }
 
-    .stat-hidden { display: none !important; }
-
-    /* ─── Mobile ─────────────────────────────────────────────── */
+    /* Mobile */
     @media (max-width: 768px) {
       .sidebar { display: none; }
       .app-container { display: block; }
-      .stat-cards { grid-template-columns: repeat(2, 1fr); }
-      .filter-row-3 { grid-template-columns: 1fr; }
       .article-row { grid-template-columns: 1fr; }
       .article-img-wrap { display: none; }
-      .topbar { padding: 10px 16px; }
-      .page-hd, .stat-cards, .digest-wrapper, .filter-wrapper,
-      .result-hd, .article-feed, .load-more-wrap,
-      .active-filter-bar { padding-left: 16px; padding-right: 16px; }
+      .page-hd, .digest-wrapper, .result-hd, .article-feed,
+      .load-more-wrap, .active-filter-bar { padding-left: 16px; padding-right: 16px; }
     }
   </style>
 </head>
@@ -643,9 +565,26 @@
 
   <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
   <aside class="sidebar">
+
+    <!-- Logo -->
     <div class="sidebar-logo">
       <div class="brand-eyebrow">Cermaq</div>
       <div class="brand-name">Media <span>Watch</span></div>
+    </div>
+
+    <!-- Search -->
+    <div class="sidebar-search">
+      <input type="text" id="search-input"
+             placeholder="{{ ui_text.search_placeholder }}" autocomplete="off" />
+    </div>
+
+    <!-- Language -->
+    <div class="sidebar-langs">
+      {% set _langs = [('no','NO'),('en','EN'),('es','ES'),('ja','JA')] %}
+      {% for lc, label in _langs %}
+      <a href="?{{ request.query_string.decode().replace('lang=no','').replace('lang=en','').replace('lang=es','').replace('lang=ja','') | trim('&') }}&lang={{ lc }}"
+         class="{% if lang == lc %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
     </div>
 
     <!-- NEWS WATCH -->
@@ -653,7 +592,9 @@
       <div class="sidebar-pillar-label">News Watch</div>
     </div>
 
-    <a href="/?lang={{ lang }}" class="nav-item{% if not active_region and not active_theme %} active{% endif %}" onclick="setRegionFilter('all');return false;">
+    <a href="/?lang={{ lang }}"
+       class="nav-item{% if not active_region and not active_theme %} active{% endif %}"
+       onclick="setRegionFilter('all');return false;">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
         <polyline points="14 2 14 8 20 8"/>
@@ -661,46 +602,45 @@
       Alle nyheter
       <span class="nav-count" id="nav-count-all">{{ articles | length }}</span>
     </a>
-    <a href="/?region=norge&lang={{ lang }}" class="nav-item{% if active_region == 'norge' %} active{% endif %}" onclick="setRegionFilter('norge');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-      </svg>
+    <a href="/?region=norge&lang={{ lang }}"
+       class="nav-item{% if active_region == 'norge' %} active{% endif %}"
+       onclick="setRegionFilter('norge');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
       Norge
-      <span class="nav-count" id="nav-count-norge">{{ region_counts.norge }}</span>
+      <span class="nav-count">{{ region_counts.norge }}</span>
     </a>
-    <a href="/?region=chile&lang={{ lang }}" class="nav-item{% if active_region == 'chile' %} active{% endif %}" onclick="setRegionFilter('chile');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-      </svg>
+    <a href="/?region=chile&lang={{ lang }}"
+       class="nav-item{% if active_region == 'chile' %} active{% endif %}"
+       onclick="setRegionFilter('chile');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
       Chile
-      <span class="nav-count" id="nav-count-chile">{{ region_counts.chile }}</span>
+      <span class="nav-count">{{ region_counts.chile }}</span>
     </a>
-    <a href="/?region=canada&lang={{ lang }}" class="nav-item{% if active_region == 'canada' %} active{% endif %}" onclick="setRegionFilter('canada');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-      </svg>
+    <a href="/?region=canada&lang={{ lang }}"
+       class="nav-item{% if active_region == 'canada' %} active{% endif %}"
+       onclick="setRegionFilter('canada');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
       Canada
-      <span class="nav-count" id="nav-count-canada">{{ region_counts.canada }}</span>
+      <span class="nav-count">{{ region_counts.canada }}</span>
     </a>
-    <a href="/?region=global&lang={{ lang }}" class="nav-item{% if active_region == 'global' %} active{% endif %}" onclick="setRegionFilter('global');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"/>
-      </svg>
+    <a href="/?region=global&lang={{ lang }}"
+       class="nav-item{% if active_region == 'global' %} active{% endif %}"
+       onclick="setRegionFilter('global');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
       Globalt
-      <span class="nav-count" id="nav-count-global">{{ region_counts.global }}</span>
+      <span class="nav-count">{{ region_counts.global }}</span>
     </a>
 
     <div class="sidebar-divider"></div>
 
     <!-- TEMA (collapsible) -->
-    <button class="sidebar-collapsible-toggle{% if not active_theme %} collapsed{% endif %}" id="tema-toggle" onclick="toggleTema()">
+    <button class="sidebar-collapsible-toggle{% if not active_theme %} collapsed{% endif %}"
+            id="tema-toggle" onclick="toggleTema()">
       <span class="coll-label">Tema</span>
       <span class="coll-arrow">&#9660;</span>
     </button>
     <div class="sidebar-collapsible-body{% if not active_theme %} collapsed{% endif %}" id="tema-body">
-      {% set _themes_list = [
-        'Sjø', 'Landbasert', 'Fôr', 'Fiskehelse', 'Teknologi', 'Digitalisering', 'Finans'
-      ] %}
+      {% set _themes_list = ['Sjø','Landbasert','Fôr','Fiskehelse','Teknologi','Digitalisering','Finans'] %}
       {% for t in _themes_list %}
       <a href="/?theme={{ t | urlencode }}&lang={{ lang }}"
          class="nav-item{% if active_theme == t %} active{% endif %}"
@@ -731,10 +671,64 @@
       </a>
     </div>
 
-    <div class="sidebar-divider"></div>
+    <!-- FILTRE -->
+    <div class="sidebar-filters">
+      <h3>Filtre</h3>
+
+      <div class="sidebar-filter-group">
+        <label>Omtale-nivå</label>
+        <select id="filter-scope">
+          <option value="all">Alle</option>
+          <option value="cermaq">Cermaq direkte</option>
+          <option value="industry-core">Bransje i Cermaq-områder</option>
+          <option value="industry-global">Bransje generelt</option>
+        </select>
+      </div>
+
+      <div class="sidebar-filter-group">
+        <label>Kilde</label>
+        <select id="filter-source">
+          <option value="all">Alle</option>
+          <option value="nyheter" selected>Nyheter</option>
+          <option value="some">SoMe</option>
+        </select>
+      </div>
+
+      <div class="sidebar-filter-group">
+        <label>Tone</label>
+        <select id="filter-tone">
+          <option value="all">Alle</option>
+          <option value="positiv">Positiv</option>
+          <option value="noytral">Nøytral</option>
+          <option value="negativ">Negativ</option>
+        </select>
+      </div>
+
+      <div class="sidebar-filter-group">
+        <label>Tidsperiode</label>
+        <select id="filter-date">
+          <option value="all">Alt</option>
+          <option value="today">I dag</option>
+          <option value="week">Siste uke</option>
+          <option value="month">Siste måned</option>
+        </select>
+      </div>
+
+      <div class="sidebar-filter-group">
+        <label>Sortér</label>
+        <select id="filter-sort">
+          <option value="newest" selected>Nyeste først</option>
+          <option value="oldest">Eldste først</option>
+          <option value="relevance">Relevans</option>
+          <option value="negative">Negativ tone først</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="sidebar-divider" style="margin-top:14px;"></div>
 
     <!-- FINANCE WATCH -->
-    <div class="sidebar-pillar" style="padding-top:12px;">
+    <div class="sidebar-pillar" style="padding-top:10px;">
       <div class="sidebar-pillar-label">Finance Watch</div>
     </div>
     <a href="/finance?lang={{ lang }}" class="nav-item">
@@ -746,33 +740,20 @@
     </a>
     <a href="/alerts?lang={{ lang }}" class="nav-item">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
       </svg>
       {{ ui_text.nav_alerts }}
     </a>
+
   </aside>
 
   <!-- ═══ Main content ══════════════════════════════════════════ -->
   <div class="main-content">
 
-    <!-- Top bar -->
+    <!-- Minimal topbar -->
     <header class="topbar">
-      <div class="search-wrap">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input class="search-input" id="search-input" type="text"
-               placeholder="{{ ui_text.search_placeholder }}" autocomplete="off" />
-      </div>
-      <div class="topbar-right">
-        <div class="lang-selector">
-          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">NO</button>
-          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">EN</button>
-          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">ES</button>
-          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">JA</button>
-        </div>
-        <div class="avatar">HM</div>
-      </div>
+      <div class="avatar">HM</div>
     </header>
 
     <!-- Page header -->
@@ -784,49 +765,16 @@
       <span class="page-hd-date">{{ today }}</span>
     </div>
 
-    <!-- Stat cards -->
-    <div class="stat-cards">
-      <div class="stat-card">
-        <div class="stat-card-label">{{ ui_text.stat_articles }}</div>
-        <div class="stat-card-number" id="stat-total">{{ articles | length }}</div>
-        <div class="stat-card-sub" id="stat-queue-info">
-          {% if queue_size > 0 %}{{ queue_size }} i kø{% else %}{{ ui_text.stat_articles_subtitle | replace('{n}', classified_count | string) }}{% endif %}
-        </div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">{{ ui_text.stat_cermaq }}</div>
-        <div class="stat-card-number teal" id="stat-cermaq">{{ cermaq_count }}</div>
-        <div class="stat-card-sub">{{ ui_text.stat_cermaq_subtitle }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">{{ ui_text.stat_negative }}</div>
-        <div class="stat-card-number{% if negative_count > 0 %} red{% endif %}" id="stat-negative">{{ negative_count }}</div>
-        <div class="stat-card-sub">{{ ui_text.stat_negative_subtitle }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-card-label">{{ ui_text.stat_sources }}</div>
-        <div class="stat-card-number" id="stat-sources">-</div>
-        <div class="stat-card-sub" id="stat-region-dist">
-          NO {{ region_counts.norge }} &middot; CL {{ region_counts.chile }} &middot; CA {{ region_counts.canada }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Hidden stat placeholders -->
-    <span class="stat-hidden" id="stat-norge">{{ region_counts.norge }}</span>
-    <span class="stat-hidden" id="stat-chile">{{ region_counts.chile }}</span>
-    <span class="stat-hidden" id="stat-canada">{{ region_counts.canada }}</span>
-    <span class="stat-hidden" id="stat-global">{{ region_counts.global }}</span>
-    <span class="stat-hidden" id="stat-positiv">{{ articles | selectattr('tone', 'equalto', 'positiv') | list | length }}</span>
-    <span class="stat-hidden" id="stat-noytral">{{ articles | selectattr('tone', 'equalto', 'noytral') | list | length }}</span>
-    <span class="stat-hidden" id="stat-kritisk">{{ negative_count }}</span>
-
     <!-- Active filter chip -->
-    <div class="active-filter-bar{% if active_region or active_theme %} visible{% endif %}" id="active-filter-bar">
+    <div class="active-filter-bar{% if active_region or active_theme %} visible{% endif %}"
+         id="active-filter-bar">
       <span class="active-filter-label">Filtrerer på:</span>
       <span class="active-filter-chip">
-        <span id="active-filter-chip-label">{% if active_region %}{{ active_region | title }}{% elif active_theme %}{{ active_theme }}{% endif %}</span>
-        <button class="filter-chip-remove" onclick="clearFilter()" title="Fjern filter">&times;</button>
+        <span id="active-filter-chip-label">
+          {% if active_region %}{{ active_region | title }}{% elif active_theme %}{{ active_theme }}{% endif %}
+        </span>
+        <button class="filter-chip-remove" onclick="clearFilter()"
+                title="Fjern filter">&times;</button>
       </span>
     </div>
 
@@ -843,12 +791,17 @@
             <div class="ai-badge">AI</div>
             <span class="digest-label">{{ ui_text.daily_update }}</span>
           </div>
-          <span class="digest-timestamp">{{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}</span>
+          <span class="digest-timestamp">
+            {{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}
+          </span>
         </div>
         <div class="digest-headline">{{ digest.headline }}</div>
         <div class="digest-body"><p>{{ digest.body }}</p></div>
         <div style="margin-top:8px;display:flex;justify-content:flex-end;">
-          <a href="/uken?lang={{ lang }}" style="font-size:12px;color:var(--aqua);text-decoration:none;font-weight:500;">{{ ui_text.see_weekly }} &rarr;</a>
+          <a href="/uken?lang={{ lang }}"
+             style="font-size:12px;color:var(--aqua);text-decoration:none;font-weight:500;">
+            {{ ui_text.see_weekly }} &rarr;
+          </a>
         </div>
       </div>
       {% else %}
@@ -856,88 +809,13 @@
       {% endif %}
     </div>
 
-    <!-- Filter card -->
-    <div class="filter-wrapper">
-      <div class="filter-card">
-        <div class="filter-card-hd">
-          <span class="filter-card-hd-label">{{ ui_text.filter_title }}</span>
-          <button class="filter-reset" id="reset-filters">{{ ui_text.filter_reset }}</button>
-        </div>
-
-        <div class="filter-group">
-          <div class="filter-group-label">{{ ui_text.filter_scope }}</div>
-          <div class="btn-group">
-            <button class="filter-pill scope-pill active" data-scope-filter="all">
-              {{ ui_text.filter_all }} <span class="pill-count">{{ articles | length }}</span>
-            </button>
-            <button class="filter-pill scope-pill" data-scope-filter="cermaq">
-              {{ ui_text.scope_cermaq }} <span class="pill-count">{{ cermaq_count }}</span>
-            </button>
-            <button class="filter-pill scope-pill" data-scope-filter="industry-core">
-              {{ ui_text.scope_industry_in_regions }} <span class="pill-count">{{ industry_core_count }}</span>
-            </button>
-            <button class="filter-pill scope-pill" data-scope-filter="industry-global">
-              {{ ui_text.scope_industry_general }} <span class="pill-count">{{ industry_global_count }}</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <div class="filter-group-label">{{ ui_text.filter_country }}</div>
-          <div class="btn-group">
-            <button class="filter-pill{% if not active_region %} active{% endif %}" data-region="all">{{ ui_text.filter_all }}</button>
-            <button class="filter-pill{% if active_region == 'norge' %} active{% endif %}" data-region="norge">{{ ui_text.country_norway }} <span class="pill-count">{{ region_counts.norge }}</span></button>
-            <button class="filter-pill{% if active_region == 'chile' %} active{% endif %}" data-region="chile">{{ ui_text.country_chile }} <span class="pill-count">{{ region_counts.chile }}</span></button>
-            <button class="filter-pill{% if active_region == 'canada' %} active{% endif %}" data-region="canada">{{ ui_text.country_canada }} <span class="pill-count">{{ region_counts.canada }}</span></button>
-            <button class="filter-pill{% if active_region == 'global' %} active{% endif %}" data-region="global">{{ ui_text.country_global }} <span class="pill-count">{{ region_counts.global }}</span></button>
-          </div>
-        </div>
-
-        <div class="filter-group">
-          <div class="filter-group-label">{{ ui_text.filter_source }}</div>
-          <div class="btn-group">
-            <button class="filter-pill source-pill" data-source-filter="all">{{ ui_text.filter_all }}</button>
-            <button class="filter-pill source-pill active" data-source-filter="nyheter">{{ ui_text.source_news }} <span class="pill-count"></span></button>
-            <button class="filter-pill source-pill" data-source-filter="some">{{ ui_text.source_some }} <span class="pill-count"></span></button>
-          </div>
-        </div>
-
-        <div class="filter-row-3">
-          <div class="filter-group">
-            <div class="filter-group-label">{{ ui_text.filter_tone }}</div>
-            <div class="btn-group">
-              <button class="filter-pill tone-pill active" data-tone="all">{{ ui_text.filter_all }}</button>
-              <button class="filter-pill tone-pill" data-tone="positiv">{{ ui_text.tone_positive }}</button>
-              <button class="filter-pill tone-pill" data-tone="noytral">{{ ui_text.tone_neutral }}</button>
-              <button class="filter-pill tone-pill" data-tone="negativ">{{ ui_text.tone_negative }}</button>
-            </div>
-          </div>
-          <div class="filter-group">
-            <div class="filter-group-label">{{ ui_text.filter_time }}</div>
-            <select class="filter-select" id="date-select">
-              <option value="today">{{ ui_text.time_today }}</option>
-              <option value="week">{{ ui_text.time_7days }}</option>
-              <option value="month">{{ ui_text.time_30days }}</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <div class="filter-group-label">{{ ui_text.filter_sort }}</div>
-            <select class="filter-select" id="sort">
-              <option value="newest" selected>{{ ui_text.sort_newest }}</option>
-              <option value="relevance">{{ ui_text.sort_relevance }}</option>
-              <option value="oldest">{{ ui_text.sort_oldest }}</option>
-            </select>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- Result header -->
     <div class="result-hd">
       <span class="result-count" id="result-count"></span>
       <div class="result-actions">
-        <button class="result-action-btn" title="{{ ui_text.btn_export }}">{{ ui_text.btn_export }}</button>
-        <a href="/alerts?lang={{ lang }}" class="result-action-btn">{{ ui_text.btn_create_alert }}</a>
+        <a href="/alerts?lang={{ lang }}" class="result-action-btn">
+          {{ ui_text.btn_create_alert }}
+        </a>
       </div>
     </div>
 
@@ -954,7 +832,7 @@
           {% if a.scope == 'cermaq' %}
             {% set scope_cls = 'scope-cermaq' %}
             {% set scope_lbl = ui_text.scope_cermaq %}
-          {% elif a.scope == 'industry' and r in ['norge', 'chile', 'canada'] %}
+          {% elif a.scope == 'industry' and r in ['norge','chile','canada'] %}
             {% set scope_cls = 'scope-core' %}
             {% set scope_lbl = ui_text.scope_industry_in_regions %}
           {% elif a.scope == 'industry' %}
@@ -978,7 +856,8 @@
 
             <div class="article-left">
               <div class="article-meta">
-                <span class="source-favicon" data-source-name="{{ a.source_name or 'U' }}">{{ (a.source_name or 'U')[0] | upper }}</span>
+                <span class="source-favicon"
+                      data-source-name="{{ a.source_name or 'U' }}">{{ (a.source_name or 'U')[0] | upper }}</span>
                 <span class="source-name">{{ a.source_name or "Ukjent" }}</span>
                 <span class="meta-dot">&middot;</span>
                 <span class="time-ago" data-published="{{ a.published_at_iso }}">{{ a.published_at }}</span>
@@ -987,18 +866,21 @@
                 {% endif %}
                 {% if a.tone == 'positiv' %}
                   <span class="tone-badge tone-positiv">&#8593; {{ ui_text.tone_positive }}</span>
-                {% elif a.tone in ('kritisk', 'negativ') %}
+                {% elif a.tone in ('kritisk','negativ') %}
                   <span class="tone-badge tone-negativ">&#8595; {{ ui_text.tone_negative }}</span>
                 {% elif a.tone == 'noytral' %}
                   <span class="tone-badge tone-noytral">&#8212; {{ ui_text.tone_neutral }}</span>
                 {% endif %}
                 {% if a.relevance %}<span class="relevance-star">&#9733; {{ a.relevance }}</span>{% endif %}
                 {% for theme in (a.themes or []) %}
-                <span class="theme-tag" data-theme="{{ theme }}" onclick="event.preventDefault();setThemeFilter('{{ theme }}')">{{ theme }}</span>
+                <span class="theme-tag" data-theme="{{ theme }}"
+                      onclick="event.preventDefault();setThemeFilter('{{ theme }}')">{{ theme }}</span>
                 {% endfor %}
               </div>
 
-              <span class="article-title">{% if a.titles and a.titles.get(lang) %}{{ a.titles[lang] }}{% else %}{{ a.title }}{% endif %}</span>
+              <span class="article-title">
+                {% if a.titles and a.titles.get(lang) %}{{ a.titles[lang] }}{% else %}{{ a.title }}{% endif %}
+              </span>
 
               <div class="summary-container">
                 <p class="article-summary lang-text" data-lang="no">{{ sumno }}</p>
@@ -1012,7 +894,8 @@
               {% if a.image_url %}
               <img src="{{ a.image_url }}" alt="" loading="lazy" />
               {% else %}
-              <div class="article-img-placeholder" data-source-name="{{ a.source_name or '' }}"></div>
+              <div class="article-img-placeholder"
+                   data-source-name="{{ a.source_name or '' }}"></div>
               {% endif %}
             </div>
           </a>
@@ -1035,28 +918,20 @@
   /* ─── UI texts ───────────────────────────────────────────── */
   var UI_TEXTS = {{ ui_text | tojson }};
 
-  /* ─── URL param state ────────────────────────────────────── */
+  /* ─── URL params ─────────────────────────────────────────── */
   var _urlParams = new URLSearchParams(window.location.search);
-  var _urlLang = _urlParams.get("lang") || "no";
-  var _savedLang = localStorage.getItem("cermaq_lang");
-  if (!_urlParams.get("lang") && _savedLang && _savedLang !== "no") {
-    var _u = new URL(window.location);
-    _u.searchParams.set("lang", _savedLang);
-    window.location.replace(_u.toString());
-  }
-  var activeLang = _urlLang;
+  var activeLang = _urlParams.get("lang") || localStorage.getItem("cermaq_lang") || "no";
 
-  /* ─── Filter state ───────────────────────────────────────── */
-  var activeRegion       = _urlParams.get("region") || "all";
-  var activeTheme        = _urlParams.get("theme")  || "all";
-  var activeDateRange    = "today";
-  var activeTone         = "all";
-  var activeScopeFilter  = "all";
-  var activeSourceFilter = "nyheter";
-  var activeSearch       = "";
-  var currentVisible     = 25;
-  var PAGE_SIZE          = 25;
-  var DATE_MS = { today: 86400000, week: 604800000, month: 2592000000 };
+  /* ─── Filter state (init from URL) ──────────────────────── */
+  var activeRegion = _urlParams.get("region") || "all";
+  var activeTheme  = _urlParams.get("theme")  || "all";
+  var activeSearch = "";
+  var currentVisible = 25;
+  var PAGE_SIZE = 25;
+
+  /* Bug fix: when theme or region filter is set via URL, default to
+     showing ALL dates so sidebar counts match article list counts. */
+  var DATE_MS = { today: 86400000, week: 604800000, month: 2592000000, all: Infinity };
 
   /* ─── Source colors ──────────────────────────────────────── */
   var SRC_COLORS = ['#0096a0','#324664','#1e40af','#7e22ce','#c2410c','#b45309','#0891b2','#065f46'];
@@ -1071,7 +946,7 @@
     if (!isoStr) return "";
     var diff = Date.now() - new Date(isoStr).getTime();
     if (diff < 0) return "";
-    if (diff < 60000) return "Na";
+    if (diff < 60000) return "Nå";
     if (diff < 3600000) return (UI_TEXTS.time_ago_minutes || "{n} min siden").replace("{n}", Math.floor(diff / 60000));
     if (diff < 86400000) return (UI_TEXTS.time_ago_hours || "{n} t siden").replace("{n}", Math.floor(diff / 3600000));
     return (UI_TEXTS.time_ago_days || "{n} dager siden").replace("{n}", Math.floor(diff / 86400000));
@@ -1080,16 +955,25 @@
   /* ─── Source category ────────────────────────────────────── */
   function getSourceCategory(row) {
     var src = (row.dataset.source || "").toLowerCase();
-    var socialSites = ["linkedin","twitter","x","facebook","instagram","youtube","tiktok","reddit"];
-    for (var i = 0; i < socialSites.length; i++) {
-      if (src.indexOf(socialSites[i]) > -1) return "some";
-    }
-    var method = (row.dataset.fetchMethod || "").toLowerCase();
-    if (method === "some" || method === "social") return "some";
+    var social = ["linkedin","twitter","x","facebook","instagram","youtube","tiktok","reddit"];
+    for (var i = 0; i < social.length; i++) { if (src.indexOf(social[i]) > -1) return "some"; }
+    var m = (row.dataset.fetchMethod || "").toLowerCase();
+    if (m === "some" || m === "social") return "some";
     return "nyheter";
   }
 
-  /* ─── URL navigation helpers ─────────────────────────────── */
+  /* ─── Get current filter values from selects ─────────────── */
+  function getFilters() {
+    return {
+      scope:  document.getElementById("filter-scope").value,
+      source: document.getElementById("filter-source").value,
+      tone:   document.getElementById("filter-tone").value,
+      date:   document.getElementById("filter-date").value,
+      sort:   document.getElementById("filter-sort").value,
+    };
+  }
+
+  /* ─── URL navigation (sidebar region/theme links) ────────── */
   function setRegionFilter(region) {
     var u = new URL(window.location);
     if (region === "all") { u.searchParams.delete("region"); } else { u.searchParams.set("region", region); }
@@ -1113,113 +997,26 @@
 
   /* ─── Collapsible TEMA ───────────────────────────────────── */
   function toggleTema() {
-    var toggle = document.getElementById("tema-toggle");
-    var body = document.getElementById("tema-body");
-    toggle.classList.toggle("collapsed");
-    body.classList.toggle("collapsed");
+    document.getElementById("tema-toggle").classList.toggle("collapsed");
+    document.getElementById("tema-body").classList.toggle("collapsed");
   }
 
-  /* ─── Reactive filter counters ───────────────────────────── */
-  function updateFilterCounts(allRows) {
-    var now = Date.now();
-    var maxAge = DATE_MS[activeDateRange] || DATE_MS.today;
-    var searchLc = activeSearch.toLowerCase();
-    var coreRegions = ["norge", "chile", "canada"];
+  /* ─── Language switch (preserved) ───────────────────────── */
+  function switchLanguage(newLang) {
+    localStorage.setItem("cermaq_lang", newLang);
+    var u = new URL(window.location);
+    u.searchParams.set("lang", newLang);
+    window.location.href = u.toString();
+  }
 
-    function passesDate(row) {
-      var iso = row.dataset.publishedAt;
-      if (!iso) return true;
-      var age = now - new Date(iso).getTime();
-      return age >= 0 && age <= maxAge;
-    }
-    function passesSearch(row) {
-      if (!searchLc) return true;
-      return (row.dataset.title || "").toLowerCase().indexOf(searchLc) > -1 ||
-             (row.dataset.source || "").toLowerCase().indexOf(searchLc) > -1;
-    }
-    function passesRegion(row) {
-      if (activeRegion === "all") return true;
-      return row.dataset.region === activeRegion;
-    }
-    function passesTheme(row) {
-      if (activeTheme === "all") return true;
-      try { return JSON.parse(row.dataset.themes || "[]").indexOf(activeTheme) > -1; } catch(e) { return false; }
-    }
-    function passesTone(row) {
-      if (activeTone === "all") return true;
-      var t = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
-      return t === activeTone;
-    }
-    function passesScope(row) {
-      if (activeScopeFilter === "all") return true;
-      var scope = row.dataset.scope, region = row.dataset.region;
-      if (activeScopeFilter === "cermaq") return scope === "cermaq";
-      if (activeScopeFilter === "industry-core") return scope === "industry" && coreRegions.indexOf(region) > -1;
-      if (activeScopeFilter === "industry-global") return scope === "industry" && coreRegions.indexOf(region) === -1;
-      return true;
-    }
-    function passesSource(row) {
-      if (activeSourceFilter === "all") return true;
-      return getSourceCategory(row) === activeSourceFilter;
-    }
-
-    var regCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
-    allRows.forEach(function(row) {
-      if (!passesDate(row) || !passesSearch(row) || !passesTone(row) || !passesScope(row) || !passesSource(row)) return;
-      var reg = row.dataset.region || "global";
-      if (reg in regCounts) regCounts[reg]++; else regCounts.global++;
-    });
-    document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(btn) {
-      var r = btn.dataset.region;
-      if (r === "all") return;
-      var span = btn.querySelector(".pill-count");
-      if (span) span.textContent = regCounts[r] !== undefined ? regCounts[r] : 0;
-    });
-
-    var tCounts = { positiv: 0, noytral: 0, negativ: 0 };
-    allRows.forEach(function(row) {
-      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTheme(row) || !passesScope(row) || !passesSource(row)) return;
-      var t = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
-      if (t in tCounts) tCounts[t]++;
-    });
-    document.querySelectorAll(".tone-pill[data-tone]").forEach(function(btn) {
-      var t = btn.dataset.tone;
-      if (t === "all") return;
-      var span = btn.querySelector(".pill-count");
-      if (span) span.textContent = tCounts[t] !== undefined ? tCounts[t] : 0;
-    });
-
-    var cermaqCnt = 0, coreCnt = 0, globalIndCnt = 0, allScopeCnt = 0;
-    allRows.forEach(function(row) {
-      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTheme(row) || !passesTone(row) || !passesSource(row)) return;
-      allScopeCnt++;
-      var scope = row.dataset.scope, region = row.dataset.region;
-      if (scope === "cermaq") cermaqCnt++;
-      else if (scope === "industry" && coreRegions.indexOf(region) > -1) coreCnt++;
-      else globalIndCnt++;
-    });
-    var scopeMap = { "all": allScopeCnt, "cermaq": cermaqCnt, "industry-core": coreCnt, "industry-global": globalIndCnt };
-    document.querySelectorAll(".scope-pill[data-scope-filter]").forEach(function(btn) {
-      var sf = btn.dataset.scopeFilter;
-      var span = btn.querySelector(".pill-count");
-      if (span && scopeMap[sf] !== undefined) span.textContent = scopeMap[sf];
-    });
-
-    var srcCounts = { nyheter: 0, some: 0 };
-    allRows.forEach(function(row) {
-      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTheme(row) || !passesTone(row) || !passesScope(row)) return;
-      var cat = getSourceCategory(row);
-      if (cat in srcCounts) srcCounts[cat]++;
-    });
-    document.querySelectorAll(".source-pill[data-source-filter]").forEach(function(btn) {
-      var sf = btn.dataset.sourceFilter;
-      if (sf === "all") return;
-      var span = btn.querySelector(".pill-count");
-      if (span) span.textContent = srcCounts[sf] !== undefined ? srcCounts[sf] : 0;
+  /* ─── Apply language display ─────────────────────────────── */
+  function applyLang(lang) {
+    document.querySelectorAll(".lang-text").forEach(function(el) {
+      el.style.display = el.dataset.lang === lang ? "" : "none";
     });
   }
 
-  /* ─── Init rows ──────────────────────────────────────────── */
+  /* ─── Init rows (favicons, placeholders, time-ago) ───────── */
   function initRows() {
     document.querySelectorAll(".source-favicon").forEach(function(el) {
       el.style.background = srcColor(el.dataset.sourceName || "?");
@@ -1235,16 +1032,18 @@
 
   /* ─── Main filter + sort ─────────────────────────────────── */
   function applyFilters() {
+    var f = getFilters();
     var now = Date.now();
-    var maxAge = DATE_MS[activeDateRange] || DATE_MS.today;
-    var sortBy = document.getElementById("sort").value;
+    var maxAge = DATE_MS[f.date] !== undefined ? DATE_MS[f.date] : DATE_MS.all;
     var searchLc = activeSearch.toLowerCase();
-    var allRows = Array.from(document.querySelectorAll("#article-feed .article-row"));
     var coreRegions = ["norge", "chile", "canada"];
+    var allRows = Array.from(document.querySelectorAll("#article-feed .article-row"));
 
     var visible = allRows.filter(function(row) {
+      /* Region (URL-based) */
       if (activeRegion !== "all" && row.dataset.region !== activeRegion) return false;
 
+      /* Theme (URL-based) — bug fix: themes is HTML-entity-encoded JSON */
       if (activeTheme !== "all") {
         try {
           var themes = JSON.parse(row.dataset.themes || "[]");
@@ -1252,26 +1051,31 @@
         } catch(e) { return false; }
       }
 
+      /* Date */
       var iso = row.dataset.publishedAt;
-      if (iso) {
+      if (iso && isFinite(maxAge)) {
         var age = now - new Date(iso).getTime();
         if (age < 0 || age > maxAge) return false;
       }
 
-      if (activeTone !== "all") {
+      /* Tone */
+      if (f.tone !== "all") {
         var rowTone = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
-        if (rowTone !== activeTone) return false;
+        if (rowTone !== f.tone) return false;
       }
 
-      if (activeScopeFilter !== "all") {
-        var scope = row.dataset.scope, region = row.dataset.region;
-        if (activeScopeFilter === "cermaq" && scope !== "cermaq") return false;
-        if (activeScopeFilter === "industry-core" && !(scope === "industry" && coreRegions.indexOf(region) > -1)) return false;
-        if (activeScopeFilter === "industry-global" && !(scope === "industry" && coreRegions.indexOf(region) === -1)) return false;
+      /* Scope */
+      if (f.scope !== "all") {
+        var scope = row.dataset.scope, reg = row.dataset.region;
+        if (f.scope === "cermaq" && scope !== "cermaq") return false;
+        if (f.scope === "industry-core" && !(scope === "industry" && coreRegions.indexOf(reg) > -1)) return false;
+        if (f.scope === "industry-global" && !(scope === "industry" && coreRegions.indexOf(reg) === -1)) return false;
       }
 
-      if (activeSourceFilter !== "all" && getSourceCategory(row) !== activeSourceFilter) return false;
+      /* Source */
+      if (f.source !== "all" && getSourceCategory(row) !== f.source) return false;
 
+      /* Search */
       if (searchLc) {
         if ((row.dataset.title || "").toLowerCase().indexOf(searchLc) === -1 &&
             (row.dataset.source || "").toLowerCase().indexOf(searchLc) === -1) return false;
@@ -1280,14 +1084,20 @@
       return true;
     });
 
-    updateFilterCounts(allRows);
-
+    /* Sort */
     visible.sort(function(a, b) {
-      if (sortBy === "relevance") return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
-      if (sortBy === "oldest") return new Date(a.dataset.publishedAt || 0) - new Date(b.dataset.publishedAt || 0);
+      if (f.sort === "relevance") return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
+      if (f.sort === "oldest") return new Date(a.dataset.publishedAt || 0) - new Date(b.dataset.publishedAt || 0);
+      if (f.sort === "negative") {
+        var aTone = (a.dataset.tone === "negativ" || a.dataset.tone === "kritisk") ? 0 : 1;
+        var bTone = (b.dataset.tone === "negativ" || b.dataset.tone === "kritisk") ? 0 : 1;
+        if (aTone !== bTone) return aTone - bTone;
+      }
+      /* newest (default) */
       return new Date(b.dataset.publishedAt || 0) - new Date(a.dataset.publishedAt || 0);
     });
 
+    /* Render */
     allRows.forEach(function(r) { r.style.display = "none"; });
     var feed = document.getElementById("article-feed");
     visible.slice(0, currentVisible).forEach(function(r) {
@@ -1296,147 +1106,25 @@
     });
 
     var loadWrap = document.getElementById("load-more-wrap");
-    if (visible.length > currentVisible) {
-      loadWrap.style.display = "";
-    } else {
-      loadWrap.style.display = "none";
-    }
+    loadWrap.style.display = visible.length > currentVisible ? "" : "none";
 
-    var regionCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
-    var toneCounts = { positiv: 0, noytral: 0, negativ: 0 };
-    var cermaqCount = 0;
-    var sources = new Set();
-    visible.forEach(function(r) {
-      var reg = r.dataset.region;
-      if (reg in regionCounts) regionCounts[reg]++; else regionCounts.global++;
-      if (r.dataset.scope === "cermaq") cermaqCount++;
-      var t = r.dataset.tone === "kritisk" ? "negativ" : r.dataset.tone;
-      if (t in toneCounts) toneCounts[t]++;
-      if (r.dataset.source) sources.add(r.dataset.source);
-    });
-
-    document.getElementById("stat-total").textContent    = visible.length;
-    document.getElementById("stat-cermaq").textContent   = cermaqCount;
-    document.getElementById("stat-negative").textContent = toneCounts.negativ;
-    document.getElementById("stat-sources").textContent  = sources.size || "-";
-    document.getElementById("stat-kritisk").textContent  = toneCounts.negativ;
-    document.getElementById("stat-norge").textContent    = regionCounts.norge;
-    document.getElementById("stat-chile").textContent    = regionCounts.chile;
-    document.getElementById("stat-canada").textContent   = regionCounts.canada;
-    document.getElementById("stat-global").textContent   = regionCounts.global;
-    document.getElementById("stat-positiv").textContent  = toneCounts.positiv;
-    document.getElementById("stat-noytral").textContent  = toneCounts.noytral;
-
+    /* Update nav count */
     var navAll = document.getElementById("nav-count-all");
     if (navAll) navAll.textContent = visible.length;
 
+    /* Result count */
     var countText = (UI_TEXTS.showing_articles || "Viser {n} av {total} artikler")
       .replace("{n}", Math.min(currentVisible, visible.length))
       .replace("{total}", visible.length);
     document.getElementById("result-count").textContent = countText;
   }
 
-  /* ─── Language apply ─────────────────────────────────────── */
-  function applyLang(lang) {
-    activeLang = lang;
-    document.querySelectorAll(".lang-btn").forEach(function(b) {
-      b.classList.toggle("active", b.dataset.lang === lang);
-    });
-    document.querySelectorAll(".lang-text").forEach(function(el) {
-      el.style.display = el.dataset.lang === lang ? "" : "none";
-    });
-  }
-
-  function switchLanguage(newLang) {
-    localStorage.setItem("cermaq_lang", newLang);
-    var u = new URL(window.location);
-    u.searchParams.set("lang", newLang);
-    window.location.href = u.toString();
-  }
-
   /* ─── Event listeners ────────────────────────────────────── */
-  document.querySelectorAll(".lang-btn").forEach(function(btn) {
-    btn.addEventListener("click", function() { switchLanguage(btn.dataset.lang); });
-  });
-
-  document.querySelectorAll(".scope-pill").forEach(function(btn) {
-    btn.addEventListener("click", function() {
-      document.querySelectorAll(".scope-pill").forEach(function(b) { b.classList.remove("active"); });
-      btn.classList.add("active");
-      activeScopeFilter = btn.dataset.scopeFilter;
+  ["filter-scope","filter-source","filter-tone","filter-date","filter-sort"].forEach(function(id) {
+    document.getElementById(id).addEventListener("change", function() {
       currentVisible = PAGE_SIZE;
       applyFilters();
     });
-  });
-
-  document.querySelectorAll("[data-region]").forEach(function(btn) {
-    if (!btn.classList.contains("scope-pill")) {
-      btn.addEventListener("click", function() {
-        document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(b) { b.classList.remove("active"); });
-        btn.classList.add("active");
-        activeRegion = btn.dataset.region;
-        activeTheme = "all";
-        currentVisible = PAGE_SIZE;
-        applyFilters();
-      });
-    }
-  });
-
-  document.querySelectorAll(".tone-pill").forEach(function(btn) {
-    btn.addEventListener("click", function() {
-      document.querySelectorAll(".tone-pill").forEach(function(b) { b.classList.remove("active"); });
-      btn.classList.add("active");
-      activeTone = btn.dataset.tone;
-      currentVisible = PAGE_SIZE;
-      applyFilters();
-    });
-  });
-
-  document.querySelectorAll(".source-pill").forEach(function(btn) {
-    btn.addEventListener("click", function() {
-      document.querySelectorAll(".source-pill").forEach(function(b) { b.classList.remove("active"); });
-      btn.classList.add("active");
-      activeSourceFilter = btn.dataset.sourceFilter;
-      currentVisible = PAGE_SIZE;
-      applyFilters();
-    });
-  });
-
-  document.getElementById("date-select").addEventListener("change", function() {
-    activeDateRange = this.value;
-    currentVisible = PAGE_SIZE;
-    applyFilters();
-  });
-
-  document.getElementById("sort").addEventListener("change", function() {
-    currentVisible = PAGE_SIZE;
-    applyFilters();
-  });
-
-  document.getElementById("reset-filters").addEventListener("click", function() {
-    activeRegion = "all";
-    activeDateRange = "today";
-    activeTone = "all";
-    activeScopeFilter = "all";
-    activeSourceFilter = "all";
-    activeSearch = "";
-    currentVisible = PAGE_SIZE;
-    document.getElementById("search-input").value = "";
-    document.getElementById("date-select").value = "today";
-    document.getElementById("sort").value = "newest";
-    document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(b) {
-      b.classList.toggle("active", b.dataset.region === "all");
-    });
-    document.querySelectorAll(".scope-pill").forEach(function(b) {
-      b.classList.toggle("active", b.dataset.scopeFilter === "all");
-    });
-    document.querySelectorAll(".tone-pill").forEach(function(b) {
-      b.classList.toggle("active", b.dataset.tone === "all");
-    });
-    document.querySelectorAll(".source-pill").forEach(function(b) {
-      b.classList.toggle("active", b.dataset.sourceFilter === "all");
-    });
-    applyFilters();
   });
 
   document.getElementById("load-more").addEventListener("click", function() {
@@ -1459,12 +1147,17 @@
   initRows();
   applyLang(activeLang);
 
-  // Expand TEMA if theme filter active
+  /* Expand TEMA sidebar section if theme filter is active */
   if (activeTheme !== "all") {
-    var toggle = document.getElementById("tema-toggle");
-    var body = document.getElementById("tema-body");
-    if (toggle) toggle.classList.remove("collapsed");
-    if (body) body.classList.remove("collapsed");
+    var tt = document.getElementById("tema-toggle");
+    var tb = document.getElementById("tema-body");
+    if (tt) tt.classList.remove("collapsed");
+    if (tb) tb.classList.remove("collapsed");
+  }
+
+  /* Set date filter: "all" when region/theme URL param is active (bug fix) */
+  if (activeTheme !== "all" || activeRegion !== "all") {
+    document.getElementById("filter-date").value = "all";
   }
 
   applyFilters();
