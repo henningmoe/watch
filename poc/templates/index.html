@@ -1043,13 +1043,7 @@
       /* Region (URL-based) */
       if (activeRegion !== "all" && row.dataset.region !== activeRegion) return false;
 
-      /* Theme (URL-based) — bug fix: themes is HTML-entity-encoded JSON */
-      if (activeTheme !== "all") {
-        try {
-          var themes = JSON.parse(row.dataset.themes || "[]");
-          if (themes.indexOf(activeTheme) === -1) return false;
-        } catch(e) { return false; }
-      }
+      /* Theme is filtered server-side — no JS check needed */
 
       /* Date */
       var iso = row.dataset.publishedAt;
