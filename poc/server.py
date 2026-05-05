@@ -24,8 +24,9 @@ from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
     init_db, ensure_columns, migrate_id_to_bigint, migrate_add_themes,
+    migrate_add_finance_digests,
     is_db_available, SessionLocal,
-    Source, Article, Digest, Alert, WeeklyDigest,
+    Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest,
     extract_domain, get_or_create_source,
 )
 
@@ -722,6 +723,7 @@ init_db()
 ensure_columns()
 migrate_id_to_bigint()
 migrate_add_themes()
+migrate_add_finance_digests()
 _load_from_db()
 
 
@@ -1092,6 +1094,7 @@ def _digest_scheduler() -> None:
             log.info("Neste digest-generering: %s (om %.1f timer)", target.isoformat(), wait / 3600)
             time.sleep(wait)
             _generate_all_digests()
+            _generate_finance_digest_all()
         except Exception as exc:
             log.error("Digest-scheduler-feil: %s", exc)
             time.sleep(3600)
@@ -1109,6 +1112,110 @@ def _initial_digest() -> None:
 def get_digest(lang: str = "no") -> dict | None:
     with _digest_lock:
         return _digest_cache.get(lang)
+
+
+# ---------------------------------------------------------------------------
+# Finance digest
+# ---------------------------------------------------------------------------
+
+_finance_digest_cache: dict = {}  # lang -> {'content': ..., 'generated_at': ..., 'rates': ..., 'stocks': ...}
+_finance_digest_lock = threading.Lock()
+
+
+def _generate_finance_digest_all() -> None:
+    """Fetch FX rates + stocks and generate AI finance digest for all languages."""
+    from poc.finance import fetch_norges_bank_rates, fetch_all_stocks
+    import anthropic as _anthropic
+
+    rates = fetch_norges_bank_rates() or {}
+    stocks = fetch_all_stocks() or {}
+
+    if not rates and not stocks:
+        log.warning("Finance digest: ingen data tilgjengelig")
+        return
+
+    rates_text = "\n".join(
+        f"  {cur}: {v['rate']} NOK (endring: {v.get('change_pct', 'N/A')}%, dato: {v.get('date', '?')})"
+        for cur, v in rates.items()
+    )
+    stocks_text = "\n".join(
+        f"  {name}: {v['price']} {v.get('currency','NOK')} "
+        f"(1d: {v.get('change_1d','?')}%, 7d: {v.get('change_7d','?')}%, 30d: {v.get('change_30d','?')}%)"
+        for name, v in stocks.items()
+    )
+
+    prompts = {
+        "no": (
+            "Du er finansanalytiker for Cermaq. Lag en kort, skarp markedskommentar (4–6 setninger) "
+            "basert på dagens valutakurser og konkurrentaksjekurser. Fokuser på hva som er relevant "
+            "for en norsk lakseoppdretters økonomi og strategi. Ikke gjenta tallene — tolke dem.\n\n"
+            f"Valutakurser (NOK per enhet):\n{rates_text}\n\nKonkurrentaksjer:\n{stocks_text}"
+        ),
+        "en": (
+            "You are a financial analyst for Cermaq. Write a short, sharp market commentary (4–6 sentences) "
+            "based on today's exchange rates and competitor stock prices. Focus on what is relevant "
+            "for a Norwegian salmon farmer's economics and strategy. Do not repeat the numbers — interpret them.\n\n"
+            f"Exchange rates (NOK per unit):\n{rates_text}\n\nCompetitor stocks:\n{stocks_text}"
+        ),
+        "es": (
+            "Eres analista financiero de Cermaq. Escribe un breve comentario de mercado (4–6 oraciones) "
+            "basado en los tipos de cambio y precios de acciones de competidores de hoy. Enfócate en lo "
+            "relevante para la economía y estrategia de un productor noruego de salmón. No repitas los "
+            "números — interprételos.\n\n"
+            f"Tipos de cambio (NOK por unidad):\n{rates_text}\n\nAcciones de competidores:\n{stocks_text}"
+        ),
+        "ja": (
+            "あなたはCermaqのファイナリスト分析担当者です。今日の為替レートと競合他社の株価に基づき、"
+            "簡潔な市場コメント（4〜6文）を作成してください。ノルウェーのサーモン養殖業者の経済と戦略に"
+            "関連する内容に絞ってください。数字を繰り返すのではなく、解釈してください。\n\n"
+            f"為替レート（NOK/単位）:\n{rates_text}\n\n競合他社株価:\n{stocks_text}"
+        ),
+    }
+
+    try:
+        client = _anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    except Exception as exc:
+        log.error("Finance digest: Anthropic-klient feilet: %s", exc)
+        return
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+    for lang, prompt in prompts.items():
+        try:
+            response = client.messages.create(
+                model="claude-haiku-4-5",
+                max_tokens=400,
+                temperature=0.3,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            text = "".join(b.text for b in response.content if getattr(b, "type", "") == "text")
+            entry = {
+                "content": text,
+                "generated_at": now_iso,
+                "rates": rates,
+                "stocks": stocks,
+                "lang": lang,
+            }
+            with _finance_digest_lock:
+                _finance_digest_cache[lang] = entry
+
+            if is_db_available():
+                try:
+                    with SessionLocal() as session:
+                        fd = FinanceDigest(
+                            lang=lang,
+                            content=text,
+                            generated_at=datetime.now(timezone.utc),
+                            rates_snapshot=rates,
+                            stocks_snapshot=stocks,
+                        )
+                        session.add(fd)
+                        session.commit()
+                except Exception as db_exc:
+                    log.warning("Finance digest DB-persist feilet lang=%s: %s", lang, db_exc)
+
+            log.info("Finance digest klar lang=%s", lang)
+        except Exception as exc:
+            log.error("Finance digest feilet lang=%s: %s", lang, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -2295,6 +2402,84 @@ def api_reports_weekly_summary():
         "article_count": len(relevant),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     })
+
+
+@app.route("/finance")
+def finance_page():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    return render_template("finance.html", lang=lang)
+
+
+@app.route("/api/finance/rates")
+def api_finance_rates():
+    from poc.finance import fetch_norges_bank_rates
+    rates = fetch_norges_bank_rates()
+    if rates is None:
+        return jsonify({"error": "Kunne ikke hente valutakurser"}), 503
+    return jsonify(rates)
+
+
+@app.route("/api/finance/stocks")
+def api_finance_stocks():
+    from poc.finance import fetch_all_stocks
+    stocks = fetch_all_stocks()
+    return jsonify(stocks)
+
+
+@app.route("/api/finance/digest")
+def api_finance_digest():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    with _finance_digest_lock:
+        entry = _finance_digest_cache.get(lang)
+    if entry:
+        return jsonify(entry)
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                row = (
+                    session.query(FinanceDigest)
+                    .filter_by(lang=lang)
+                    .order_by(FinanceDigest.generated_at.desc())
+                    .first()
+                )
+                if row:
+                    result = {
+                        "content": row.content,
+                        "generated_at": row.generated_at.isoformat(),
+                        "rates": row.rates_snapshot or {},
+                        "stocks": row.stocks_snapshot or {},
+                        "lang": lang,
+                    }
+                    with _finance_digest_lock:
+                        _finance_digest_cache[lang] = result
+                    return jsonify(result)
+        except Exception as exc:
+            log.warning("api_finance_digest DB-feil: %s", exc)
+    return jsonify({"error": "Ingen finance digest tilgjengelig"}), 404
+
+
+@app.route("/api/finance/news")
+def api_finance_news():
+    lang = request.args.get("lang", "no")
+    limit = min(int(request.args.get("limit", 20)), 50)
+    if not is_db_available():
+        return jsonify({"results": [], "total": 0})
+    with SessionLocal() as session:
+        articles = (
+            session.query(Article)
+            .filter(Article.classified_at.isnot(None), Article.scope != "irrelevant")
+            .order_by(Article.published_at.desc())
+            .all()
+        )
+        finance_articles = [a for a in articles if a.themes and "Finans" in a.themes][:limit]
+        return jsonify({
+            "results": [_article_db_to_dict(a) for a in finance_articles],
+            "total": len(finance_articles),
+        })
 
 
 @app.route("/healthz")

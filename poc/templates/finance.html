@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cermaq Media Watch — Finans</title>
+  <title>Cermaq Media Watch — Finans &amp; Marked</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,6 +16,10 @@
       --border: #e5e7eb;
       --text-secondary: #6b7280;
       --text-muted: #9ca3af;
+      --green: #059669;
+      --red: #dc2626;
+      --green-bg: #f0fdf4;
+      --red-bg: #fef2f2;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; }
@@ -24,6 +28,7 @@
     .app-outer { min-height: 100vh; display: flex; justify-content: center; background: var(--bg-page); }
     .app-container { width: 100%; max-width: 1440px; display: flex; min-height: 100vh; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.06); }
 
+    /* --- Sidebar --- */
     .sidebar {
       width: 240px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border);
       display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 100;
@@ -44,7 +49,14 @@
     .nav-item:hover { background: #f9fafb; color: #111827; }
     .nav-item.active { background: var(--aqua-light); color: var(--aqua); border-left-color: var(--aqua); font-weight: 500; }
     .nav-item svg { flex-shrink: 0; opacity: 0.6; }
+    .sidebar-count { margin-left: auto; font-size: 10px; color: var(--text-muted); background: #f3f4f6; padding: 1px 6px; border-radius: 10px; }
 
+    /* --- Lang switcher --- */
+    .lang-switcher { display: flex; gap: 4px; padding: 12px 20px; border-top: 1px solid var(--border); margin-top: auto; flex-wrap: wrap; }
+    .lang-btn { font-size: 11px; padding: 3px 8px; border-radius: 4px; text-decoration: none; color: var(--text-secondary); border: 1px solid var(--border); }
+    .lang-btn.active { background: var(--aqua); color: #fff; border-color: var(--aqua); }
+
+    /* --- Main --- */
     .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
     .topbar {
       background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px;
@@ -52,33 +64,104 @@
       position: sticky; top: 0; z-index: 50;
     }
     .topbar-title { font-size: 14px; font-weight: 500; color: #374151; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .topbar-refresh { font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; background: none; }
+    .topbar-refresh:hover { background: #f9fafb; }
     .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--deep-blue); color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 
-    .content-area { padding: 40px 24px; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .content-area { padding: 28px 24px; flex: 1; }
 
-    .coming-soon { text-align: center; max-width: 400px; }
-    .coming-soon-icon {
-      width: 64px; height: 64px; background: #fff7ed; border-radius: 16px;
-      display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: #c2410c;
+    /* --- Section headers --- */
+    .section-header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+    .section-title { font-size: 15px; font-weight: 600; color: var(--deep-blue); }
+    .section-subtitle { font-size: 12px; color: var(--text-muted); }
+    .section-block { margin-bottom: 32px; }
+
+    /* --- AI digest card --- */
+    .digest-card {
+      background: linear-gradient(135deg, #f0f9ff 0%, #e8f5f6 100%);
+      border: 1px solid #bae6fd; border-radius: 12px; padding: 20px 24px; margin-bottom: 32px;
     }
-    .coming-soon h2 { font-size: 22px; font-weight: 600; color: var(--deep-blue); margin-bottom: 10px; }
-    .coming-soon p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
-    .back-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      margin-top: 24px; color: var(--aqua); font-size: 13px; text-decoration: none; font-weight: 500;
+    .digest-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .ai-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--aqua); background: #fff; border: 1px solid #bae6fd; border-radius: 20px; padding: 2px 10px;
     }
-    .back-link:hover { text-decoration: underline; }
+    .digest-timestamp { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+    .digest-content { font-size: 13.5px; line-height: 1.7; color: #1e3a5f; }
+    .digest-loading { font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    /* --- Currency grid --- */
+    .currency-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+    .currency-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+      transition: box-shadow 0.15s;
+    }
+    .currency-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .currency-code { font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+    .currency-rate { font-size: 20px; font-weight: 600; color: var(--deep-blue); line-height: 1.2; }
+    .currency-unit { font-size: 10px; color: var(--text-muted); }
+    .currency-change { font-size: 11px; font-weight: 500; margin-top: 6px; }
+    .currency-change.up { color: var(--green); }
+    .currency-change.down { color: var(--red); }
+    .currency-change.flat { color: var(--text-muted); }
+    .currency-date { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .currency-loading { grid-column: 1/-1; padding: 20px; text-align: center; font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    /* --- Stocks table --- */
+    .stocks-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .stocks-table th { padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+    .stocks-table th.num { text-align: right; }
+    .stocks-table td { padding: 10px 12px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    .stocks-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .stocks-table tr:hover td { background: #fafafa; }
+    .stocks-table .company-name { font-weight: 500; color: var(--deep-blue); }
+    .stocks-table .ticker { font-size: 11px; color: var(--text-muted); }
+    .stocks-table .price { font-weight: 600; }
+    .chg { font-weight: 500; font-size: 12px; }
+    .chg.up { color: var(--green); }
+    .chg.down { color: var(--red); }
+    .chg.flat { color: var(--text-muted); }
+
+    /* --- News list --- */
+    .news-list { display: flex; flex-direction: column; gap: 10px; }
+    .news-item {
+      background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px;
+      transition: box-shadow 0.15s;
+    }
+    .news-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+    .news-item-header { display: flex; align-items: flex-start; gap: 10px; }
+    .news-title { font-size: 13.5px; font-weight: 500; color: #111827; text-decoration: none; line-height: 1.4; }
+    .news-title:hover { color: var(--aqua); }
+    .news-meta { font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .news-summary { font-size: 12px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5; }
+    .scope-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .scope-cermaq { background: #dbeafe; color: #1d4ed8; }
+    .scope-industry { background: #f0fdf4; color: var(--green); }
+    .news-loading { text-align: center; padding: 20px; font-size: 13px; color: var(--text-muted); font-style: italic; }
+
+    /* --- Skeleton loader --- */
+    .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .currency-grid { grid-template-columns: repeat(2, 1fr); }
+    }
   </style>
 </head>
 <body>
 <div class="app-outer">
 <div class="app-container">
 
+  <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-logo">
       <div class="brand-eyebrow">Cermaq</div>
       <div class="brand-name">Media <span>Watch</span></div>
     </div>
+
     <div class="sidebar-pillar">
       <div class="sidebar-pillar-label">News Watch</div>
     </div>
@@ -88,6 +171,38 @@
       </svg>
       Alle nyheter
     </a>
+
+    {% if theme_counts %}
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Tema</div>
+      {% for t, cnt in theme_counts.items() %}
+      <a href="/?lang={{ lang }}&theme={{ t | urlencode }}" class="nav-item {% if active_theme == t %}active{% endif %}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+        {{ t }}
+        <span class="sidebar-count">{{ cnt }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if region_counts %}
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Region</div>
+      {% for r, cnt in region_counts.items() %}
+      <a href="/?lang={{ lang }}&region={{ r }}" class="nav-item {% if active_region == r %}active{% endif %}">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        {{ r | capitalize }}
+        <span class="sidebar-count">{{ cnt }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="sidebar-divider"></div>
     <div class="sidebar-group">
       <div class="sidebar-group-label">Innsikt</div>
@@ -104,6 +219,7 @@
         Analytics
       </a>
     </div>
+
     <div class="sidebar-divider"></div>
     <div class="sidebar-pillar" style="padding-top:12px;">
       <div class="sidebar-pillar-label">Finance Watch</div>
@@ -120,33 +236,240 @@
       </svg>
       Varsling
     </a>
+
+    <div class="lang-switcher">
+      {% for l, label in [('no','NO'),('en','EN'),('es','ES'),('ja','JP')] %}
+      <a href="/finance?lang={{ l }}" class="lang-btn {% if lang == l %}active{% endif %}">{{ label }}</a>
+      {% endfor %}
+    </div>
   </aside>
 
+  <!-- Main content -->
   <div class="main-content">
     <header class="topbar">
       <span class="topbar-title">Finans &amp; Marked</span>
-      <div class="avatar">HM</div>
+      <div class="topbar-right">
+        <button class="topbar-refresh" onclick="loadAll()">↻ Oppdater</button>
+        <div class="avatar">HM</div>
+      </div>
     </header>
 
     <div class="content-area">
-      <div class="coming-soon">
-        <div class="coming-soon-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
-          </svg>
+
+      <!-- AI Finance Digest -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">AI Markedsanalyse</span>
+          <span class="section-subtitle" id="digest-subtitle"></span>
         </div>
-        <h2>Finance Watch — kommer snart</h2>
-        <p>Laksepris-tracker, kvartalsresultater, aksjekurser og markedsanalyse for norsk oppdrettsbransje er under utvikling.</p>
-        <a href="/?lang={{ lang }}" class="back-link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-          Tilbake til nyheter
-        </a>
+        <div class="digest-card">
+          <div class="digest-card-header">
+            <span class="ai-badge">
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+              AI-analyse
+            </span>
+            <span class="digest-timestamp" id="digest-ts"></span>
+          </div>
+          <div id="digest-content" class="digest-loading">Laster markedsanalyse…</div>
+        </div>
       </div>
-    </div>
-  </div>
+
+      <!-- FX Rates -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Valutakurser mot NOK</span>
+          <span class="section-subtitle">Norges Bank — siste bankdag</span>
+        </div>
+        <div class="currency-grid" id="currency-grid">
+          <div class="currency-loading skeleton" style="height:80px;border-radius:10px;">&nbsp;</div>
+        </div>
+      </div>
+
+      <!-- Competitor stocks -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Konkurrentaksjer</span>
+          <span class="section-subtitle">Yahoo Finance — Oslo Børs</span>
+        </div>
+        <div style="overflow-x:auto; background:#fff; border:1px solid var(--border); border-radius:10px;">
+          <table class="stocks-table">
+            <thead>
+              <tr>
+                <th>Selskap</th>
+                <th class="num">Kurs</th>
+                <th class="num">1D %</th>
+                <th class="num">7D %</th>
+                <th class="num">30D %</th>
+              </tr>
+            </thead>
+            <tbody id="stocks-tbody">
+              <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted);font-style:italic;">Laster aksjedata…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Finance news -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Finansnyheter</span>
+          <span class="section-subtitle">Artikler tagget Finans</span>
+        </div>
+        <div class="news-list" id="finance-news">
+          <div class="news-loading">Laster finansnyheter…</div>
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-content -->
+
 </div>
 </div>
+
+<script>
+const LANG = '{{ lang }}';
+const CURRENCY_LABELS = {
+  USD: 'US Dollar', EUR: 'Euro', CLP: 'Chilensk Peso', CAD: 'Kanadisk Dollar',
+  JPY: 'Japansk Yen', CNY: 'Kinesisk Yuan'
+};
+const CURRENCY_UNITS = { CLP: 'per 100 CLP', JPY: 'per 100 JPY' };
+
+function fmtChange(pct) {
+  if (pct === null || pct === undefined) return { text: '—', cls: 'flat' };
+  const abs = Math.abs(pct).toFixed(2);
+  if (pct > 0.05) return { text: `▲ ${abs}%`, cls: 'up' };
+  if (pct < -0.05) return { text: `▼ ${abs}%`, cls: 'down' };
+  return { text: `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`, cls: 'flat' };
+}
+
+function fmtTs(iso) {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('no-NO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return iso; }
+}
+
+async function loadDigest() {
+  try {
+    const r = await fetch(`/api/finance/digest?lang=${LANG}`);
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    document.getElementById('digest-content').textContent = data.content || '';
+    document.getElementById('digest-content').className = 'digest-content';
+    document.getElementById('digest-ts').textContent = fmtTs(data.generated_at);
+  } catch (e) {
+    document.getElementById('digest-content').textContent = 'Ingen markedsanalyse tilgjengelig ennå. Genereres ved neste oppdatering (09:00, 12:00, 18:00).';
+    document.getElementById('digest-content').style.fontStyle = 'italic';
+    document.getElementById('digest-content').style.color = 'var(--text-muted)';
+  }
+}
+
+async function loadRates() {
+  const grid = document.getElementById('currency-grid');
+  try {
+    const r = await fetch('/api/finance/rates');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const order = ['USD', 'EUR', 'CAD', 'CNY', 'CLP', 'JPY'];
+    const currencies = order.filter(c => data[c]).concat(Object.keys(data).filter(c => !order.includes(c)));
+    if (!currencies.length) {
+      grid.innerHTML = '<div class="currency-loading">Ingen valutadata tilgjengelig.</div>';
+      return;
+    }
+    grid.innerHTML = currencies.map(cur => {
+      const v = data[cur];
+      const chg = fmtChange(v.change_pct);
+      const unit = CURRENCY_UNITS[cur] || '';
+      const label = CURRENCY_LABELS[cur] || cur;
+      return `<div class="currency-card">
+        <div class="currency-code">${cur} <span style="font-weight:400;font-size:10px;color:var(--text-muted);">${label}</span></div>
+        <div class="currency-rate">${v.rate.toFixed(4)}</div>
+        <div class="currency-unit">NOK ${unit ? '(' + unit + ')' : ''}</div>
+        <div class="currency-change ${chg.cls}">${chg.text}</div>
+        ${v.date ? `<div class="currency-date">${v.date}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    grid.innerHTML = '<div class="currency-loading">Kunne ikke hente valutakurser.</div>';
+  }
+}
+
+async function loadStocks() {
+  const tbody = document.getElementById('stocks-tbody');
+  try {
+    const r = await fetch('/api/finance/stocks');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const entries = Object.entries(data);
+    if (!entries.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted);font-style:italic;">Ingen aksjedata tilgjengelig.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = entries.map(([name, v]) => {
+      const c1 = fmtChange(v.change_1d);
+      const c7 = fmtChange(v.change_7d);
+      const c30 = fmtChange(v.change_30d);
+      return `<tr>
+        <td>
+          <div class="company-name">${name}</div>
+          <div class="ticker">${v.ticker || ''}</div>
+        </td>
+        <td class="num price">${v.price ? v.price.toFixed(2) : '—'} <span style="font-size:10px;color:var(--text-muted);">${v.currency || 'NOK'}</span></td>
+        <td class="num"><span class="chg ${c1.cls}">${c1.text}</span></td>
+        <td class="num"><span class="chg ${c7.cls}">${c7.text}</span></td>
+        <td class="num"><span class="chg ${c30.cls}">${c30.text}</span></td>
+      </tr>`;
+    }).join('');
+  } catch (e) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--text-muted);">Feil ved henting av aksjedata.</td></tr>';
+  }
+}
+
+async function loadNews() {
+  const container = document.getElementById('finance-news');
+  try {
+    const r = await fetch(`/api/finance/news?lang=${LANG}&limit=15`);
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const articles = data.results || [];
+    if (!articles.length) {
+      container.innerHTML = '<div class="news-loading">Ingen finansnyheter funnet.</div>';
+      return;
+    }
+    container.innerHTML = articles.map(a => {
+      const title = (a.titles && a.titles[LANG]) || a.title || '(Ingen tittel)';
+      const summary = (a.summaries && a.summaries[LANG]) || '';
+      const scopeCls = a.scope === 'cermaq' ? 'scope-cermaq' : 'scope-industry';
+      const scopeLabel = a.scope === 'cermaq' ? 'Cermaq' : 'Bransje';
+      const pub = a.published_at ? new Date(a.published_at).toLocaleDateString('no-NO', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+      return `<div class="news-item">
+        <div class="news-item-header">
+          <div>
+            <a href="${a.url}" target="_blank" rel="noopener" class="news-title">${title}</a>
+            <div class="news-meta">
+              <span class="scope-badge ${scopeCls}">${scopeLabel}</span>
+              ${a.source_name ? `<span>${a.source_name}</span>` : ''}
+              ${pub ? `<span>${pub}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        ${summary ? `<div class="news-summary">${summary}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="news-loading">Kunne ikke laste finansnyheter.</div>';
+  }
+}
+
+function loadAll() {
+  loadDigest();
+  loadRates();
+  loadStocks();
+  loadNews();
+}
+
+loadAll();
+</script>
 </body>
 </html>

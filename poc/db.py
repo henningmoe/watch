@@ -128,6 +128,19 @@ if Base is not None:
             default=lambda: datetime.now(timezone.utc),
         )
 
+    class FinanceDigest(Base):
+        __tablename__ = "finance_digests"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        lang = Column(String(8), nullable=False, index=True)
+        content = Column(Text, nullable=False)
+        generated_at = Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
+        rates_snapshot = Column(JSON, nullable=True)
+        stocks_snapshot = Column(JSON, nullable=True)
+
 else:
     # Stub classes so imports don't fail when DB is unavailable
     class Source:  # type: ignore[no-redef]
@@ -144,6 +157,34 @@ else:
 
     class WeeklyDigest:  # type: ignore[no-redef]
         pass
+
+    class FinanceDigest:  # type: ignore[no-redef]
+        pass
+
+
+def migrate_add_finance_digests() -> None:
+    """Create finance_digests table (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text("""
+                CREATE TABLE IF NOT EXISTS finance_digests (
+                    id SERIAL PRIMARY KEY,
+                    lang VARCHAR(8) NOT NULL,
+                    content TEXT NOT NULL,
+                    generated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    rates_snapshot JSON,
+                    stocks_snapshot JSON
+                )
+            """))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_finance_digests_lang ON finance_digests (lang)"
+            ))
+        logger.info("migrate_add_finance_digests: tabell OK")
+    except Exception as e:
+        logger.warning("migrate_add_finance_digests: %s", e)
 
 
 def migrate_add_themes() -> None:
