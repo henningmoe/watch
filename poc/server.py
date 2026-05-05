@@ -993,13 +993,35 @@ def _classify_loop() -> None:
 
 def _generate_all_digests() -> None:
     """Generate digest for all four languages from the last 24 hours of articles."""
-    with _articles_lock:
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-        recent = [
-            a for a in _articles.values()
-            if a.get("scope") in ("cermaq", "industry")
-            and _parse_dt(a.get("published_at")) >= cutoff
-        ]
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+
+    if is_db_available():
+        try:
+            from sqlalchemy import func as _func
+            with SessionLocal() as session:
+                db_rows = session.query(Article).filter(
+                    Article.classified_at.isnot(None),
+                    Article.scope.in_(("cermaq", "industry")),
+                    _func.coalesce(Article.published_at, Article.fetched_at) >= cutoff,
+                ).order_by(
+                    _func.coalesce(Article.published_at, Article.fetched_at).desc()
+                ).all()
+                recent = [_article_db_to_dict(a) for a in db_rows]
+        except Exception as exc:
+            log.error("_generate_all_digests DB-feil, faller tilbake til in-memory: %s", exc)
+            with _articles_lock:
+                recent = [
+                    a for a in _articles.values()
+                    if a.get("scope") in ("cermaq", "industry")
+                    and _parse_dt(a.get("published_at")) >= cutoff
+                ]
+    else:
+        with _articles_lock:
+            recent = [
+                a for a in _articles.values()
+                if a.get("scope") in ("cermaq", "industry")
+                and _parse_dt(a.get("published_at")) >= cutoff
+            ]
 
     cermaq_count = sum(1 for a in recent if a.get("scope") == "cermaq")
     log.info("Genererer digest for %d artikler (%d Cermaq)", len(recent), cermaq_count)
@@ -1049,15 +1071,24 @@ def _generate_all_digests() -> None:
         log.info("Digest-generering la til %d nye artikler fra web-søk", added)
 
 
+def _next_digest_time() -> datetime:
+    """Return next scheduled digest time: 09:00, 12:00, or 18:00 Oslo time."""
+    oslo_tz = ZoneInfo("Europe/Oslo")
+    now = datetime.now(oslo_tz)
+    for hour in (9, 12, 18):
+        candidate = now.replace(hour=hour, minute=0, second=0, microsecond=0)
+        if candidate > now:
+            return candidate
+    tomorrow = now + timedelta(days=1)
+    return tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
+
+
 def _digest_scheduler() -> None:
-    """Regenerate digest every day at 06:00 Oslo time."""
+    """Regenerate digest at 09:00, 12:00, and 18:00 Oslo time."""
     while True:
         try:
-            now = datetime.now(ZoneInfo("Europe/Oslo"))
-            target = now.replace(hour=6, minute=0, second=0, microsecond=0)
-            if target <= now:
-                target += timedelta(days=1)
-            wait = (target - now).total_seconds()
+            target = _next_digest_time()
+            wait = (target - datetime.now(ZoneInfo("Europe/Oslo"))).total_seconds()
             log.info("Neste digest-generering: %s (om %.1f timer)", target.isoformat(), wait / 3600)
             time.sleep(wait)
             _generate_all_digests()
