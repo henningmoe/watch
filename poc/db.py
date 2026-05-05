@@ -73,6 +73,7 @@ if Base is not None:
         tone = Column(String(20), index=True)
         category = Column(String(30), index=True)
         relevance = Column(Integer, index=True)
+        themes = Column(JSON, nullable=True)
         summaries = Column(JSON)
         titles = Column(JSON)
         image_url = Column(Text)
@@ -143,6 +144,21 @@ else:
 
     class WeeklyDigest:  # type: ignore[no-redef]
         pass
+
+
+def migrate_add_themes() -> None:
+    """Add themes column to articles table (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text(
+                "ALTER TABLE articles ADD COLUMN IF NOT EXISTS themes JSON DEFAULT '[]'::json"
+            ))
+        logger.info("Migrert articles tabell - lagt til themes kolonne")
+    except Exception as e:
+        logger.warning("Themes-migrasjon: %s", e)
 
 
 def migrate_id_to_bigint() -> None:

@@ -11,67 +11,69 @@ from bs4 import BeautifulSoup
 log = logging.getLogger(__name__)
 
 _PROMPT = (
-    "Du er media-analyst for Cermaq, et globalt lakseoppdrettsselskap "
-    "eid av Mitsubishi Corporation, med drift i Norge (Nordland og "
-    "Finnmark), Canada (British Columbia) og Chile (Los Lagos, Aysén, "
-    "Magallanes).\n\n"
-    "Klassifiser denne artikkelen og returner KUN gyldig JSON, "
-    "ingenting annet. Ingen markdown, ingen code blocks, bare ren JSON.\n\n"
-    "REGLER FOR scope-FELTET (kritisk viktig):\n\n"
-    'scope = "cermaq" KUN når én av disse er sant:\n'
-    "- Artikkelen nevner ordet \"Cermaq\" eksplisitt\n"
-    "- Artikkelen nevner Cermaq-merker: True Arctic, Salmon Saver, "
-    "Cermaq Norway, Cermaq Canada, Cermaq Chile, Cermaq Group\n"
-    "- Artikkelen nevner Cermaq-ledere ved navn: Steven Rafferty (CEO), "
-    "Snorre Jonassen, Lise Bergan, David Kiemele, Knut Ellekjær, "
-    "Sven Eric Ellingsen, Terje Suul\n\n"
-    'scope = "industry" når artikkelen handler om:\n'
-    "- Lakseoppdrett, fiskehelse, akvakultur generelt\n"
-    "- Sjømat-marked, eksport, lakseprisen\n"
-    "- Konkurrenter (Mowi, SalMar, Lerøy, Grieg, AquaChile, MultiX, "
-    "Bakkafrost, Atlantic Sapphire)\n"
-    "- Oppdrettsregulering, konsesjoner, miljøkrav, fiskehelsekrav\n"
-    "- Akvakultur-teknologi, RAS-anlegg, landbasert oppdrett\n"
-    "- ...uten at Cermaq nevnes direkte\n\n"
-    'scope = "irrelevant" hvis artikkelen IKKE handler om sjømat, '
-    "laks, oppdrett eller relaterte næringstema. Dette inkluderer:\n"
-    "- Generelle nyheter, kriminalitet, terror, ulykker\n"
-    "- Sport, kultur, underholdning, lokale arrangementer\n"
-    "- Politikk og lokalsaker uten næringskobling til oppdrett\n"
-    "- Vær, trafikk, samfunnssaker, samferdsel\n"
-    "- Kraftforsyning eller industri uten direkte oppdrett-kobling\n"
-    "- Tekniske eller administrative meldinger fra fylkeskommuner\n\n"
-    "VIKTIG: Bare det at en artikkel kommer fra norsk kilde eller "
-    "nevner et norsk geografisk område er IKKE nok for scope=cermaq. "
-    "Cermaq må faktisk nevnes ved navn.\n\n"
-    "REGLER FOR ANDRE FELT:\n\n"
-    '- region: "norge" | "chile" | "canada" | "global"\n'
-    '- tone: "positiv" | "noytral" | "negativ"\n'
-    '  * positiv: artikkelen er positiv for Cermaq eller bransjen\n'
-    '  * noytral: faktabasert, ingen tydelig vinkling\n'
-    '  * negativ: kritisk eller negativ omtale\n'
-    '- category: "regulatorisk" | "marked" | "fiskehelse" | "miljo" | '
-    '"drift" | "ma" | "politikk" | "annet"\n'
-    "- relevance: 1-5 hvor 5 er mest relevant for Cermaq\n"
-    "  * scope=irrelevant gir alltid relevance=1\n"
-    "  * scope=industry typisk relevance=2-3\n"
-    "  * scope=cermaq typisk relevance=4-5\n\n"
+    "Du er en klassifiserer for Cermaq Watch — en medie-overvåkningsløsning "
+    "for Cermaq, en global lakseoppdretter med virksomhet i Norge, Chile og "
+    "Canada.\n\n"
+    "Din oppgave er å klassifisere én artikkel langs seks akser:\n\n"
+    "1. SCOPE — hvor relevant for Cermaq?\n"
+    "   - 'cermaq': Artikkelen omtaler Cermaq direkte, eller eier (Mitsubishi\n"
+    "     Corporation), datterselskap (True Arctic), eller nøkkelpersoner\n"
+    "     (Steven Rafferty, Snorre Jonassen, Lise Bergan, David Kiemele,\n"
+    "     Knut Ellekjær, Sven Eric Ellingsen, Terje Suul)\n"
+    "   - 'industry': Artikkelen omtaler lakseoppdrettsbransjen, konkurrenter\n"
+    "     (Mowi, SalMar, Grieg, Bakkafrost, Lerøy), regulering, marked,\n"
+    "     teknologi eller andre temaer som er relevante for Cermaq selv om\n"
+    "     Cermaq ikke nevnes\n"
+    "   - 'irrelevant': Artikkelen handler om noe annet\n\n"
+    "2. REGION — geografisk kontekst\n"
+    "   - 'norge', 'chile', 'canada', 'global'\n\n"
+    "3. TONE — sentiment for Cermaq eller bransjen\n"
+    "   - 'positiv', 'noytral', 'negativ'\n\n"
+    "4. CATEGORY — saksområde (én av disse)\n"
+    "   - 'regulatorisk', 'marked', 'fiskehelse', 'miljo', 'drift', 'ma',\n"
+    "     'politikk', 'annet'\n\n"
+    "5. THEMES — tematiske underkategorier (velg 0-3 temaer)\n"
+    "   - 'Sjø': Sjøbasert oppdrett — merder, lokaliteter, brønnbåter,\n"
+    "     slakteri, havbasert oppdrett, eksponert havbruk, offshore-anlegg\n"
+    "   - 'Landbasert': Land-baserte oppdrettsanlegg (RAS, gjennomstrømnings-\n"
+    "     anlegg), settefiskanlegg, smolt-produksjon på land, post-smolt\n"
+    "   - 'Fôr': Fôrproduksjon, fôrråvarer (soya, fiskemel, fiskeolje,\n"
+    "     alternative proteiner), FCR, Cargill, BioMar, Skretting\n"
+    "   - 'Fiskehelse': Sykdom (PD, ILA, AGD), lus, parasitter, vaksiner,\n"
+    "     dødelighet, dyrevelferd, behandling, rensefisk, lusetelling\n"
+    "   - 'Teknologi': Innovasjon i utstyr, undervannskamera, sensorer, AI/ML,\n"
+    "     automatisering på anlegg, lasernoder, undervannsroboter\n"
+    "   - 'Digitalisering': IT-systemer, dataplattformer, programvare, ERP,\n"
+    "     digital transformasjon på selskapsnivå, IoT, cybersecurity, AI-strategi\n"
+    "   - 'Finans': Finansielle resultater, kvartalsrapporter, børsmeldinger,\n"
+    "     aksjekurs, M&A, investeringer, utbytte, valuta, råvarepriser\n\n"
+    "   VIKTIG om themes:\n"
+    "   - 'themes' er et array med 0-3 verdier (maks 3)\n"
+    "   - Velg KUN tema som faktisk er hovedfokus i artikkelen\n"
+    "   - Irrelevante artikler får alltid themes: []\n\n"
+    "6. RELEVANCE — relevans-score 1-5\n"
+    "   - 5: Direkte og viktig Cermaq-sak\n"
+    "   - 4: Cermaq-omtale eller veldig relevant bransjenyhet\n"
+    "   - 3: Relevant bransjenyhet uten Cermaq\n"
+    "   - 2: Tangerer bransjen\n"
+    "   - 1: Marginal relevans\n"
+    "   - scope=irrelevant gir alltid relevance=1\n\n"
+    "OUTPUT-FORMAT:\n"
+    "Returner KUN gyldig JSON. Start med {{ og slutt med }}. Ingen prosa\n"
+    "eller markdown.\n\n"
+    "{{\n"
+    '  "scope": "cermaq" | "industry" | "irrelevant",\n'
+    '  "region": "norge" | "chile" | "canada" | "global",\n'
+    '  "tone": "positiv" | "noytral" | "negativ",\n'
+    '  "category": "regulatorisk" | "marked" | "fiskehelse" | "miljo" | "drift" | "ma" | "politikk" | "annet",\n'
+    '  "themes": [],\n'
+    '  "relevance": 1-5,\n'
+    '  "titles": {{"no": "...", "en": "...", "es": "...", "ja": "..."}},\n'
+    '  "summaries": {{"no": "2 setninger", "en": "2 sentences", "es": "2 oraciones", "ja": "2文"}}\n'
+    "}}\n\n"
     "Tittel: {title}\n"
     "Innhold: {content_truncated}\n"
-    "Kilde: {source_name}\n\n"
-    "Returner JSON med:\n"
-    "- region, tone, scope, category, relevance\n"
-    "- titles: dict med fire nøkler (oversett tittelen naturlig; behold egennavn "
-    "som Cermaq, stedsnavn og personalnavn uforandret):\n"
-    '    "no": tittel på norsk\n'
-    '    "en": title in English\n'
-    '    "es": título en español\n'
-    '    "ja": 日本語のタイトル\n'
-    "- summaries: dict med fire nøkler:\n"
-    '    "no": 2 setninger på norsk\n'
-    '    "en": 2 sentences in English\n'
-    '    "es": 2 oraciones en español\n'
-    '    "ja": 日本語の2文'
+    "Kilde: {source_name}"
 )
 
 _DEFAULT = {
@@ -79,6 +81,7 @@ _DEFAULT = {
     "tone": "noytral",
     "scope": "industry",
     "category": "annet",
+    "themes": [],
     "relevance": 1,
 }
 
@@ -139,12 +142,21 @@ def classify(article: dict) -> dict:
 
         raw_text = text_block.text
         result = json.loads(_extract_json(raw_text))
+
+        # Ensure themes is a list of valid strings
+        themes = result.get("themes")
+        if not isinstance(themes, list):
+            themes = []
+        valid_themes = {"Sjø", "Landbasert", "Fôr", "Fiskehelse", "Teknologi", "Digitalisering", "Finans"}
+        result["themes"] = [t for t in themes if t in valid_themes][:3]
+
         log.info(
-            "Klassifiserte artikkel-id=%s: scope=%s, region=%s, tone=%s",
+            "Klassifiserte artikkel-id=%s: scope=%s, region=%s, tone=%s, themes=%s",
             article.get("id"),
             result.get("scope"),
             result.get("region"),
             result.get("tone"),
+            result.get("themes"),
         )
         return result
     except Exception as exc:

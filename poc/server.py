@@ -23,7 +23,8 @@ except ImportError:
 from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
-    init_db, ensure_columns, migrate_id_to_bigint, is_db_available, SessionLocal,
+    init_db, ensure_columns, migrate_id_to_bigint, migrate_add_themes,
+    is_db_available, SessionLocal,
     Source, Article, Digest, Alert, WeeklyDigest,
     extract_domain, get_or_create_source,
 )
@@ -485,6 +486,7 @@ def _article_db_to_dict(a) -> dict:
         "relevance": a.relevance,
         "summaries": a.summaries or {},
         "titles": a.titles or {},
+        "themes": a.themes or [],
         "image_url": a.image_url,
         "content": a.content,
         "classified_at": a.classified_at.isoformat() if a.classified_at else None,
@@ -598,6 +600,7 @@ def _persist_article(article: dict) -> None:
                 "tone": article.get("tone"),
                 "category": article.get("category"),
                 "relevance": article.get("relevance"),
+                "themes": article.get("themes") or [],
                 "summaries": article.get("summaries"),
                 "titles": article.get("titles"),
                 "image_url": article.get("image_url"),
@@ -669,6 +672,7 @@ def _persist_digest(lang: str, digest: dict, used_article_ids: list = None) -> N
 init_db()
 ensure_columns()
 migrate_id_to_bigint()
+migrate_add_themes()
 _load_from_db()
 
 
@@ -1285,7 +1289,11 @@ def index():
         for a in articles_sorted
     ]
 
-    formatted = [a for a in formatted if a.get("scope") != "irrelevant"]
+    # Only show classified, non-irrelevant articles
+    formatted = [
+        a for a in formatted
+        if a.get("classified_at") and a.get("scope") != "irrelevant"
+    ]
 
     irrelevant_count = sum(1 for a in articles if a.get("scope") == "irrelevant")
     if irrelevant_count:
@@ -1311,9 +1319,9 @@ def index():
         classified = _classified_count
         total = _total_count or len(articles)
 
-    cermaq_count = sum(1 for a in articles if a.get("scope") == "cermaq")
+    cermaq_count = sum(1 for a in formatted if a.get("scope") == "cermaq")
     region_counts = {
-        r: sum(1 for a in articles if a.get("region") == r)
+        r: sum(1 for a in formatted if a.get("region") == r)
         for r in ("norge", "chile", "canada", "global")
     }
     industry_core_count = sum(
@@ -1435,6 +1443,87 @@ def admin_reclassify():
     return jsonify({
         "queued": len(targets),
         "criteria": {"since": since_str, "all": do_all, "missing_only": missing_only},
+    })
+
+
+@app.route("/admin/reclassify-all", methods=["POST"])
+def admin_reclassify_all():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    def _run_reclassify():
+        from poc.classify import classify as _classify
+        from sqlalchemy import desc, func
+
+        if not is_db_available():
+            log.warning("Reklassifisering: ingen database tilgjengelig")
+            return
+
+        try:
+            with SessionLocal() as session:
+                articles = session.query(Article).order_by(
+                    desc(func.coalesce(Article.published_at, Article.fetched_at))
+                ).all()
+                total = len(articles)
+                log.info("Starter reklassifisering av %d artikler", total)
+
+                for a in articles:
+                    a.classified_at = None
+                session.commit()
+
+            for i, db_art in enumerate(articles):
+                try:
+                    art_dict = {
+                        "id": db_art.id,
+                        "title": db_art.title or "",
+                        "url": db_art.url or "",
+                        "content": db_art.content or "",
+                        "source_name": db_art.source_name or "",
+                    }
+                    result = _classify(art_dict)
+
+                    with SessionLocal() as session:
+                        a = session.get(Article, db_art.id)
+                        if a:
+                            a.scope = result.get("scope")
+                            a.region = result.get("region")
+                            a.tone = result.get("tone")
+                            a.category = result.get("category")
+                            a.themes = result.get("themes", [])
+                            a.relevance = result.get("relevance")
+                            a.summaries = result.get("summaries") or a.summaries
+                            a.titles = result.get("titles") or a.titles
+                            a.classified_at = datetime.now(timezone.utc)
+                            session.commit()
+
+                    with _articles_lock:
+                        if db_art.id in _articles:
+                            _articles[db_art.id].update({
+                                "scope": result.get("scope"),
+                                "region": result.get("region"),
+                                "tone": result.get("tone"),
+                                "category": result.get("category"),
+                                "themes": result.get("themes", []),
+                                "relevance": result.get("relevance"),
+                                "classified_at": datetime.now(timezone.utc).isoformat(),
+                            })
+
+                    if (i + 1) % 10 == 0:
+                        log.info("Reklassifisert %d/%d artikler", i + 1, total)
+
+                    time.sleep(_CLASSIFY_RATE)
+
+                except Exception as exc:
+                    log.error("Reklassifisering feilet for id=%s: %s", db_art.id, exc)
+
+            log.info("Reklassifisering ferdig: %d artikler", total)
+        except Exception as exc:
+            log.exception("Reklassifisering feilet: %s", exc)
+
+    threading.Thread(target=_run_reclassify, daemon=True).start()
+    return jsonify({
+        "status": "Reklassifisering startet",
+        "note": "Tar 5-10 minutter. Nyeste artikler reklassifiseres først.",
     })
 
 
@@ -1677,6 +1766,7 @@ def api_articles():
     scope = request.args.get("scope")
     region = request.args.get("region")
     tone = request.args.get("tone")
+    theme = request.args.get("theme")
     source_domain = request.args.get("source")
     since = request.args.get("since")
     limit = min(int(request.args.get("limit", 50)), 200)
@@ -1684,13 +1774,18 @@ def api_articles():
 
     if not is_db_available():
         with _articles_lock:
-            results = list(_articles.values())
+            results = [
+                a for a in _articles.values()
+                if a.get("classified_at") and a.get("scope") != "irrelevant"
+            ]
         if scope:
             results = [a for a in results if a.get("scope") == scope]
         if region:
             results = [a for a in results if a.get("region") == region]
         if tone:
             results = [a for a in results if a.get("tone") == tone]
+        if theme:
+            results = [a for a in results if theme in (a.get("themes") or [])]
         return jsonify({
             "results": results[offset:offset + limit],
             "total": len(results),
@@ -1699,13 +1794,18 @@ def api_articles():
         })
 
     with SessionLocal() as session:
-        q = session.query(Article)
+        q = session.query(Article).filter(
+            Article.classified_at.isnot(None),
+            Article.scope != "irrelevant",
+        )
         if scope:
             q = q.filter(Article.scope == scope)
         if region:
             q = q.filter(Article.region == region)
         if tone:
             q = q.filter(Article.tone == tone)
+        if theme:
+            q = q.filter(Article.themes.contains([theme]))
         if source_domain:
             q = q.filter(Article.source_domain == source_domain)
         if since:
@@ -1736,13 +1836,21 @@ def api_articles_search():
     if not is_db_available():
         return jsonify({"results": [], "query": query, "total": 0})
 
+    theme = request.args.get("theme")
+
     with SessionLocal() as session:
         from sqlalchemy import or_
         q_filter = or_(
             Article.title.ilike(f"%{query}%"),
             Article.content.ilike(f"%{query}%"),
         )
-        q = session.query(Article).filter(q_filter)
+        q = session.query(Article).filter(
+            q_filter,
+            Article.classified_at.isnot(None),
+            Article.scope != "irrelevant",
+        )
+        if theme:
+            q = q.filter(Article.themes.contains([theme]))
         if since:
             try:
                 cutoff = datetime.fromisoformat(since)

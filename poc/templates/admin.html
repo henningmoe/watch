@@ -319,7 +319,17 @@
     <div id="weekly-feedback" class="feedback"></div>
   </div>
 
-  <!-- Card 6: Migrer tone -->
+  <!-- Card 6: Reklassifiser alle -->
+  <div class="card">
+    <div class="card-title">Reklassifiser alle artikler</div>
+    <div class="card-desc">Reklassifiser alle artikler med ny prompt (inkluderer themes-akse). Nyeste artikler reklassifiseres først for minst påvirkning på brukerne. Tar 5-10 minutter.</div>
+    <div class="btn-row">
+      <button class="btn btn-danger" id="btn-reclassify-all" onclick="triggerFullReclassify()">Reklassifiser alle</button>
+    </div>
+    <div id="reclassify-all-feedback" class="feedback"></div>
+  </div>
+
+  <!-- Card 7: Migrer tone -->
   <div class="card">
     <div class="card-title">Migrer tone-verdier</div>
     <div class="card-desc">Engangs-operasjon: oppdaterer alle artikler med <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px">tone='kritisk'</code> til <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px">tone='negativ'</code> i databasen og in-memory cache. Trygt å kjøre flere ganger.</div>
@@ -511,6 +521,32 @@
   function reclassifyAll() {
     if (!confirm("Reklassifiser ALLE artikler? Dette tar tid og bruker API-kvoter.")) return;
     reclassify("all");
+  }
+
+  /* ─── Card 6: Full reklassifisering med ny prompt ───────── */
+  async function triggerFullReclassify() {
+    if (!requireToken("reclassify-all-feedback")) return;
+    if (!confirm("Reklassifiser ALLE artikler med ny prompt (inkl. themes)?\n\nTar 5-10 minutter og bruker API-kvoter.\nNyeste artikler reklassifiseres først.")) return;
+    var btn = document.getElementById("btn-reclassify-all");
+    btn.disabled = true;
+    btn.textContent = "Starter…";
+    showFeedback("reclassify-all-feedback", "Sender forespørsel…", "loading", true);
+    try {
+      var resp = await fetch("/admin/reclassify-all?" + tokenParam(), {method: "POST"});
+      var data = await resp.json();
+      if (!resp.ok) {
+        showFeedback("reclassify-all-feedback", data.error || "Feil", "error", true);
+      } else {
+        showFeedback("reclassify-all-feedback",
+          "✓ " + data.status + "\n" + (data.note || ""), "success", true
+        );
+      }
+    } catch (e) {
+      showFeedback("reclassify-all-feedback", "Nettverksfeil: " + e.message, "error", true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Reklassifiser alle";
+    }
   }
 
   /* ─── Card 2b: Web-søk ──────────────────────────────────── */
