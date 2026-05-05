@@ -24,9 +24,9 @@ from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
     init_db, ensure_columns, migrate_id_to_bigint, migrate_add_themes,
-    migrate_add_finance_digests,
+    migrate_add_finance_digests, migrate_add_salmon_prices,
     is_db_available, SessionLocal,
-    Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest,
+    Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest, SalmonPrice,
     extract_domain, get_or_create_source,
 )
 
@@ -724,6 +724,7 @@ ensure_columns()
 migrate_id_to_bigint()
 migrate_add_themes()
 migrate_add_finance_digests()
+migrate_add_salmon_prices()
 _load_from_db()
 
 
@@ -1219,6 +1220,77 @@ def _generate_finance_digest_all() -> None:
 
 
 # ---------------------------------------------------------------------------
+# Salmon price scheduler
+# ---------------------------------------------------------------------------
+
+def _fetch_and_persist_salmon_prices() -> None:
+    """Fetch all salmon price indices and persist to DB."""
+    from poc.finance import fetch_all_salmon_prices
+    prices = fetch_all_salmon_prices()
+    if not is_db_available():
+        return
+    now = datetime.now(timezone.utc)
+    for source_key, data in prices.items():
+        if data is None:
+            continue
+        try:
+            with SessionLocal() as session:
+                row = SalmonPrice(source=source_key, price_data=data, fetched_at=now)
+                session.add(row)
+                session.commit()
+            log.info("SalmonPrice persistert: source=%s", source_key)
+        except Exception as exc:
+            log.warning("SalmonPrice persist feilet source=%s: %s", source_key, exc)
+
+
+def _next_salmon_fetch_time() -> datetime:
+    """Return next scheduled salmon price fetch time.
+
+    Fish Pool publishes Tuesdays 15:00 CET — we poll at 16:00.
+    Nasdaq Salmon publishes Fridays — we poll at 17:00.
+    Fall back to next weekday at 16:00 if neither applies.
+    """
+    oslo = ZoneInfo("Europe/Oslo")
+    now = datetime.now(oslo)
+    candidates = []
+    for days_ahead in range(8):
+        candidate = (now + timedelta(days=days_ahead)).replace(
+            minute=0, second=0, microsecond=0
+        )
+        weekday = candidate.weekday()  # 0=Mon, 1=Tue, …, 4=Fri
+        if weekday == 1:  # Tuesday
+            t = candidate.replace(hour=16)
+        elif weekday == 4:  # Friday
+            t = candidate.replace(hour=17)
+        else:
+            continue
+        if t > now:
+            candidates.append(t)
+    if candidates:
+        return min(candidates)
+    # Fallback: 24 hours from now
+    return now + timedelta(hours=24)
+
+
+def _salmon_price_scheduler() -> None:
+    """Fetch salmon prices on Tuesday 16:00 and Friday 17:00 Oslo time."""
+    # Run once shortly after startup so the UI has data immediately
+    time.sleep(90)
+    _fetch_and_persist_salmon_prices()
+
+    while True:
+        try:
+            target = _next_salmon_fetch_time()
+            wait = (target - datetime.now(ZoneInfo("Europe/Oslo"))).total_seconds()
+            log.info("Neste lakseprisfetch: %s (om %.1f timer)", target.isoformat(), wait / 3600)
+            time.sleep(max(wait, 60))
+            _fetch_and_persist_salmon_prices()
+        except Exception as exc:
+            log.error("Salmon-price-scheduler-feil: %s", exc)
+            time.sleep(3600)
+
+
+# ---------------------------------------------------------------------------
 # Backfill via Anthropic web search
 # ---------------------------------------------------------------------------
 
@@ -1368,6 +1440,7 @@ def _start_background_threads() -> None:
         (_backfill_og_images, "og-backfill-thread"),
         (_digest_scheduler, "digest-scheduler-thread"),
         (_initial_digest, "digest-initial-thread"),
+        (_salmon_price_scheduler, "salmon-price-thread"),
     ]:
         t = threading.Thread(target=target, name=name, daemon=True)
         t.start()
@@ -2460,6 +2533,38 @@ def api_finance_digest():
         except Exception as exc:
             log.warning("api_finance_digest DB-feil: %s", exc)
     return jsonify({"error": "Ingen finance digest tilgjengelig"}), 404
+
+
+@app.route("/api/finance/salmon_prices")
+def api_finance_salmon_prices():
+    result: dict = {}
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                for source_key in ("fish_pool", "nasdaq", "urner_barry"):
+                    row = (
+                        session.query(SalmonPrice)
+                        .filter_by(source=source_key)
+                        .order_by(SalmonPrice.fetched_at.desc())
+                        .first()
+                    )
+                    if row:
+                        result[source_key] = {
+                            **row.price_data,
+                            "fetched_at": row.fetched_at.isoformat(),
+                        }
+        except Exception as exc:
+            log.warning("api_finance_salmon_prices DB-feil: %s", exc)
+
+    # If DB unavailable or empty, try a live fetch (cold start)
+    if not result:
+        from poc.finance import fetch_all_salmon_prices
+        live = fetch_all_salmon_prices()
+        for k, v in live.items():
+            if v:
+                result[k] = v
+
+    return jsonify(result)
 
 
 @app.route("/api/finance/news")

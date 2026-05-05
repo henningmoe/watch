@@ -124,6 +124,30 @@
     .chg.down { color: var(--red); }
     .chg.flat { color: var(--text-muted); }
 
+    /* --- Salmon price cards --- */
+    .salmon-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .price-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px 22px;
+      transition: box-shadow 0.15s;
+    }
+    .price-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    .price-card.unavailable { background: #fafafa; }
+    .price-source {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--aqua); margin-bottom: 2px;
+    }
+    .price-sublabel { font-size: 11px; color: var(--text-muted); margin-bottom: 10px; }
+    .price-value { font-size: 28px; font-weight: 700; color: var(--deep-blue); line-height: 1.1; }
+    .price-value.na { font-size: 18px; color: var(--text-muted); font-weight: 400; }
+    .price-currency { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .price-meta { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    .price-forward { margin-top: 10px; }
+    .price-forward-row { display: flex; justify-content: space-between; font-size: 12px; padding: 3px 0; border-bottom: 1px solid #f3f4f6; }
+    .price-forward-row:last-child { border-bottom: none; }
+    .price-forward-period { color: var(--text-secondary); }
+    .price-forward-value { font-weight: 600; color: var(--deep-blue); }
+    @media (max-width: 900px) { .salmon-grid { grid-template-columns: 1fr; } }
+
     /* --- News list --- */
     .news-list { display: flex; flex-direction: column; gap: 10px; }
     .news-item {
@@ -256,6 +280,40 @@
 
     <div class="content-area">
 
+      <!-- Salmon Price Indices -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Lakseprisindekser</span>
+          <span class="section-subtitle">Fish Pool · Nasdaq Salmon · Urner Barry</span>
+        </div>
+        <div class="salmon-grid">
+          <!-- Fish Pool -->
+          <div class="price-card" id="card-fish-pool">
+            <div class="price-source">Fish Pool Index</div>
+            <div class="price-sublabel">Forward-priser · NOK/kg</div>
+            <div class="price-value na" id="fp-value">Laster…</div>
+            <div class="price-currency" id="fp-currency"></div>
+            <div class="price-forward" id="fp-forward"></div>
+            <div class="price-meta" id="fp-meta"></div>
+          </div>
+          <!-- Nasdaq Salmon -->
+          <div class="price-card" id="card-nasdaq">
+            <div class="price-source">Nasdaq Salmon Index</div>
+            <div class="price-sublabel">Spot-pris · NOK/kg</div>
+            <div class="price-value na" id="ns-value">Laster…</div>
+            <div class="price-currency" id="ns-currency"></div>
+            <div class="price-meta" id="ns-meta"></div>
+          </div>
+          <!-- Urner Barry -->
+          <div class="price-card unavailable" id="card-urner">
+            <div class="price-source">Urner Barry</div>
+            <div class="price-sublabel">US import-pris · USD/lb</div>
+            <div class="price-value na">—</div>
+            <div class="price-meta">Krever abonnement<br>Implementeres i Phase 3</div>
+          </div>
+        </div>
+      </div>
+
       <!-- AI Finance Digest -->
       <div class="section-block">
         <div class="section-header">
@@ -348,6 +406,59 @@ function fmtTs(iso) {
     const d = new Date(iso);
     return d.toLocaleString('no-NO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   } catch (e) { return iso; }
+}
+
+async function loadSalmonPrices() {
+  try {
+    const r = await fetch('/api/finance/salmon_prices');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+
+    // Fish Pool
+    const fp = data.fish_pool;
+    if (fp && fp.forward_prices && fp.forward_prices.length > 0) {
+      document.getElementById('fp-value').textContent = fp.forward_prices[0].price.toFixed(2);
+      document.getElementById('fp-value').className = 'price-value';
+      document.getElementById('fp-currency').textContent = 'NOK/kg';
+      const fwdHtml = fp.forward_prices.slice(0, 5).map(p =>
+        `<div class="price-forward-row">
+          <span class="price-forward-period">${p.period}</span>
+          <span class="price-forward-value">${p.price.toFixed(2)}</span>
+        </div>`
+      ).join('');
+      document.getElementById('fp-forward').innerHTML = fwdHtml;
+      document.getElementById('fp-meta').textContent = fp.last_updated
+        ? 'Oppdatert ' + fmtTs(fp.fetched_at || fp.last_updated)
+        : '';
+    } else if (fp && fp.fetched_at) {
+      document.getElementById('fp-value').textContent = 'Ikke tilgjengelig';
+      document.getElementById('fp-meta').textContent = 'Sist forsøkt: ' + fmtTs(fp.fetched_at);
+    } else {
+      document.getElementById('fp-value').textContent = 'Ikke tilgjengelig';
+      document.getElementById('fp-meta').textContent = 'Hentes tirsdager kl. 16:00';
+    }
+
+    // Nasdaq Salmon
+    const ns = data.nasdaq;
+    if (ns && ns.spot_price) {
+      document.getElementById('ns-value').textContent = ns.spot_price.toFixed(2);
+      document.getElementById('ns-value').className = 'price-value';
+      document.getElementById('ns-currency').textContent = 'NOK/kg';
+      const metaParts = [];
+      if (ns.week) metaParts.push(`Uke ${ns.week}`);
+      if (ns.fetched_at || ns.last_updated) metaParts.push('Oppdatert ' + fmtTs(ns.fetched_at || ns.last_updated));
+      document.getElementById('ns-meta').textContent = metaParts.join(' · ');
+    } else {
+      document.getElementById('ns-value').textContent = 'Ikke tilgjengelig';
+      document.getElementById('ns-meta').textContent = 'Hentes fredager kl. 17:00';
+    }
+
+  } catch (e) {
+    document.getElementById('fp-value').textContent = 'Ikke tilgjengelig';
+    document.getElementById('ns-value').textContent = 'Ikke tilgjengelig';
+    document.getElementById('fp-meta').textContent = 'Feil ved henting';
+    document.getElementById('ns-meta').textContent = 'Feil ved henting';
+  }
 }
 
 async function loadDigest() {
@@ -463,6 +574,7 @@ async function loadNews() {
 }
 
 function loadAll() {
+  loadSalmonPrices();
   loadDigest();
   loadRates();
   loadStocks();

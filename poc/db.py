@@ -141,6 +141,17 @@ if Base is not None:
         rates_snapshot = Column(JSON, nullable=True)
         stocks_snapshot = Column(JSON, nullable=True)
 
+    class SalmonPrice(Base):
+        __tablename__ = "salmon_prices"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        source = Column(String(50), nullable=False, index=True)
+        price_data = Column(JSON, nullable=False)
+        fetched_at = Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
+
 else:
     # Stub classes so imports don't fail when DB is unavailable
     class Source:  # type: ignore[no-redef]
@@ -159,6 +170,9 @@ else:
         pass
 
     class FinanceDigest:  # type: ignore[no-redef]
+        pass
+
+    class SalmonPrice:  # type: ignore[no-redef]
         pass
 
 
@@ -185,6 +199,32 @@ def migrate_add_finance_digests() -> None:
         logger.info("migrate_add_finance_digests: tabell OK")
     except Exception as e:
         logger.warning("migrate_add_finance_digests: %s", e)
+
+
+def migrate_add_salmon_prices() -> None:
+    """Create salmon_prices table (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text("""
+                CREATE TABLE IF NOT EXISTS salmon_prices (
+                    id SERIAL PRIMARY KEY,
+                    source VARCHAR(50) NOT NULL,
+                    price_data JSON NOT NULL,
+                    fetched_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_salmon_prices_source ON salmon_prices (source)"
+            ))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_salmon_prices_fetched_at ON salmon_prices (fetched_at DESC)"
+            ))
+        logger.info("migrate_add_salmon_prices: tabell OK")
+    except Exception as e:
+        logger.warning("migrate_add_salmon_prices: %s", e)
 
 
 def migrate_add_themes() -> None:
