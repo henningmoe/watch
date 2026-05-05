@@ -8,50 +8,106 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif; background: #f7f8fa; color: #111827; }
+    :root {
+      --aqua: #0096a0;
+      --aqua-light: #e8f5f6;
+      --deep-blue: #324664;
+      --bg-page: #f5f4ef;
+      --border: #e5e7eb;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --green-dark: #0c4a3e;
+    }
 
-    /* ─── Layout ─────────────────────────────────────────────── */
-    .app-layout {
-      display: block;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+    }
+
+    /* ─── Outer wrapper ──────────────────────────────────────── */
+    .app-outer {
       min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      background: var(--bg-page);
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 1440px;
+      display: flex;
+      min-height: 100vh;
+      background: #fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
     }
 
     /* ─── Sidebar ────────────────────────────────────────────── */
     .sidebar {
-      background: #1a2332;
-      width: 220px;
-      position: fixed;
-      top: 0; left: 0; bottom: 0;
-      overflow-y: auto;
-      z-index: 100;
+      width: 240px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
     }
 
     .sidebar-logo {
-      padding: 20px;
-      border-bottom: 1px solid #2a3441;
+      padding: 20px 20px 18px;
+      border-bottom: 1px solid var(--border);
     }
-    .sidebar-logo .brand-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
-    .sidebar-logo .brand-name { font-size: 15px; font-weight: 500; color: #fff; margin-top: 2px; }
-
-    .nav-section { padding: 18px 0 4px; }
-    .nav-section-label {
-      padding: 0 20px 8px;
+    .sidebar-logo .brand-eyebrow {
       font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #6e7884;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .sidebar-logo .brand-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--deep-blue);
+      margin-top: 3px;
+      letter-spacing: -0.3px;
+    }
+    .sidebar-logo .brand-name span { color: var(--aqua); }
+
+    .sidebar-pillar {
+      padding: 16px 20px 4px;
+    }
+    .sidebar-pillar-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+    }
+
+    .sidebar-group { padding: 8px 0 2px; }
+    .sidebar-group-label {
+      padding: 0 20px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #b0b8c4;
     }
 
     .nav-item {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding: 9px 20px;
+      gap: 9px;
+      padding: 7px 20px;
       font-size: 13px;
-      color: #c9d1d9;
+      color: var(--text-secondary);
       text-decoration: none;
       cursor: pointer;
       border: none;
@@ -59,51 +115,106 @@
       width: 100%;
       text-align: left;
       font-family: inherit;
-      transition: background 0.12s;
-      position: relative;
+      transition: background 0.1s, color 0.1s;
+      border-left: 3px solid transparent;
     }
-    .nav-item:hover { background: #243044; }
+    .nav-item:hover { background: #f9fafb; color: var(--text-primary); }
     .nav-item.active {
-      background: rgba(12,74,62,0.25);
-      color: #fff;
-      border-left: 3px solid #0c4a3e;
-      padding-left: 17px;
+      background: var(--aqua-light);
+      color: var(--aqua);
+      border-left-color: var(--aqua);
+      font-weight: 500;
     }
-    .nav-item svg { flex-shrink: 0; opacity: 0.7; }
+    .nav-item svg { flex-shrink: 0; opacity: 0.6; }
     .nav-item.active svg { opacity: 1; }
 
-    .nav-badge {
+    .nav-count {
       margin-left: auto;
-      background: #ef4444;
-      color: #fff;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+      min-width: 20px;
+      text-align: right;
+    }
+    .nav-item.active .nav-count { color: var(--aqua); opacity: 0.75; }
+
+    .sidebar-collapsible-toggle {
+      display: flex;
+      align-items: center;
+      padding: 6px 20px 4px;
+      cursor: pointer;
+      user-select: none;
+      border: none;
+      background: transparent;
+      width: 100%;
+      font-family: inherit;
+    }
+    .sidebar-collapsible-toggle .coll-label {
       font-size: 10px;
       font-weight: 600;
-      padding: 1px 5px;
-      border-radius: 8px;
-      line-height: 1.4;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #b0b8c4;
+    }
+    .sidebar-collapsible-toggle .coll-arrow {
+      margin-left: auto;
+      font-size: 10px;
+      color: #b0b8c4;
+      transition: transform 0.15s;
+    }
+    .sidebar-collapsible-toggle.collapsed .coll-arrow { transform: rotate(-90deg); }
+    .sidebar-collapsible-body.collapsed { display: none; }
+
+    .sidebar-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 6px 20px;
     }
 
-    .competitor-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      margin-left: auto;
+    /* Theme tags */
+    .theme-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .theme-tag[data-theme="Sj\00F8"]            { background: #e0f2fe; color: #0369a1; }
+    .theme-tag[data-theme="Landbasert"]          { background: #dcfce7; color: #15803d; }
+    .theme-tag[data-theme="F\00F4r"]             { background: #fef9c3; color: #854d0e; }
+    .theme-tag[data-theme="Fiskehelse"]          { background: #fce7f3; color: #9d174d; }
+    .theme-tag[data-theme="Teknologi"]           { background: #ede9fe; color: #6d28d9; }
+    .theme-tag[data-theme="Digitalisering"]      { background: #f1f5f9; color: #475569; }
+    .theme-tag[data-theme="Finans"]              { background: #fff7ed; color: #c2410c; }
+
+    .theme-dot {
+      width: 8px; height: 8px;
+      border-radius: 2px;
       flex-shrink: 0;
     }
+    .theme-dot[data-theme="Sj\00F8"]            { background: #0369a1; }
+    .theme-dot[data-theme="Landbasert"]          { background: #15803d; }
+    .theme-dot[data-theme="F\00F4r"]             { background: #854d0e; }
+    .theme-dot[data-theme="Fiskehelse"]          { background: #9d174d; }
+    .theme-dot[data-theme="Teknologi"]           { background: #6d28d9; }
+    .theme-dot[data-theme="Digitalisering"]      { background: #475569; }
+    .theme-dot[data-theme="Finans"]              { background: #c2410c; }
 
     /* ─── Main content ───────────────────────────────────────── */
     .main-content {
-      margin-left: 220px;
+      flex: 1;
       min-width: 0;
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
     }
 
     /* ─── Top bar ────────────────────────────────────────────── */
     .topbar {
       background: #fff;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 14px 28px;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -116,53 +227,53 @@
     .search-wrap {
       position: relative;
       flex: 1;
-      max-width: 420px;
+      max-width: 400px;
     }
     .search-wrap svg {
       position: absolute;
       left: 10px;
       top: 50%;
       transform: translateY(-50%);
-      color: #9ca3af;
+      color: var(--text-muted);
       pointer-events: none;
     }
     .search-input {
       width: 100%;
-      padding: 8px 12px 8px 34px;
-      border: 1px solid #e5e7eb;
+      padding: 7px 12px 7px 32px;
+      border: 1px solid var(--border);
       border-radius: 6px;
       background: #f9fafb;
       font-family: inherit;
       font-size: 13px;
-      color: #111827;
+      color: var(--text-primary);
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .search-input:focus { border-color: #0c4a3e; box-shadow: 0 0 0 3px rgba(12,74,62,0.08); }
-    .search-input::placeholder { color: #9ca3af; }
+    .search-input:focus { border-color: var(--aqua); box-shadow: 0 0 0 3px rgba(0,150,160,0.1); }
+    .search-input::placeholder { color: var(--text-muted); }
 
     .topbar-right { display: flex; align-items: center; gap: 10px; }
 
     .lang-selector { display: flex; gap: 4px; }
     .lang-btn {
       background: #fff;
-      border: 1px solid #e5e7eb;
-      color: #6b7280;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
       font-family: inherit;
       font-size: 11px;
-      padding: 5px 10px;
+      padding: 5px 9px;
       border-radius: 4px;
       cursor: pointer;
       font-weight: 500;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      transition: background 0.1s, color 0.1s, border-color 0.1s;
     }
-    .lang-btn.active { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
-    .lang-btn:hover:not(.active) { border-color: #9ca3af; }
+    .lang-btn.active { background: var(--aqua-light); color: var(--aqua); border-color: var(--aqua); }
+    .lang-btn:hover:not(.active) { border-color: var(--text-muted); }
 
     .avatar {
-      width: 32px; height: 32px;
+      width: 30px; height: 30px;
       border-radius: 50%;
-      background: #0c4a3e;
+      background: var(--deep-blue);
       color: #fff;
       font-size: 11px;
       font-weight: 600;
@@ -174,39 +285,72 @@
 
     /* ─── Page header ────────────────────────────────────────── */
     .page-hd {
-      padding: 24px 28px 0;
+      padding: 20px 24px 0;
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       flex-wrap: wrap;
       gap: 8px;
     }
-    .page-hd h1 { font-size: 22px; font-weight: 500; color: #111827; }
-    .page-hd-sub { font-size: 13px; color: #6b7280; margin-top: 3px; }
-    .page-hd-date { font-size: 12px; color: #6b7280; white-space: nowrap; padding-top: 4px; }
+    .page-hd h1 { font-size: 20px; font-weight: 600; color: var(--deep-blue); }
+    .page-hd-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .page-hd-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; padding-top: 4px; }
 
     /* ─── Stat cards ─────────────────────────────────────────── */
     .stat-cards {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      padding: 20px 28px 0;
+      gap: 12px;
+      padding: 16px 24px 0;
     }
     .stat-card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 14px 16px;
+      padding: 12px 14px;
     }
-    .stat-card-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-card-number { font-size: 24px; font-weight: 500; margin-top: 4px; color: #111827; }
-    .stat-card-number.green { color: #0c4a3e; }
+    .stat-card-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card-number { font-size: 22px; font-weight: 600; margin-top: 3px; color: var(--text-primary); }
+    .stat-card-number.teal { color: var(--aqua); }
     .stat-card-number.red { color: #b91c1c; }
-    .stat-card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+    .stat-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ─── Active filter chip ─────────────────────────────────── */
+    .active-filter-bar {
+      display: none;
+      padding: 10px 24px 0;
+      align-items: center;
+      gap: 8px;
+    }
+    .active-filter-bar.visible { display: flex; }
+    .active-filter-label { font-size: 12px; color: var(--text-secondary); }
+    .active-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--aqua-light);
+      color: var(--aqua);
+      border: 1px solid #b2dfe3;
+      border-radius: 20px;
+      padding: 3px 10px 3px 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .filter-chip-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--aqua);
+      font-size: 15px;
+      line-height: 1;
+      padding: 0;
+      opacity: 0.7;
+    }
+    .filter-chip-remove:hover { opacity: 1; }
 
     /* ─── Error banner ───────────────────────────────────────── */
     .error-banner {
-      margin: 16px 28px 0;
+      margin: 12px 24px 0;
       background: #fff0f0;
       border-left: 4px solid #c0392b;
       padding: 10px 14px;
@@ -216,111 +360,101 @@
     }
 
     /* ─── Digest card ────────────────────────────────────────── */
-    .digest-wrapper { padding: 20px 28px 0; }
+    .digest-wrapper { padding: 16px 24px 0; }
     .digest-card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
-      border-left: 3px solid #0c4a3e;
-      border-radius: 0;
-      padding: 22px 26px;
+      background: #f0fafa;
+      border: 1px solid #b2dfe3;
+      border-left: 3px solid var(--aqua);
+      border-radius: 6px;
+      padding: 18px 22px;
     }
     .digest-card-hd {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
     .digest-card-hd-left { display: flex; align-items: center; gap: 8px; }
     .ai-badge {
-      width: 22px; height: 22px;
+      width: 20px; height: 20px;
       border-radius: 4px;
-      background: #d4e4d4;
-      color: #0c4a3e;
-      font-size: 9px;
+      background: var(--aqua);
+      color: #fff;
+      font-size: 8px;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
     }
-    .digest-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #0c4a3e; font-weight: 600; }
-    .digest-timestamp { font-size: 11px; color: #9ca3af; }
-    .digest-headline { font-size: 17px; font-weight: 500; color: #111827; line-height: 1.4; margin-bottom: 10px; }
+    .digest-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--aqua); font-weight: 600; }
+    .digest-timestamp { font-size: 11px; color: var(--text-muted); }
+    .digest-headline { font-size: 15px; font-weight: 500; color: var(--deep-blue); line-height: 1.4; margin-bottom: 6px; }
     .digest-body { font-size: 13px; line-height: 1.65; color: #374151; }
-    .digest-body h3 { font-size: 13px; font-weight: 600; color: #0c4a3e; margin: 14px 0 5px; }
-    .digest-body p { margin: 5px 0; }
-    .digest-body ul { margin: 5px 0 5px 18px; }
-    .digest-body a { color: #0c4a3e; }
-    .digest-empty { background: #f9fafb; border-left-color: #d1d5db; padding: 18px 26px; font-size: 13px; color: #9ca3af; font-style: italic; }
+    .digest-empty { background: #f9fafb; border: 1px solid var(--border); border-left: 3px solid var(--border); border-radius: 6px; padding: 16px 22px; font-size: 13px; color: var(--text-muted); font-style: italic; }
 
     /* ─── Filter card ────────────────────────────────────────── */
-    .filter-wrapper { padding: 16px 28px 0; }
+    .filter-wrapper { padding: 14px 24px 0; }
     .filter-card {
       background: #fff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 16px 20px;
+      padding: 14px 18px;
     }
     .filter-card-hd {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
-    .filter-card-hd-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; font-weight: 600; }
+    .filter-card-hd-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); font-weight: 600; }
     .filter-reset {
       font-size: 11px;
-      color: #6b7280;
+      color: var(--text-secondary);
       text-decoration: underline;
       background: none;
       border: none;
       cursor: pointer;
       font-family: inherit;
     }
-    .filter-reset:hover { color: #374151; }
+    .filter-reset:hover { color: var(--text-primary); }
 
-    .filter-group { margin-bottom: 14px; }
+    .filter-group { margin-bottom: 12px; }
     .filter-group:last-child { margin-bottom: 0; }
-    .filter-group-label { font-size: 11px; font-weight: 500; color: #6b7280; margin-bottom: 7px; }
+    .filter-group-label { font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
 
-    .btn-group { display: flex; flex-wrap: nowrap; gap: 6px; overflow-x: auto; }
+    .btn-group { display: flex; flex-wrap: wrap; gap: 5px; }
 
     .filter-pill {
-      padding: 5px 12px;
+      padding: 4px 11px;
       border-radius: 20px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border);
       background: #fff;
-      color: #6b7280;
+      color: var(--text-secondary);
       font-family: inherit;
       font-size: 12px;
       font-weight: 500;
       cursor: pointer;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      transition: background 0.1s, color 0.1s, border-color 0.1s;
       white-space: nowrap;
     }
-    .filter-pill:hover { border-color: #9ca3af; color: #374151; }
-    .filter-pill.active { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
+    .filter-pill:hover { border-color: var(--text-muted); color: var(--text-primary); }
+    .filter-pill.active { background: var(--aqua); color: #fff; border-color: var(--aqua); }
     .pill-count { font-size: 11px; opacity: 0.75; margin-left: 2px; }
 
-    .scope-pill.active-cermaq   { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
-    .scope-pill.active-core     { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
-    .scope-pill.active-global   { background: #f3f4f6; color: #374151; border-color: #9ca3af; }
-
-    .tone-pill[data-tone="positiv"].active { background: #f0fdf4; color: #15803d; border-color: #86efac; }
-    .tone-pill[data-tone="noytral"].active { background: #f1f5f9; color: #475569; border-color: #94a3b8; }
-    .tone-pill[data-tone="negativ"].active { background: #fef2f2; color: #b91c1c; border-color: #fca5a5; }
-
-    .tone-negativ { background: #fef2f2; color: #b91c1c; }
+    .tone-pill[data-tone="positiv"].active { background: #15803d; border-color: #15803d; }
+    .tone-pill[data-tone="noytral"].active { background: #475569; border-color: #475569; }
+    .tone-pill[data-tone="negativ"].active { background: #b91c1c; border-color: #b91c1c; }
 
     .filter-row-3 {
       display: grid;
       grid-template-columns: 1fr 1fr 1fr;
-      gap: 14px;
+      gap: 12px;
     }
 
     .filter-select {
       width: 100%;
       padding: 6px 10px;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border);
       border-radius: 6px;
       background: #fff;
       font-family: inherit;
@@ -329,21 +463,21 @@
       cursor: pointer;
       outline: none;
     }
-    .filter-select:focus { border-color: #0c4a3e; }
+    .filter-select:focus { border-color: var(--aqua); }
 
     /* ─── Result header ──────────────────────────────────────── */
     .result-hd {
-      padding: 14px 28px 8px;
+      padding: 12px 24px 6px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
     }
-    .result-count { font-size: 13px; color: #6b7280; }
+    .result-count { font-size: 13px; color: var(--text-secondary); }
     .result-actions { display: flex; gap: 8px; }
     .result-action-btn {
-      padding: 5px 12px;
-      border: 1px solid #e5e7eb;
+      padding: 4px 11px;
+      border: 1px solid var(--border);
       border-radius: 5px;
       background: #fff;
       font-family: inherit;
@@ -354,95 +488,93 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      transition: border-color 0.12s, background 0.12s;
+      transition: border-color 0.1s, background 0.1s;
     }
-    .result-action-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+    .result-action-btn:hover { border-color: var(--text-muted); background: #f9fafb; }
 
     /* ─── Article feed ───────────────────────────────────────── */
     .article-feed {
-      padding: 0 28px;
+      padding: 0 24px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
     }
 
     .article-row {
       background: #fff;
-      border: 1px solid #e5e7eb;
+      border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 16px 20px;
+      padding: 14px 18px;
       display: grid;
-      grid-template-columns: 1fr 120px;
-      gap: 18px;
+      grid-template-columns: 1fr 110px;
+      gap: 16px;
       cursor: pointer;
       text-decoration: none;
-      transition: box-shadow 0.12s;
+      transition: box-shadow 0.1s, border-color 0.1s;
     }
-    .article-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.08); border-color: #d1d5db; }
+    .article-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.07); border-color: #d1d5db; }
 
     .article-meta {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 7px;
+      gap: 5px;
+      margin-bottom: 6px;
     }
 
     .source-favicon {
-      width: 16px; height: 16px;
+      width: 15px; height: 15px;
       border-radius: 3px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      font-size: 9px;
+      font-size: 8px;
       font-weight: 700;
       color: #fff;
       flex-shrink: 0;
     }
-    .source-name { font-size: 11px; font-weight: 600; color: #6b7280; }
+    .source-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
     .meta-dot { font-size: 10px; color: #d1d5db; }
-    .time-ago { font-size: 11px; color: #9ca3af; }
+    .time-ago { font-size: 11px; color: var(--text-muted); }
 
     .scope-badge {
       font-size: 10px;
       font-weight: 600;
-      padding: 2px 6px;
+      padding: 1px 5px;
       border-radius: 3px;
       white-space: nowrap;
     }
-    span.scope-badge.scope-cermaq { background: #0096a0 !important; color: #fff !important; }
-    .scope-core     { background: #dbeafe; color: #1e40af; }
-    .scope-global   { background: #f3f4f6; color: #4b5563; }
-    .scope-pending  { background: #f3f4f6; color: #9ca3af; font-style: italic; }
-
-    .region-flag { font-size: 11px; }
+    .scope-cermaq  { background: var(--aqua); color: #fff; }
+    .scope-core    { background: #dbeafe; color: #1e40af; }
+    .scope-global  { background: #f3f4f6; color: #4b5563; }
+    .scope-pending { background: #f3f4f6; color: var(--text-muted); font-style: italic; }
 
     .tone-badge {
       font-size: 10px;
       font-weight: 600;
-      padding: 2px 6px;
+      padding: 1px 5px;
       border-radius: 3px;
     }
     .tone-positiv { background: #f0fdf4; color: #15803d; }
     .tone-noytral { background: #f1f5f9; color: #475569; }
-    .tone-kritisk { background: #fef2f2; color: #b91c1c; }
+    .tone-negativ { background: #fef2f2; color: #b91c1c; }
 
-    .relevance-star { font-size: 10px; color: #9ca3af; }
+    .relevance-star { font-size: 10px; color: var(--text-muted); }
 
     .article-title {
       font-size: 14px;
       font-weight: 500;
-      color: #111827;
+      color: var(--text-primary);
       line-height: 1.4;
       text-decoration: none;
       display: block;
       margin-bottom: 5px;
     }
-    .article-title:hover { color: #0c4a3e; }
+    .article-row:hover .article-title { color: var(--aqua); }
 
     .article-summary {
       font-size: 12px;
-      color: #6b7280;
+      color: var(--text-secondary);
       line-height: 1.5;
       display: -webkit-box;
       -webkit-line-clamp: 2;
@@ -452,13 +584,13 @@
 
     .article-img-wrap { align-self: start; }
     .article-img-wrap img {
-      width: 120px; height: 80px;
+      width: 110px; height: 74px;
       object-fit: cover;
       border-radius: 4px;
       display: block;
     }
     .article-img-placeholder {
-      width: 120px; height: 80px;
+      width: 110px; height: 74px;
       border-radius: 4px;
     }
 
@@ -466,133 +598,158 @@
       text-align: center;
       padding: 48px 0;
       font-size: 14px;
-      color: #9ca3af;
+      color: var(--text-muted);
     }
 
     /* ─── Load more ──────────────────────────────────────────── */
     .load-more-wrap {
-      padding: 18px 28px 28px;
+      padding: 16px 24px 28px;
       text-align: center;
     }
     .load-more-btn {
-      padding: 8px 20px;
-      border: 1px solid #e5e7eb;
+      padding: 7px 18px;
+      border: 1px solid var(--border);
       border-radius: 5px;
       background: #fff;
       font-family: inherit;
       font-size: 12px;
       color: #374151;
       cursor: pointer;
-      transition: border-color 0.12s, background 0.12s;
+      transition: border-color 0.1s, background 0.1s;
     }
-    .load-more-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+    .load-more-btn:hover { border-color: var(--text-muted); background: #f9fafb; }
 
-    /* ─── Hidden legacy stat placeholders ───────────────────── */
     .stat-hidden { display: none !important; }
 
     /* ─── Mobile ─────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .sidebar { display: none; }
-      .main-content { margin-left: 0; }
+      .app-container { display: block; }
       .stat-cards { grid-template-columns: repeat(2, 1fr); }
       .filter-row-3 { grid-template-columns: 1fr; }
       .article-row { grid-template-columns: 1fr; }
       .article-img-wrap { display: none; }
-      .topbar { padding: 12px 16px; }
+      .topbar { padding: 10px 16px; }
       .page-hd, .stat-cards, .digest-wrapper, .filter-wrapper,
-      .result-hd, .article-feed, .load-more-wrap { padding-left: 16px; padding-right: 16px; }
+      .result-hd, .article-feed, .load-more-wrap,
+      .active-filter-bar { padding-left: 16px; padding-right: 16px; }
     }
   </style>
 </head>
 <body>
 
-<div class="app-layout">
+<div class="app-outer">
+<div class="app-container">
 
   <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="brand-sub">Cermaq</div>
-      <div class="brand-name">Media Watch</div>
+      <div class="brand-eyebrow">Cermaq</div>
+      <div class="brand-name">Media <span>Watch</span></div>
     </div>
 
-    <div class="nav-section">
-      <div class="nav-section-label">{{ ui_text.nav_overview }}</div>
+    <!-- NEWS WATCH -->
+    <div class="sidebar-pillar">
+      <div class="sidebar-pillar-label">News Watch</div>
+    </div>
 
-      <a href="/?lang={{ lang }}" class="nav-item active">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-        </svg>
-        {{ ui_text.nav_news }}
+    <a href="/?lang={{ lang }}" class="nav-item{% if not active_region and not active_theme %} active{% endif %}" onclick="setRegionFilter('all');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+      </svg>
+      Alle nyheter
+      <span class="nav-count" id="nav-count-all">{{ articles | length }}</span>
+    </a>
+    <a href="/?region=norge&lang={{ lang }}" class="nav-item{% if active_region == 'norge' %} active{% endif %}" onclick="setRegionFilter('norge');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+      Norge
+      <span class="nav-count" id="nav-count-norge">{{ region_counts.norge }}</span>
+    </a>
+    <a href="/?region=chile&lang={{ lang }}" class="nav-item{% if active_region == 'chile' %} active{% endif %}" onclick="setRegionFilter('chile');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+      Chile
+      <span class="nav-count" id="nav-count-chile">{{ region_counts.chile }}</span>
+    </a>
+    <a href="/?region=canada&lang={{ lang }}" class="nav-item{% if active_region == 'canada' %} active{% endif %}" onclick="setRegionFilter('canada');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+      Canada
+      <span class="nav-count" id="nav-count-canada">{{ region_counts.canada }}</span>
+    </a>
+    <a href="/?region=global&lang={{ lang }}" class="nav-item{% if active_region == 'global' %} active{% endif %}" onclick="setRegionFilter('global');return false;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/>
+      </svg>
+      Globalt
+      <span class="nav-count" id="nav-count-global">{{ region_counts.global }}</span>
+    </a>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- TEMA (collapsible) -->
+    <button class="sidebar-collapsible-toggle{% if not active_theme %} collapsed{% endif %}" id="tema-toggle" onclick="toggleTema()">
+      <span class="coll-label">Tema</span>
+      <span class="coll-arrow">&#9660;</span>
+    </button>
+    <div class="sidebar-collapsible-body{% if not active_theme %} collapsed{% endif %}" id="tema-body">
+      {% set _themes_list = [
+        'Sjø', 'Landbasert', 'Fôr', 'Fiskehelse', 'Teknologi', 'Digitalisering', 'Finans'
+      ] %}
+      {% for t in _themes_list %}
+      <a href="/?theme={{ t | urlencode }}&lang={{ lang }}"
+         class="nav-item{% if active_theme == t %} active{% endif %}"
+         onclick="setThemeFilter('{{ t }}');return false;">
+        <span class="theme-dot" data-theme="{{ t }}"></span>
+        {{ t }}
+        <span class="nav-count">{{ theme_counts.get(t, 0) }}</span>
       </a>
+      {% endfor %}
+    </div>
 
+    <div class="sidebar-divider"></div>
+
+    <!-- INNSIKT -->
+    <div class="sidebar-group">
+      <div class="sidebar-group-label">Innsikt</div>
       <a href="/uken?lang={{ lang }}" class="nav-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
         </svg>
-        {{ ui_text.nav_weekly }}
+        Uken oppsummert
       </a>
-
-      <a href="/alerts?lang={{ lang }}" class="nav-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-        </svg>
-        {{ ui_text.nav_alerts }}
-      </a>
-
-      <a href="#" class="nav-item" onclick="document.querySelector('.search-input').focus();return false;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        {{ ui_text.nav_search }}
-      </a>
-
-      <a href="/reports?lang={{ lang }}" class="nav-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <a href="/analytics?lang={{ lang }}" class="nav-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
         </svg>
-        {{ ui_text.nav_reports }}
+        Analytics
       </a>
     </div>
 
-    <div class="nav-section">
-      <div class="nav-section-label">{{ ui_text.nav_competitors }}</div>
+    <div class="sidebar-divider"></div>
 
-      <span class="nav-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-        Mowi
-        <span class="competitor-dot" style="background:#10b981"></span>
-      </span>
-
-      <span class="nav-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-        SalMar
-        <span class="competitor-dot" style="background:#f59e0b"></span>
-      </span>
-
-      <span class="nav-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-        </svg>
-        Grieg Seafood
-        <span class="competitor-dot" style="background:#ef4444"></span>
-      </span>
+    <!-- FINANCE WATCH -->
+    <div class="sidebar-pillar" style="padding-top:12px;">
+      <div class="sidebar-pillar-label">Finance Watch</div>
     </div>
-
-    <div class="nav-section">
-      <div class="nav-section-label">{{ ui_text.nav_settings }}</div>
-
-      <a href="/api/sources" target="_blank" class="nav-item">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
-        </svg>
-        {{ ui_text.nav_sources }}
-      </a>
-    </div>
+    <a href="/finance?lang={{ lang }}" class="nav-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+        <polyline points="16 7 22 7 22 13"/>
+      </svg>
+      Finans &amp; Marked
+    </a>
+    <a href="/alerts?lang={{ lang }}" class="nav-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+      </svg>
+      {{ ui_text.nav_alerts }}
+    </a>
   </aside>
 
   <!-- ═══ Main content ══════════════════════════════════════════ -->
@@ -601,7 +758,7 @@
     <!-- Top bar -->
     <header class="topbar">
       <div class="search-wrap">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         <input class="search-input" id="search-input" type="text"
@@ -638,7 +795,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-card-label">{{ ui_text.stat_cermaq }}</div>
-        <div class="stat-card-number green" id="stat-cermaq">{{ cermaq_count }}</div>
+        <div class="stat-card-number teal" id="stat-cermaq">{{ cermaq_count }}</div>
         <div class="stat-card-sub">{{ ui_text.stat_cermaq_subtitle }}</div>
       </div>
       <div class="stat-card">
@@ -648,14 +805,14 @@
       </div>
       <div class="stat-card">
         <div class="stat-card-label">{{ ui_text.stat_sources }}</div>
-        <div class="stat-card-number" id="stat-sources">–</div>
+        <div class="stat-card-number" id="stat-sources">-</div>
         <div class="stat-card-sub" id="stat-region-dist">
-          NO {{ region_counts.norge }} · CL {{ region_counts.chile }} · CA {{ region_counts.canada }}
+          NO {{ region_counts.norge }} &middot; CL {{ region_counts.chile }} &middot; CA {{ region_counts.canada }}
         </div>
       </div>
     </div>
 
-    <!-- Hidden legacy stat placeholders (used by applyFilters) -->
+    <!-- Hidden stat placeholders -->
     <span class="stat-hidden" id="stat-norge">{{ region_counts.norge }}</span>
     <span class="stat-hidden" id="stat-chile">{{ region_counts.chile }}</span>
     <span class="stat-hidden" id="stat-canada">{{ region_counts.canada }}</span>
@@ -663,6 +820,15 @@
     <span class="stat-hidden" id="stat-positiv">{{ articles | selectattr('tone', 'equalto', 'positiv') | list | length }}</span>
     <span class="stat-hidden" id="stat-noytral">{{ articles | selectattr('tone', 'equalto', 'noytral') | list | length }}</span>
     <span class="stat-hidden" id="stat-kritisk">{{ negative_count }}</span>
+
+    <!-- Active filter chip -->
+    <div class="active-filter-bar{% if active_region or active_theme %} visible{% endif %}" id="active-filter-bar">
+      <span class="active-filter-label">Filtrerer på:</span>
+      <span class="active-filter-chip">
+        <span id="active-filter-chip-label">{% if active_region %}{{ active_region | title }}{% elif active_theme %}{{ active_theme }}{% endif %}</span>
+        <button class="filter-chip-remove" onclick="clearFilter()" title="Fjern filter">&times;</button>
+      </span>
+    </div>
 
     {% if error %}
     <div class="error-banner"><strong>Feil:</strong> {{ error }}</div>
@@ -677,18 +843,16 @@
             <div class="ai-badge">AI</div>
             <span class="digest-label">{{ ui_text.daily_update }}</span>
           </div>
-          <span class="digest-timestamp">
-            {{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}
-          </span>
+          <span class="digest-timestamp">{{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}</span>
         </div>
         <div class="digest-headline">{{ digest.headline }}</div>
         <div class="digest-body"><p>{{ digest.body }}</p></div>
-        <div class="digest-meta" style="margin-top:10px;display:flex;justify-content:flex-end;">
-          <a href="/uken?lang={{ lang }}" style="font-size:12px;color:#0c4a3e;text-decoration:none;font-weight:500;">{{ ui_text.see_weekly }}</a>
+        <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+          <a href="/uken?lang={{ lang }}" style="font-size:12px;color:var(--aqua);text-decoration:none;font-weight:500;">{{ ui_text.see_weekly }} &rarr;</a>
         </div>
       </div>
       {% else %}
-      <div class="digest-card digest-empty">{{ ui_text.digest_pending }}</div>
+      <div class="digest-empty">{{ ui_text.digest_pending }}</div>
       {% endif %}
     </div>
 
@@ -700,7 +864,6 @@
           <button class="filter-reset" id="reset-filters">{{ ui_text.filter_reset }}</button>
         </div>
 
-        <!-- Scope filter -->
         <div class="filter-group">
           <div class="filter-group-label">{{ ui_text.filter_scope }}</div>
           <div class="btn-group">
@@ -708,30 +871,28 @@
               {{ ui_text.filter_all }} <span class="pill-count">{{ articles | length }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="cermaq">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#0c4a3e;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_cermaq }} <span class="pill-count">{{ cermaq_count }}</span>
+              {{ ui_text.scope_cermaq }} <span class="pill-count">{{ cermaq_count }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="industry-core">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#1e40af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_in_regions }} <span class="pill-count">{{ industry_core_count }}</span>
+              {{ ui_text.scope_industry_in_regions }} <span class="pill-count">{{ industry_core_count }}</span>
             </button>
             <button class="filter-pill scope-pill" data-scope-filter="industry-global">
-              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#9ca3af;margin-right:4px;vertical-align:middle"></span>{{ ui_text.scope_industry_general }} <span class="pill-count">{{ industry_global_count }}</span>
+              {{ ui_text.scope_industry_general }} <span class="pill-count">{{ industry_global_count }}</span>
             </button>
           </div>
         </div>
 
-        <!-- Region filter -->
         <div class="filter-group">
           <div class="filter-group-label">{{ ui_text.filter_country }}</div>
           <div class="btn-group">
-            <button class="filter-pill active" data-region="all">{{ ui_text.filter_all }}</button>
-            <button class="filter-pill" data-region="norge">{{ ui_text.country_norway }} <span class="pill-count">{{ region_counts.norge }}</span></button>
-            <button class="filter-pill" data-region="chile">{{ ui_text.country_chile }} <span class="pill-count">{{ region_counts.chile }}</span></button>
-            <button class="filter-pill" data-region="canada">{{ ui_text.country_canada }} <span class="pill-count">{{ region_counts.canada }}</span></button>
-            <button class="filter-pill" data-region="global">{{ ui_text.country_global }} <span class="pill-count">{{ region_counts.global }}</span></button>
+            <button class="filter-pill{% if not active_region %} active{% endif %}" data-region="all">{{ ui_text.filter_all }}</button>
+            <button class="filter-pill{% if active_region == 'norge' %} active{% endif %}" data-region="norge">{{ ui_text.country_norway }} <span class="pill-count">{{ region_counts.norge }}</span></button>
+            <button class="filter-pill{% if active_region == 'chile' %} active{% endif %}" data-region="chile">{{ ui_text.country_chile }} <span class="pill-count">{{ region_counts.chile }}</span></button>
+            <button class="filter-pill{% if active_region == 'canada' %} active{% endif %}" data-region="canada">{{ ui_text.country_canada }} <span class="pill-count">{{ region_counts.canada }}</span></button>
+            <button class="filter-pill{% if active_region == 'global' %} active{% endif %}" data-region="global">{{ ui_text.country_global }} <span class="pill-count">{{ region_counts.global }}</span></button>
           </div>
         </div>
 
-        <!-- Source type filter -->
         <div class="filter-group">
           <div class="filter-group-label">{{ ui_text.filter_source }}</div>
           <div class="btn-group">
@@ -741,15 +902,14 @@
           </div>
         </div>
 
-        <!-- Tone + date + sort -->
         <div class="filter-row-3">
           <div class="filter-group">
             <div class="filter-group-label">{{ ui_text.filter_tone }}</div>
             <div class="btn-group">
               <button class="filter-pill tone-pill active" data-tone="all">{{ ui_text.filter_all }}</button>
-              <button class="filter-pill tone-pill" data-tone="positiv">{{ ui_text.tone_positive }} <span class="pill-count"></span></button>
-              <button class="filter-pill tone-pill" data-tone="noytral">{{ ui_text.tone_neutral }} <span class="pill-count"></span></button>
-              <button class="filter-pill tone-pill" data-tone="negativ">{{ ui_text.tone_negative }} <span class="pill-count"></span></button>
+              <button class="filter-pill tone-pill" data-tone="positiv">{{ ui_text.tone_positive }}</button>
+              <button class="filter-pill tone-pill" data-tone="noytral">{{ ui_text.tone_neutral }}</button>
+              <button class="filter-pill tone-pill" data-tone="negativ">{{ ui_text.tone_negative }}</button>
             </div>
           </div>
           <div class="filter-group">
@@ -763,8 +923,8 @@
           <div class="filter-group">
             <div class="filter-group-label">{{ ui_text.filter_sort }}</div>
             <select class="filter-select" id="sort">
+              <option value="newest" selected>{{ ui_text.sort_newest }}</option>
               <option value="relevance">{{ ui_text.sort_relevance }}</option>
-              <option value="newest">{{ ui_text.sort_newest }}</option>
               <option value="oldest">{{ ui_text.sort_oldest }}</option>
             </select>
           </div>
@@ -776,8 +936,8 @@
     <div class="result-hd">
       <span class="result-count" id="result-count"></span>
       <div class="result-actions">
-        <button class="result-action-btn" title="{{ ui_text.btn_export }}">📥 {{ ui_text.btn_export }}</button>
-        <a href="/alerts?lang={{ lang }}" class="result-action-btn">🔔 {{ ui_text.btn_create_alert }}</a>
+        <button class="result-action-btn" title="{{ ui_text.btn_export }}">{{ ui_text.btn_export }}</button>
+        <a href="/alerts?lang={{ lang }}" class="result-action-btn">{{ ui_text.btn_create_alert }}</a>
       </div>
     </div>
 
@@ -786,7 +946,7 @@
       {% if articles %}
         {% for a in articles %}
           {% set r = a.region or "global" %}
-          {% set excerpt = a.content | striptags | truncate(200, True, "…") %}
+          {% set excerpt = a.content | striptags | truncate(200, True, "...") %}
           {% set sumno = a.summaries.no or excerpt %}
           {% set sumen = a.summaries.en or excerpt %}
           {% set sumes = a.summaries.es or excerpt %}
@@ -802,9 +962,8 @@
             {% set scope_lbl = ui_text.scope_industry_general %}
           {% else %}
             {% set scope_cls = 'scope-pending' %}
-            {% set scope_lbl = 'Klassifiseres…' %}
+            {% set scope_lbl = 'Klassifiseres...' %}
           {% endif %}
-          {% set region_flags = {'norge': '🇳🇴', 'chile': '🇨🇱', 'canada': '🇨🇦', 'global': '🌐'} %}
           <a class="article-row"
              href="{{ a.url }}" target="_blank" rel="noopener"
              data-region="{{ r }}"
@@ -814,26 +973,29 @@
              data-tone="{{ a.tone or '' }}"
              data-source="{{ a.source_name or '' }}"
              data-fetch-method="{{ a.fetch_method or 'miniflux' }}"
-             data-title="{{ a.title | lower }}">
+             data-title="{{ a.title | lower }}"
+             data-themes="{{ (a.themes or []) | tojson | e }}">
 
             <div class="article-left">
               <div class="article-meta">
                 <span class="source-favicon" data-source-name="{{ a.source_name or 'U' }}">{{ (a.source_name or 'U')[0] | upper }}</span>
                 <span class="source-name">{{ a.source_name or "Ukjent" }}</span>
-                <span class="meta-dot">·</span>
+                <span class="meta-dot">&middot;</span>
                 <span class="time-ago" data-published="{{ a.published_at_iso }}">{{ a.published_at }}</span>
                 {% if a.scope %}
                 <span class="scope-badge {{ scope_cls }}">{{ scope_lbl }}</span>
                 {% endif %}
-                <span class="region-flag">{{ region_flags.get(r, '🌐') }}</span>
                 {% if a.tone == 'positiv' %}
-                  <span class="tone-badge tone-positiv">↑ {{ ui_text.tone_positive }}</span>
+                  <span class="tone-badge tone-positiv">&#8593; {{ ui_text.tone_positive }}</span>
                 {% elif a.tone in ('kritisk', 'negativ') %}
-                  <span class="tone-badge tone-kritisk tone-negativ">↓ {{ ui_text.tone_negative }}</span>
+                  <span class="tone-badge tone-negativ">&#8595; {{ ui_text.tone_negative }}</span>
                 {% elif a.tone == 'noytral' %}
-                  <span class="tone-badge tone-noytral">— {{ ui_text.tone_neutral }}</span>
+                  <span class="tone-badge tone-noytral">&#8212; {{ ui_text.tone_neutral }}</span>
                 {% endif %}
-                {% if a.relevance %}<span class="relevance-star">★ {{ a.relevance }}</span>{% endif %}
+                {% if a.relevance %}<span class="relevance-star">&#9733; {{ a.relevance }}</span>{% endif %}
+                {% for theme in (a.themes or []) %}
+                <span class="theme-tag" data-theme="{{ theme }}" onclick="event.preventDefault();setThemeFilter('{{ theme }}')">{{ theme }}</span>
+                {% endfor %}
               </div>
 
               <span class="article-title">{% if a.titles and a.titles.get(lang) %}{{ a.titles[lang] }}{% else %}{{ a.title }}{% endif %}</span>
@@ -850,7 +1012,7 @@
               {% if a.image_url %}
               <img src="{{ a.image_url }}" alt="" loading="lazy" />
               {% else %}
-              <div class="article-img-placeholder" data-source-name="{{ a.source_name or '' }}" style="background: #e5e7eb;"></div>
+              <div class="article-img-placeholder" data-source-name="{{ a.source_name or '' }}"></div>
               {% endif %}
             </div>
           </a>
@@ -866,46 +1028,18 @@
     </div>
 
   </div><!-- /main-content -->
-</div><!-- /app-layout -->
+</div><!-- /app-container -->
+</div><!-- /app-outer -->
 
 <script>
-  /* ─── UI texts from server (current language) ───────────── */
-  const UI_TEXTS = {{ ui_text | tojson }};
+  /* ─── UI texts ───────────────────────────────────────────── */
+  var UI_TEXTS = {{ ui_text | tojson }};
 
-  /* ─── Translation helpers (backwards-compat) ────────────── */
-  function translateScope(value) {
-    var map = {
-      "cermaq": UI_TEXTS.scope_cermaq,
-      "industry_in_regions": UI_TEXTS.scope_industry_in_regions,
-      "industry": UI_TEXTS.scope_industry_general,
-    };
-    return map[value] || value;
-  }
-
-  function translateTone(value) {
-    var v = (value || "").toLowerCase();
-    if (v === "positiv" || v === "positive") return UI_TEXTS.tone_positive;
-    if (v === "nøytral" || v === "noytral" || v === "neutral") return UI_TEXTS.tone_neutral;
-    if (v === "negativ" || v === "negative" || v === "kritisk" || v === "critical") return UI_TEXTS.tone_negative;
-    return value;
-  }
-
-  function translateCountry(value) {
-    var map = {
-      "norge": UI_TEXTS.country_norway,
-      "norway": UI_TEXTS.country_norway,
-      "chile": UI_TEXTS.country_chile,
-      "canada": UI_TEXTS.country_canada,
-      "global": UI_TEXTS.country_global,
-      "globalt": UI_TEXTS.country_global,
-    };
-    return map[(value || "").toLowerCase()] || value;
-  }
-
-  /* ─── Language init ──────────────────────────────────────── */
-  var _urlLang = new URLSearchParams(window.location.search).get("lang") || "no";
+  /* ─── URL param state ────────────────────────────────────── */
+  var _urlParams = new URLSearchParams(window.location.search);
+  var _urlLang = _urlParams.get("lang") || "no";
   var _savedLang = localStorage.getItem("cermaq_lang");
-  if (!_urlLang && _savedLang && _savedLang !== "no") {
+  if (!_urlParams.get("lang") && _savedLang && _savedLang !== "no") {
     var _u = new URL(window.location);
     _u.searchParams.set("lang", _savedLang);
     window.location.replace(_u.toString());
@@ -913,20 +1047,19 @@
   var activeLang = _urlLang;
 
   /* ─── Filter state ───────────────────────────────────────── */
-  var activeRegion = "all";
-  var activeDateRange = "today";
-  var activeTone = "all";
-  var activeScopeFilter = "all";
+  var activeRegion       = _urlParams.get("region") || "all";
+  var activeTheme        = _urlParams.get("theme")  || "all";
+  var activeDateRange    = "today";
+  var activeTone         = "all";
+  var activeScopeFilter  = "all";
   var activeSourceFilter = "nyheter";
-  var activeSearch = "";
-  var cermaqActive = false; // legacy compat
-  var currentVisible = 25;
-  var PAGE_SIZE = 25;
-
+  var activeSearch       = "";
+  var currentVisible     = 25;
+  var PAGE_SIZE          = 25;
   var DATE_MS = { today: 86400000, week: 604800000, month: 2592000000 };
 
-  /* ─── Source favicon colors ──────────────────────────────── */
-  var SRC_COLORS = ['#0c4a3e','#1e40af','#7e22ce','#c2410c','#b45309','#0891b2','#065f46','#1d4ed8'];
+  /* ─── Source colors ──────────────────────────────────────── */
+  var SRC_COLORS = ['#0096a0','#324664','#1e40af','#7e22ce','#c2410c','#b45309','#0891b2','#065f46'];
   function srcColor(name) {
     var h = 0;
     for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
@@ -938,29 +1071,55 @@
     if (!isoStr) return "";
     var diff = Date.now() - new Date(isoStr).getTime();
     if (diff < 0) return "";
-    if (diff < 60000) return "Nå";
+    if (diff < 60000) return "Na";
     if (diff < 3600000) return (UI_TEXTS.time_ago_minutes || "{n} min siden").replace("{n}", Math.floor(diff / 60000));
     if (diff < 86400000) return (UI_TEXTS.time_ago_hours || "{n} t siden").replace("{n}", Math.floor(diff / 3600000));
     return (UI_TEXTS.time_ago_days || "{n} dager siden").replace("{n}", Math.floor(diff / 86400000));
   }
 
-  /* ─── Source category ───────────────────────────────────── */
+  /* ─── Source category ────────────────────────────────────── */
   function getSourceCategory(row) {
     var src = (row.dataset.source || "").toLowerCase();
-    if (src.indexOf("linkedin") > -1 ||
-        src.indexOf("twitter") > -1 ||
-        src === "x" || src.indexOf("x /") === 0 ||
-        src.indexOf("facebook") > -1 ||
-        src.indexOf("instagram") > -1 ||
-        src.indexOf("youtube") > -1 ||
-        src.indexOf("tiktok") > -1 ||
-        src.indexOf("reddit") > -1) return "some";
+    var socialSites = ["linkedin","twitter","x","facebook","instagram","youtube","tiktok","reddit"];
+    for (var i = 0; i < socialSites.length; i++) {
+      if (src.indexOf(socialSites[i]) > -1) return "some";
+    }
     var method = (row.dataset.fetchMethod || "").toLowerCase();
     if (method === "some" || method === "social") return "some";
     return "nyheter";
   }
 
-  /* ─── Reactive filter counters ("excluding self") ────────── */
+  /* ─── URL navigation helpers ─────────────────────────────── */
+  function setRegionFilter(region) {
+    var u = new URL(window.location);
+    if (region === "all") { u.searchParams.delete("region"); } else { u.searchParams.set("region", region); }
+    u.searchParams.delete("theme");
+    window.location.href = u.toString();
+  }
+
+  function setThemeFilter(theme) {
+    var u = new URL(window.location);
+    if (theme === "all") { u.searchParams.delete("theme"); } else { u.searchParams.set("theme", theme); }
+    u.searchParams.delete("region");
+    window.location.href = u.toString();
+  }
+
+  function clearFilter() {
+    var u = new URL(window.location);
+    u.searchParams.delete("region");
+    u.searchParams.delete("theme");
+    window.location.href = u.toString();
+  }
+
+  /* ─── Collapsible TEMA ───────────────────────────────────── */
+  function toggleTema() {
+    var toggle = document.getElementById("tema-toggle");
+    var body = document.getElementById("tema-body");
+    toggle.classList.toggle("collapsed");
+    body.classList.toggle("collapsed");
+  }
+
+  /* ─── Reactive filter counters ───────────────────────────── */
   function updateFilterCounts(allRows) {
     var now = Date.now();
     var maxAge = DATE_MS[activeDateRange] || DATE_MS.today;
@@ -975,13 +1134,16 @@
     }
     function passesSearch(row) {
       if (!searchLc) return true;
-      var title = (row.dataset.title || "").toLowerCase();
-      var src = (row.dataset.source || "").toLowerCase();
-      return title.indexOf(searchLc) > -1 || src.indexOf(searchLc) > -1;
+      return (row.dataset.title || "").toLowerCase().indexOf(searchLc) > -1 ||
+             (row.dataset.source || "").toLowerCase().indexOf(searchLc) > -1;
     }
     function passesRegion(row) {
       if (activeRegion === "all") return true;
       return row.dataset.region === activeRegion;
+    }
+    function passesTheme(row) {
+      if (activeTheme === "all") return true;
+      try { return JSON.parse(row.dataset.themes || "[]").indexOf(activeTheme) > -1; } catch(e) { return false; }
     }
     function passesTone(row) {
       if (activeTone === "all") return true;
@@ -990,8 +1152,7 @@
     }
     function passesScope(row) {
       if (activeScopeFilter === "all") return true;
-      var scope = row.dataset.scope;
-      var region = row.dataset.region;
+      var scope = row.dataset.scope, region = row.dataset.region;
       if (activeScopeFilter === "cermaq") return scope === "cermaq";
       if (activeScopeFilter === "industry-core") return scope === "industry" && coreRegions.indexOf(region) > -1;
       if (activeScopeFilter === "industry-global") return scope === "industry" && coreRegions.indexOf(region) === -1;
@@ -1002,7 +1163,6 @@
       return getSourceCategory(row) === activeSourceFilter;
     }
 
-    // Region counts (exclude region filter)
     var regCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
     allRows.forEach(function(row) {
       if (!passesDate(row) || !passesSearch(row) || !passesTone(row) || !passesScope(row) || !passesSource(row)) return;
@@ -1016,10 +1176,9 @@
       if (span) span.textContent = regCounts[r] !== undefined ? regCounts[r] : 0;
     });
 
-    // Tone counts (exclude tone filter)
     var tCounts = { positiv: 0, noytral: 0, negativ: 0 };
     allRows.forEach(function(row) {
-      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesScope(row) || !passesSource(row)) return;
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTheme(row) || !passesScope(row) || !passesSource(row)) return;
       var t = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
       if (t in tCounts) tCounts[t]++;
     });
@@ -1030,13 +1189,11 @@
       if (span) span.textContent = tCounts[t] !== undefined ? tCounts[t] : 0;
     });
 
-    // Scope counts (exclude scope filter)
     var cermaqCnt = 0, coreCnt = 0, globalIndCnt = 0, allScopeCnt = 0;
     allRows.forEach(function(row) {
-      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTone(row) || !passesSource(row)) return;
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTheme(row) || !passesTone(row) || !passesSource(row)) return;
       allScopeCnt++;
-      var scope = row.dataset.scope;
-      var region = row.dataset.region;
+      var scope = row.dataset.scope, region = row.dataset.region;
       if (scope === "cermaq") cermaqCnt++;
       else if (scope === "industry" && coreRegions.indexOf(region) > -1) coreCnt++;
       else globalIndCnt++;
@@ -1048,10 +1205,9 @@
       if (span && scopeMap[sf] !== undefined) span.textContent = scopeMap[sf];
     });
 
-    // Source counts (exclude source filter)
     var srcCounts = { nyheter: 0, some: 0 };
     allRows.forEach(function(row) {
-      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTone(row) || !passesScope(row)) return;
+      if (!passesDate(row) || !passesSearch(row) || !passesRegion(row) || !passesTheme(row) || !passesTone(row) || !passesScope(row)) return;
       var cat = getSourceCategory(row);
       if (cat in srcCounts) srcCounts[cat]++;
     });
@@ -1063,7 +1219,7 @@
     });
   }
 
-  /* ─── Init source favicons and time-ago ──────────────────── */
+  /* ─── Init rows ──────────────────────────────────────────── */
   function initRows() {
     document.querySelectorAll(".source-favicon").forEach(function(el) {
       el.style.background = srcColor(el.dataset.sourceName || "?");
@@ -1084,44 +1240,41 @@
     var sortBy = document.getElementById("sort").value;
     var searchLc = activeSearch.toLowerCase();
     var allRows = Array.from(document.querySelectorAll("#article-feed .article-row"));
+    var coreRegions = ["norge", "chile", "canada"];
 
     var visible = allRows.filter(function(row) {
-      // Region
       if (activeRegion !== "all" && row.dataset.region !== activeRegion) return false;
 
-      // Date
+      if (activeTheme !== "all") {
+        try {
+          var themes = JSON.parse(row.dataset.themes || "[]");
+          if (themes.indexOf(activeTheme) === -1) return false;
+        } catch(e) { return false; }
+      }
+
       var iso = row.dataset.publishedAt;
       if (iso) {
         var age = now - new Date(iso).getTime();
         if (age < 0 || age > maxAge) return false;
       }
 
-      // Tone (treat legacy "kritisk" as "negativ")
       if (activeTone !== "all") {
         var rowTone = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
         if (rowTone !== activeTone) return false;
       }
 
-      // Scope
       if (activeScopeFilter !== "all") {
-        var scope = row.dataset.scope;
-        var region = row.dataset.region;
-        var coreRegions = ["norge", "chile", "canada"];
+        var scope = row.dataset.scope, region = row.dataset.region;
         if (activeScopeFilter === "cermaq" && scope !== "cermaq") return false;
         if (activeScopeFilter === "industry-core" && !(scope === "industry" && coreRegions.indexOf(region) > -1)) return false;
         if (activeScopeFilter === "industry-global" && !(scope === "industry" && coreRegions.indexOf(region) === -1)) return false;
       }
 
-      // Source type
-      if (activeSourceFilter !== "all") {
-        if (getSourceCategory(row) !== activeSourceFilter) return false;
-      }
+      if (activeSourceFilter !== "all" && getSourceCategory(row) !== activeSourceFilter) return false;
 
-      // Search
       if (searchLc) {
-        var title = (row.dataset.title || "").toLowerCase();
-        var source = (row.dataset.source || "").toLowerCase();
-        if (title.indexOf(searchLc) === -1 && source.indexOf(searchLc) === -1) return false;
+        if ((row.dataset.title || "").toLowerCase().indexOf(searchLc) === -1 &&
+            (row.dataset.source || "").toLowerCase().indexOf(searchLc) === -1) return false;
       }
 
       return true;
@@ -1129,37 +1282,26 @@
 
     updateFilterCounts(allRows);
 
-    // Sort
     visible.sort(function(a, b) {
-      if (sortBy === "relevance") {
-        return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
-      }
-      if (sortBy === "oldest") {
-        return new Date(a.dataset.publishedAt || 0) - new Date(b.dataset.publishedAt || 0);
-      }
+      if (sortBy === "relevance") return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
+      if (sortBy === "oldest") return new Date(a.dataset.publishedAt || 0) - new Date(b.dataset.publishedAt || 0);
       return new Date(b.dataset.publishedAt || 0) - new Date(a.dataset.publishedAt || 0);
     });
 
-    // Hide all, then show paginated
     allRows.forEach(function(r) { r.style.display = "none"; });
     var feed = document.getElementById("article-feed");
-    var toShow = visible.slice(0, currentVisible);
-    toShow.forEach(function(r) {
+    visible.slice(0, currentVisible).forEach(function(r) {
       r.style.display = "";
       feed.appendChild(r);
     });
 
-    // Load more button
     var loadWrap = document.getElementById("load-more-wrap");
-    var remaining = visible.length - currentVisible;
-    if (remaining > 0) {
+    if (visible.length > currentVisible) {
       loadWrap.style.display = "";
-      document.getElementById("load-more").textContent = UI_TEXTS.load_more || "Last flere artikler";
     } else {
       loadWrap.style.display = "none";
     }
 
-    // Stats
     var regionCounts = { norge: 0, chile: 0, canada: 0, global: 0 };
     var toneCounts = { positiv: 0, noytral: 0, negativ: 0 };
     var cermaqCount = 0;
@@ -1173,17 +1315,20 @@
       if (r.dataset.source) sources.add(r.dataset.source);
     });
 
-    document.getElementById("stat-total").textContent = visible.length;
-    document.getElementById("stat-cermaq").textContent = cermaqCount;
+    document.getElementById("stat-total").textContent    = visible.length;
+    document.getElementById("stat-cermaq").textContent   = cermaqCount;
     document.getElementById("stat-negative").textContent = toneCounts.negativ;
-    document.getElementById("stat-kritisk").textContent = toneCounts.negativ;
-    document.getElementById("stat-sources").textContent = sources.size || "–";
-    document.getElementById("stat-norge").textContent = regionCounts.norge;
-    document.getElementById("stat-chile").textContent = regionCounts.chile;
-    document.getElementById("stat-canada").textContent = regionCounts.canada;
-    document.getElementById("stat-global").textContent = regionCounts.global;
-    document.getElementById("stat-positiv").textContent = toneCounts.positiv;
-    document.getElementById("stat-noytral").textContent = toneCounts.noytral;
+    document.getElementById("stat-sources").textContent  = sources.size || "-";
+    document.getElementById("stat-kritisk").textContent  = toneCounts.negativ;
+    document.getElementById("stat-norge").textContent    = regionCounts.norge;
+    document.getElementById("stat-chile").textContent    = regionCounts.chile;
+    document.getElementById("stat-canada").textContent   = regionCounts.canada;
+    document.getElementById("stat-global").textContent   = regionCounts.global;
+    document.getElementById("stat-positiv").textContent  = toneCounts.positiv;
+    document.getElementById("stat-noytral").textContent  = toneCounts.noytral;
+
+    var navAll = document.getElementById("nav-count-all");
+    if (navAll) navAll.textContent = visible.length;
 
     var countText = (UI_TEXTS.showing_articles || "Viser {n} av {total} artikler")
       .replace("{n}", Math.min(currentVisible, visible.length))
@@ -1216,12 +1361,9 @@
 
   document.querySelectorAll(".scope-pill").forEach(function(btn) {
     btn.addEventListener("click", function() {
-      document.querySelectorAll(".scope-pill").forEach(function(b) {
-        b.classList.remove("active", "active-cermaq", "active-core", "active-global");
-      });
+      document.querySelectorAll(".scope-pill").forEach(function(b) { b.classList.remove("active"); });
       btn.classList.add("active");
       activeScopeFilter = btn.dataset.scopeFilter;
-      cermaqActive = activeScopeFilter === "cermaq";
       currentVisible = PAGE_SIZE;
       applyFilters();
     });
@@ -1233,6 +1375,7 @@
         document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(b) { b.classList.remove("active"); });
         btn.classList.add("active");
         activeRegion = btn.dataset.region;
+        activeTheme = "all";
         currentVisible = PAGE_SIZE;
         applyFilters();
       });
@@ -1277,11 +1420,10 @@
     activeScopeFilter = "all";
     activeSourceFilter = "all";
     activeSearch = "";
-    cermaqActive = false;
     currentVisible = PAGE_SIZE;
     document.getElementById("search-input").value = "";
     document.getElementById("date-select").value = "today";
-    document.getElementById("sort").value = "relevance";
+    document.getElementById("sort").value = "newest";
     document.querySelectorAll("[data-region]:not(.scope-pill)").forEach(function(b) {
       b.classList.toggle("active", b.dataset.region === "all");
     });
@@ -1316,6 +1458,15 @@
   /* ─── Boot ───────────────────────────────────────────────── */
   initRows();
   applyLang(activeLang);
+
+  // Expand TEMA if theme filter active
+  if (activeTheme !== "all") {
+    var toggle = document.getElementById("tema-toggle");
+    var body = document.getElementById("tema-body");
+    if (toggle) toggle.classList.remove("collapsed");
+    if (body) body.classList.remove("collapsed");
+  }
+
   applyFilters();
 </script>
 
