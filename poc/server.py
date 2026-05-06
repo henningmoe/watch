@@ -2822,21 +2822,40 @@ def api_finance_salmon_prices():
 
 @app.route("/api/finance/news")
 def api_finance_news():
+    """Returnerer siste finans-tag-artikler, nyeste først."""
     lang = request.args.get("lang", "no")
-    limit = min(int(request.args.get("limit", 20)), 50)
+    limit = min(int(request.args.get("limit", 10)), 50)
     if not is_db_available():
-        return jsonify({"results": [], "total": 0})
+        return jsonify({"articles": []})
+    from sqlalchemy import func as _func
     with SessionLocal() as session:
-        articles = (
+        rows = (
             session.query(Article)
             .filter(Article.classified_at.isnot(None), Article.scope != "irrelevant")
-            .order_by(Article.published_at.desc())
+            .order_by(
+                _func.coalesce(Article.published_at, Article.fetched_at).desc()
+            )
+            .limit(200)
             .all()
         )
-        finance_articles = [a for a in articles if a.themes and "Finans" in a.themes][:limit]
+        finance_articles = [a for a in rows if a.themes and "Finans" in a.themes][:limit]
         return jsonify({
-            "results": [_article_db_to_dict(a) for a in finance_articles],
-            "total": len(finance_articles),
+            "articles": [
+                {
+                    "id": a.id,
+                    "title": (a.titles or {}).get(lang) or a.title,
+                    "summary": (a.summaries or {}).get(lang, ""),
+                    "source_name": a.source_name,
+                    "source_domain": a.source_domain,
+                    "url": a.url,
+                    "published_at": a.published_at.isoformat() if a.published_at else None,
+                    "fetched_at": a.fetched_at.isoformat() if a.fetched_at else None,
+                    "tone": a.tone,
+                    "scope": a.scope,
+                    "region": a.region,
+                }
+                for a in finance_articles
+            ]
         })
 
 

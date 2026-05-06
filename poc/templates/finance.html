@@ -167,6 +167,7 @@
     .scope-badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.4px; }
     .scope-cermaq { background: #dbeafe; color: #1d4ed8; }
     .scope-industry { background: #f0fdf4; color: var(--green); }
+    .news-timestamp { color: #888; font-variant-numeric: tabular-nums; }
     .news-loading { text-align: center; padding: 20px; font-size: 13px; color: var(--text-muted); font-style: italic; }
 
     .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
@@ -504,6 +505,23 @@ const LANG = '{{ lang }}';
 const CURRENCY_LABELS = { USD:'US Dollar', EUR:'Euro', CLP:'Chilensk Peso', CAD:'Kanadisk Dollar', JPY:'Japansk Yen', CNY:'Kinesisk Yuan' };
 const CURRENCY_UNITS  = { CLP:'per 100 CLP', JPY:'per 100 JPY' };
 const CHART_COLORS = ['#0096a0','#324664','#059669','#7c3aed','#d97706'];
+
+function relativeTime(iso) {
+  if (!iso) return '';
+  const dt = new Date(iso);
+  const now = new Date();
+  const diffMs = now - dt;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  if (diffMin < 1) return 'nå nettopp';
+  if (diffMin < 60) return `${diffMin} min siden`;
+  if (diffHours < 24) return `${diffHours} ${diffHours === 1 ? 'time' : 'timer'} siden`;
+  if (diffDays === 1) return 'i går';
+  if (diffDays < 7) return `${diffDays} dager siden`;
+  const mo = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+  return `${dt.getDate()}. ${mo[dt.getMonth()]}`;
+}
 
 // ---------- helpers ----------
 function fmtChange(pct) {
@@ -921,23 +939,26 @@ async function loadNews() {
     const r = await fetch(`/api/finance/news?lang=${LANG}&limit=10`);
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
-    const articles = data.results || [];
-    if (!articles.length) { container.innerHTML = '<div class="news-loading">Ingen finansnyheter funnet.</div>'; return; }
+    const articles = data.articles || [];
+    if (!articles.length) { container.innerHTML = '<p style="color:#888">Ingen finans-nyheter siste 24 timer.</p>'; return; }
     container.innerHTML = articles.map(a => {
-      const title = (a.titles && a.titles[LANG]) || a.title || '(Ingen tittel)';
-      const summary = (a.summaries && a.summaries[LANG]) || '';
+      const title = a.title || '(Ingen tittel)';
+      const summary = a.summary || '';
       const scopeCls = a.scope === 'cermaq' ? 'scope-cermaq' : 'scope-industry';
       const scopeLabel = a.scope === 'cermaq' ? 'Cermaq' : 'Bransje';
-      const pub = a.published_at ? new Date(a.published_at).toLocaleDateString('no-NO', { day:'2-digit', month:'short', year:'numeric' }) : '';
-      return `<div class="news-item">
-        <a href="${a.url}" target="_blank" rel="noopener" class="news-title">${title}</a>
-        <div class="news-meta">
-          <span class="scope-badge ${scopeCls}">${scopeLabel}</span>
-          ${a.source_name ? `<span>${a.source_name}</span>` : ''}
-          ${pub ? `<span>${pub}</span>` : ''}
+      const timestamp = relativeTime(a.published_at || a.fetched_at);
+      return `<a href="${a.url}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;">
+        <div class="news-item">
+          <div class="news-title">${title}</div>
+          <div class="news-meta">
+            <span class="scope-badge ${scopeCls}">${scopeLabel}</span>
+            ${a.source_name ? `<span>${a.source_name}</span>` : ''}
+            ${timestamp ? `<span>•</span><span class="news-timestamp">${timestamp}</span>` : ''}
+            ${a.tone ? `<span>•</span><span>${a.tone}</span>` : ''}
+          </div>
+          ${summary ? `<div class="news-summary">${summary}</div>` : ''}
         </div>
-        ${summary ? `<div class="news-summary">${summary}</div>` : ''}
-      </div>`;
+      </a>`;
     }).join('');
   } catch (e) { container.innerHTML = '<div class="news-loading">Feil ved lasting av nyheter.</div>'; }
 }
