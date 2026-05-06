@@ -1211,53 +1211,184 @@ _finance_digest_cache: dict = {}  # lang -> {'content': ..., 'generated_at': ...
 _finance_digest_lock = threading.Lock()
 
 
-def _generate_finance_digest_all() -> None:
-    """Fetch FX rates + stocks and generate AI finance digest for all languages."""
-    from poc.finance import fetch_norges_bank_rates, fetch_all_stocks
-    import anthropic as _anthropic
+def _send_slack_notification(message: str) -> None:
+    """Post a message to Slack via incoming webhook if SLACK_WEBHOOK_URL is set."""
+    url = os.environ.get("SLACK_WEBHOOK_URL")
+    if not url:
+        return
+    try:
+        import requests as _req
+        _req.post(url, json={"text": message}, timeout=5)
+        log.info("Slack-varsling sendt")
+    except Exception as exc:
+        log.warning("Slack-varsling feilet: %s", exc)
+
+
+def _build_finance_context() -> dict:
+    """Collect all live finance data for enriched digest prompt. Returns context dict."""
+    from poc.finance import fetch_norges_bank_rates, fetch_all_stocks, fetch_commodities
 
     rates = fetch_norges_bank_rates() or {}
     stocks = fetch_all_stocks() or {}
+    commodities = fetch_commodities() or {}
+
+    # Latest salmon prices from DB (most recent record per source)
+    salmon: dict = {}
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                for src in ("fish_pool", "nasdaq"):
+                    row = (
+                        session.query(SalmonPrice)
+                        .filter_by(source=src)
+                        .order_by(SalmonPrice.fetched_at.desc())
+                        .first()
+                    )
+                    if row:
+                        salmon[src] = row.price_data
+        except Exception as exc:
+            log.warning("_build_finance_context: salmon DB feil: %s", exc)
+
+    # Recent Cermaq + industry articles (last 48 h)
+    recent_articles: list = []
+    if is_db_available():
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(hours=48)
+            from sqlalchemy import func as _func
+            with SessionLocal() as session:
+                rows = (
+                    session.query(Article)
+                    .filter(
+                        Article.classified_at.isnot(None),
+                        Article.scope.in_(("cermaq", "industry")),
+                        _func.coalesce(Article.published_at, Article.fetched_at) >= cutoff,
+                    )
+                    .order_by(
+                        Article.relevance.desc(),
+                        _func.coalesce(Article.published_at, Article.fetched_at).desc(),
+                    )
+                    .limit(12)
+                    .all()
+                )
+                for a in rows:
+                    summary = (a.summaries or {}).get("no") or (a.summaries or {}).get("en") or ""
+                    recent_articles.append({
+                        "title": a.title,
+                        "scope": a.scope,
+                        "tone": a.tone,
+                        "source": a.source_name,
+                        "summary": summary[:200],
+                    })
+        except Exception as exc:
+            log.warning("_build_finance_context: article DB feil: %s", exc)
+
+    return {
+        "rates": rates,
+        "stocks": stocks,
+        "commodities": commodities,
+        "salmon": salmon,
+        "articles": recent_articles,
+    }
+
+
+def _format_finance_context_no(ctx: dict) -> str:
+    """Format finance context as Norwegian text block for AI prompt."""
+    parts = []
+
+    if ctx.get("rates"):
+        lines = [
+            f"  {cur}: {v['rate']} NOK (endring: {v.get('change_pct', 'N/A')}%)"
+            for cur, v in ctx["rates"].items()
+        ]
+        parts.append("Valutakurser (NOK):\n" + "\n".join(lines))
+
+    if ctx.get("salmon"):
+        salmon_lines = []
+        fp = ctx["salmon"].get("fish_pool")
+        if fp and fp.get("forward_prices"):
+            p0 = fp["forward_prices"][0]
+            salmon_lines.append(f"  Fish Pool nærmeste termin ({p0.get('period','')}): {p0.get('price','?')} NOK/kg")
+        ns = ctx["salmon"].get("nasdaq")
+        if ns and ns.get("spot_price"):
+            salmon_lines.append(f"  Nasdaq Salmon spot: {ns['spot_price']} NOK/kg")
+        if salmon_lines:
+            parts.append("Lakseprisindekser:\n" + "\n".join(salmon_lines))
+
+    if ctx.get("commodities"):
+        lines = [
+            f"  {name}: {v.get('price','?')} {v.get('commodity_currency','')} (1d: {v.get('change_1d','?')}%)"
+            for name, v in ctx["commodities"].items()
+        ]
+        parts.append("Råvarer (fôrinput):\n" + "\n".join(lines))
+
+    if ctx.get("stocks"):
+        lines = [
+            f"  {name}: {v.get('price','?')} NOK (1d: {v.get('change_1d','?')}%, 30d: {v.get('change_30d','?')}%)"
+            for name, v in ctx["stocks"].items()
+        ]
+        parts.append("Konkurrentaksjer:\n" + "\n".join(lines))
+
+    if ctx.get("articles"):
+        news_lines = []
+        for a in ctx["articles"][:8]:
+            scope_tag = "[CERMAQ]" if a["scope"] == "cermaq" else "[Bransje]"
+            tone_tag = f"[{a.get('tone','?')}]"
+            news_lines.append(f"  {scope_tag}{tone_tag} {a['title'][:120]}")
+        parts.append("Siste nyheter (48t):\n" + "\n".join(news_lines))
+
+    return "\n\n".join(parts)
+
+
+def _generate_finance_digest_all() -> None:
+    """Fetch all finance data and generate enriched AI digest for all languages."""
+    import anthropic as _anthropic
+
+    ctx = _build_finance_context()
+    rates = ctx["rates"]
+    stocks = ctx["stocks"]
 
     if not rates and not stocks:
         log.warning("Finance digest: ingen data tilgjengelig")
         return
 
-    rates_text = "\n".join(
-        f"  {cur}: {v['rate']} NOK (endring: {v.get('change_pct', 'N/A')}%, dato: {v.get('date', '?')})"
-        for cur, v in rates.items()
-    )
-    stocks_text = "\n".join(
-        f"  {name}: {v['price']} {v.get('currency','NOK')} "
-        f"(1d: {v.get('change_1d','?')}%, 7d: {v.get('change_7d','?')}%, 30d: {v.get('change_30d','?')}%)"
-        for name, v in stocks.items()
+    context_no = _format_finance_context_no(ctx)
+
+    system_instruction = (
+        "Du er senioranalytiker for Cermaq ASA, et globalt lakseoppdrettsselskap eid av Mitsubishi "
+        "Corporation med virksomhet i Norge, Chile og Canada. Du skriver en daglig markedsbrief til "
+        "Cermaqs ledergruppe. Analysen skal:\n"
+        "1. Binde sammen laksepris, valuta, råvarer og bransjenytt til ett helhetlig bilde\n"
+        "2. Konkretisere konsekvenser for Cermaqs tre regioner (Norge, Chile, Canada)\n"
+        "3. Fremheve det viktigste Cermaq må følge med på de neste 24 timene\n"
+        "Vær presis, analytisk og handlingsorientert. IKKE gjenta tallene fra dataene — tolke dem. "
+        "Maks 6 setninger."
     )
 
     prompts = {
-        "no": (
-            "Du er finansanalytiker for Cermaq. Lag en kort, skarp markedskommentar (4–6 setninger) "
-            "basert på dagens valutakurser og konkurrentaksjekurser. Fokuser på hva som er relevant "
-            "for en norsk lakseoppdretters økonomi og strategi. Ikke gjenta tallene — tolke dem.\n\n"
-            f"Valutakurser (NOK per enhet):\n{rates_text}\n\nKonkurrentaksjer:\n{stocks_text}"
-        ),
+        "no": f"{system_instruction}\n\nMarkedsdata:\n{context_no}",
         "en": (
-            "You are a financial analyst for Cermaq. Write a short, sharp market commentary (4–6 sentences) "
-            "based on today's exchange rates and competitor stock prices. Focus on what is relevant "
-            "for a Norwegian salmon farmer's economics and strategy. Do not repeat the numbers — interpret them.\n\n"
-            f"Exchange rates (NOK per unit):\n{rates_text}\n\nCompetitor stocks:\n{stocks_text}"
+            "You are a senior analyst for Cermaq ASA, a global salmon farming company owned by Mitsubishi "
+            "Corporation with operations in Norway, Chile and Canada. Write a daily market brief (max 6 sentences) "
+            "for Cermaq's leadership team that: 1) synthesises salmon price, FX, feed commodities and industry news; "
+            "2) spells out consequences for Cermaq's three regions; 3) highlights the single most important "
+            "development to monitor in the next 24 hours. Do NOT repeat the numbers — interpret them.\n\n"
+            f"Market data:\n{context_no}"
         ),
         "es": (
-            "Eres analista financiero de Cermaq. Escribe un breve comentario de mercado (4–6 oraciones) "
-            "basado en los tipos de cambio y precios de acciones de competidores de hoy. Enfócate en lo "
-            "relevante para la economía y estrategia de un productor noruego de salmón. No repitas los "
+            "Eres analista senior de Cermaq ASA, una empresa global de acuicultura de salmón propiedad de "
+            "Mitsubishi Corporation con operaciones en Noruega, Chile y Canadá. Escribe un briefing diario de "
+            "mercado (máx. 6 oraciones) para el equipo directivo de Cermaq que: 1) sintetice precio del salmón, "
+            "divisas, materias primas y noticias del sector; 2) explique consecuencias para las tres regiones de "
+            "Cermaq; 3) destaque el desarrollo más importante a vigilar en las próximas 24 horas. NO repitas los "
             "números — interprételos.\n\n"
-            f"Tipos de cambio (NOK por unidad):\n{rates_text}\n\nAcciones de competidores:\n{stocks_text}"
+            f"Datos de mercado:\n{context_no}"
         ),
         "ja": (
-            "あなたはCermaqのファイナリスト分析担当者です。今日の為替レートと競合他社の株価に基づき、"
-            "簡潔な市場コメント（4〜6文）を作成してください。ノルウェーのサーモン養殖業者の経済と戦略に"
-            "関連する内容に絞ってください。数字を繰り返すのではなく、解釈してください。\n\n"
-            f"為替レート（NOK/単位）:\n{rates_text}\n\n競合他社株価:\n{stocks_text}"
+            "あなたはCermaq ASAのシニアアナリストです。CermaqはMitsubishi Corporationが所有するグローバルなサーモン養殖企業で、"
+            "ノルウェー、チリ、カナダで事業を展開しています。Cermaqの経営陣向けに日次市場ブリーフ（最大6文）を作成してください。"
+            "内容：1）サーモン価格・為替・飼料原料・業界ニュースを統合、2）Cermaqの3地域への影響を明示、"
+            "3）今後24時間で最も重要な動向を強調。数字を繰り返すのではなく、解釈してください。\n\n"
+            f"市場データ:\n{context_no}"
         ),
     }
 
@@ -1272,8 +1403,8 @@ def _generate_finance_digest_all() -> None:
         try:
             response = client.messages.create(
                 model="claude-haiku-4-5",
-                max_tokens=400,
-                temperature=0.3,
+                max_tokens=600,
+                temperature=0.2,
                 messages=[{"role": "user", "content": prompt}],
             )
             text = "".join(b.text for b in response.content if getattr(b, "type", "") == "text")
@@ -1312,8 +1443,8 @@ def _generate_finance_digest_all() -> None:
 # ---------------------------------------------------------------------------
 
 def _fetch_and_persist_salmon_prices() -> None:
-    """Fetch all salmon price indices and persist to DB."""
-    from poc.finance import fetch_all_salmon_prices
+    """Fetch all salmon price indices, persist to DB, then run anomaly detection."""
+    from poc.finance import fetch_all_salmon_prices, fetch_norges_bank_rates, detect_anomalies
     prices = fetch_all_salmon_prices()
     if not is_db_available():
         return
@@ -1329,6 +1460,40 @@ def _fetch_and_persist_salmon_prices() -> None:
             log.info("SalmonPrice persistert: source=%s", source_key)
         except Exception as exc:
             log.warning("SalmonPrice persist feilet source=%s: %s", source_key, exc)
+
+    # Anomaly detection after each price fetch
+    try:
+        latest_rates = fetch_norges_bank_rates()
+        latest_salmon = prices.get("nasdaq")
+
+        # Fetch 30-day salmon history for sigma calculation
+        history_salmon = []
+        if is_db_available():
+            cutoff30 = now - timedelta(days=30)
+            with SessionLocal() as session:
+                rows = (
+                    session.query(SalmonPrice)
+                    .filter(SalmonPrice.source == "nasdaq", SalmonPrice.fetched_at >= cutoff30)
+                    .order_by(SalmonPrice.fetched_at)
+                    .all()
+                )
+                history_salmon = [r.price_data for r in rows if r.price_data]
+
+        anomalies = detect_anomalies(
+            latest_rates=latest_rates,
+            latest_salmon=latest_salmon,
+            history_salmon=history_salmon,
+        )
+        for anomaly in anomalies:
+            if anomaly.get("severity") in ("high", "medium"):
+                msg = (
+                    f"⚠️ *Cermaq Watch Avvik*: {anomaly['description']} "
+                    f"(z={anomaly.get('z_score', 'N/A')}, verdi={anomaly['value']})"
+                )
+                log.warning("ANOMALI DETEKTERT: %s", anomaly["description"])
+                _send_slack_notification(msg)
+    except Exception as exc:
+        log.warning("Anomali-deteksjon feilet: %s", exc)
 
 
 def _next_salmon_fetch_time() -> datetime:
@@ -2830,6 +2995,268 @@ def api_finance_stocks_timeseries():
         if hist:
             result[name] = {"dates": hist["dates"], "prices": hist["prices"], "ticker": ticker}
     return jsonify(result)
+
+
+@app.route("/api/finance/scenarios")
+def api_finance_scenarios():
+    """Compute what-if margin scenarios for Cermaq based on current market data."""
+    from poc.finance import fetch_norges_bank_rates, compute_scenarios
+
+    rates = fetch_norges_bank_rates() or {}
+
+    # Get latest salmon spot from DB
+    salmon_spot: float | None = None
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                row = (
+                    session.query(SalmonPrice)
+                    .filter_by(source="nasdaq")
+                    .order_by(SalmonPrice.fetched_at.desc())
+                    .first()
+                )
+                if row and row.price_data:
+                    salmon_spot = row.price_data.get("spot_price")
+        except Exception as exc:
+            log.warning("api_finance_scenarios: DB feil: %s", exc)
+
+    # Get latest commodities
+    commodities: dict = {}
+    try:
+        from poc.finance import fetch_commodities
+        commodities = fetch_commodities()
+    except Exception:
+        pass
+
+    result = compute_scenarios(salmon_spot, rates, commodities)
+    return jsonify(result)
+
+
+@app.route("/api/finance/anomalies")
+def api_finance_anomalies():
+    """Run anomaly detection against latest data and return results."""
+    from poc.finance import fetch_norges_bank_rates, detect_anomalies
+
+    latest_rates = fetch_norges_bank_rates()
+
+    history_salmon: list = []
+    latest_salmon = None
+    if is_db_available():
+        try:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+            with SessionLocal() as session:
+                rows = (
+                    session.query(SalmonPrice)
+                    .filter(SalmonPrice.source == "nasdaq", SalmonPrice.fetched_at >= cutoff)
+                    .order_by(SalmonPrice.fetched_at)
+                    .all()
+                )
+                history_salmon = [r.price_data for r in rows if r.price_data]
+                if history_salmon:
+                    latest_salmon = history_salmon[-1]
+        except Exception as exc:
+            log.warning("api_finance_anomalies: DB feil: %s", exc)
+
+    anomalies = detect_anomalies(
+        latest_rates=latest_rates,
+        latest_salmon=latest_salmon,
+        history_salmon=history_salmon,
+    )
+    return jsonify({
+        "anomalies": anomalies,
+        "count": len(anomalies),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
+    })
+
+
+# Shares outstanding (approximate, used for market cap estimation)
+_SHARES_OUTSTANDING_M = {
+    "Mowi": 475,
+    "SalMar": 114,
+    "Grieg Seafood": 116,
+    "Bakkafrost": 65,
+    "Lerøy": 593,
+}
+
+
+@app.route("/api/finance/market-cap")
+def api_finance_market_cap():
+    """Return estimated market cap for competitor companies (price × shares)."""
+    from poc.finance import fetch_all_stocks
+    stocks = fetch_all_stocks()
+    result = {}
+    for name, data in stocks.items():
+        shares_m = _SHARES_OUTSTANDING_M.get(name)
+        price = data.get("price")
+        if shares_m and price:
+            result[name] = {
+                "price": price,
+                "currency": data.get("currency", "NOK"),
+                "shares_million": shares_m,
+                "market_cap_bnok": round(price * shares_m / 1000, 2),
+                "change_1d": data.get("change_1d"),
+                "change_30d": data.get("change_30d"),
+                "ticker": data.get("ticker"),
+            }
+    return jsonify(result)
+
+
+@app.route("/api/finance/correlation")
+def api_finance_correlation():
+    """Compute Pearson correlation between weekly Cermaq article count and salmon spot price."""
+    import math
+    if not is_db_available():
+        return jsonify({"error": "Database utilgjengelig"}), 503
+
+    weeks = min(int(request.args.get("weeks", 26)), 52)
+    cutoff = datetime.now(timezone.utc) - timedelta(weeks=weeks)
+
+    try:
+        with SessionLocal() as session:
+            # Weekly Cermaq article counts
+            cermaq_rows = (
+                session.query(Article)
+                .filter(
+                    Article.classified_at.isnot(None),
+                    Article.scope == "cermaq",
+                    Article.published_at >= cutoff,
+                )
+                .order_by(Article.published_at)
+                .all()
+            )
+
+            # Weekly salmon prices
+            salmon_rows = (
+                session.query(SalmonPrice)
+                .filter(SalmonPrice.source == "nasdaq", SalmonPrice.fetched_at >= cutoff)
+                .order_by(SalmonPrice.fetched_at)
+                .all()
+            )
+
+        # Bucket both into ISO weeks
+        from collections import defaultdict
+        article_by_week: dict = defaultdict(int)
+        for a in cermaq_rows:
+            if a.published_at:
+                wk = a.published_at.isocalendar()[:2]
+                article_by_week[wk] += 1
+
+        salmon_by_week: dict = {}
+        for r in salmon_rows:
+            if r.fetched_at and r.price_data and r.price_data.get("spot_price"):
+                wk = r.fetched_at.isocalendar()[:2]
+                salmon_by_week[wk] = r.price_data["spot_price"]
+
+        common_weeks = sorted(set(article_by_week) & set(salmon_by_week))
+        if len(common_weeks) < 4:
+            return jsonify({
+                "r": None,
+                "n": len(common_weeks),
+                "message": "For lite data til å beregne korrelasjon (< 4 uker)",
+                "series": [],
+            })
+
+        xs = [article_by_week[w] for w in common_weeks]
+        ys = [salmon_by_week[w] for w in common_weeks]
+        n = len(xs)
+        mean_x = sum(xs) / n
+        mean_y = sum(ys) / n
+        cov = sum((xs[i] - mean_x) * (ys[i] - mean_y) for i in range(n)) / n
+        std_x = math.sqrt(sum((x - mean_x) ** 2 for x in xs) / n)
+        std_y = math.sqrt(sum((y - mean_y) ** 2 for y in ys) / n)
+        r = round(cov / (std_x * std_y), 3) if std_x > 0 and std_y > 0 else None
+
+        return jsonify({
+            "r": r,
+            "n": n,
+            "interpretation": (
+                "Sterk positiv" if r and r > 0.6 else
+                "Moderat positiv" if r and r > 0.3 else
+                "Sterk negativ" if r and r < -0.6 else
+                "Moderat negativ" if r and r < -0.3 else
+                "Svak/ingen"
+            ),
+            "series": [
+                {
+                    "week": f"{w[0]}-W{w[1]:02d}",
+                    "articles": article_by_week[w],
+                    "salmon_price": salmon_by_week[w],
+                }
+                for w in common_weeks
+            ],
+        })
+    except Exception as exc:
+        log.error("api_finance_correlation feilet: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/api/finance/export/csv")
+def api_finance_export_csv():
+    """Export all current finance data as CSV download."""
+    import csv
+    import io
+    from poc.finance import fetch_norges_bank_rates, fetch_all_stocks, fetch_commodities
+
+    rates = fetch_norges_bank_rates() or {}
+    stocks = fetch_all_stocks() or {}
+    commodities = fetch_commodities() or {}
+
+    # Latest salmon prices
+    salmon: dict = {}
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                for src in ("fish_pool", "nasdaq"):
+                    row = (
+                        session.query(SalmonPrice)
+                        .filter_by(source=src)
+                        .order_by(SalmonPrice.fetched_at.desc())
+                        .first()
+                    )
+                    if row and row.price_data:
+                        salmon[src] = row.price_data
+        except Exception:
+            pass
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    now_str = datetime.now(ZoneInfo("Europe/Oslo")).strftime("%Y-%m-%d %H:%M")
+
+    writer.writerow([f"Cermaq Watch — Finansdata eksportert {now_str} Oslo-tid"])
+    writer.writerow([])
+
+    writer.writerow(["VALUTAKURSER", "Kurs (NOK)", "Endring %", "Dato"])
+    for cur, v in rates.items():
+        writer.writerow([cur, v.get("rate"), v.get("change_pct"), v.get("date")])
+    writer.writerow([])
+
+    writer.writerow(["KONKURRENTAKSJER", "Kurs", "Valuta", "1D %", "7D %", "30D %", "Ticker"])
+    for name, v in stocks.items():
+        writer.writerow([name, v.get("price"), v.get("currency"), v.get("change_1d"), v.get("change_7d"), v.get("change_30d"), v.get("ticker")])
+    writer.writerow([])
+
+    writer.writerow(["RÅVARER", "Kurs", "Enhet", "1D %", "7D %", "Ticker"])
+    for name, v in commodities.items():
+        writer.writerow([name, v.get("price"), v.get("commodity_currency"), v.get("change_1d"), v.get("change_7d"), v.get("ticker")])
+    writer.writerow([])
+
+    writer.writerow(["LAKSEPRISINDEKSER", "Kilde", "Pris (NOK/kg)", "Info"])
+    ns = salmon.get("nasdaq")
+    if ns:
+        writer.writerow(["Nasdaq Salmon Index", "nasdaq", ns.get("spot_price"), f"Uke {ns.get('week','')}"])
+    fp = salmon.get("fish_pool")
+    if fp and fp.get("forward_prices"):
+        for fwp in fp["forward_prices"]:
+            writer.writerow(["Fish Pool", f"termin {fwp.get('period')}", fwp.get("price"), "NOK/kg"])
+
+    csv_bytes = buf.getvalue().encode("utf-8-sig")  # BOM for Excel compatibility
+    from flask import Response
+    filename = f"cermaq-finans-{datetime.now().strftime('%Y%m%d')}.csv"
+    return Response(
+        csv_bytes,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 @app.route("/healthz")

@@ -505,6 +505,197 @@ def fetch_urner_barry() -> Optional[Dict]:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Scenario computation
+# ---------------------------------------------------------------------------
+
+# Cermaq operational constants (approximate, for directional analysis)
+_CERMAQ_FCR = 1.15            # kg feed per kg fish
+_CERMAQ_FEED_COST_SHARE = 0.50  # feed as fraction of total production cost
+_CERMAQ_SOYA_INCLUSION = 0.25  # soya/soyamel as fraction of feed weight
+_CERMAQ_EXPORT_USD_SHARE = 0.20  # fraction of revenue in USD
+_CERMAQ_EXPORT_EUR_SHARE = 0.45  # fraction of revenue in EUR
+_CERMAQ_CHILE_COST_CLP_SHARE = 0.30  # fraction of total cost in CLP
+
+
+def compute_scenarios(
+    salmon_spot: Optional[float],
+    rates: Optional[Dict],
+    commodities: Optional[Dict],
+) -> Dict:
+    """Compute directional what-if scenarios for Cermaq's margin.
+
+    All impacts are expressed as approximate NOK/kg produced.
+    """
+    scenarios = []
+    base_price = salmon_spot or 0.0
+    nok_usd = (rates or {}).get("USD", {}).get("rate", 10.5)
+    nok_eur = (rates or {}).get("EUR", {}).get("rate", 11.5)
+    nok_clp = (rates or {}).get("CLP", {}).get("rate", 0.012)
+
+    # Soya price in USD/bushel → rough NOK/kg feed conversion
+    soya_usd_bu = (commodities or {}).get("Soya", {}).get("price")
+    soyamel_usd_ton = (commodities or {}).get("Soyamel", {}).get("price")
+
+    def _fmt(nok_kg: float) -> str:
+        sign = "+" if nok_kg >= 0 else ""
+        return f"{sign}{nok_kg:.2f} NOK/kg"
+
+    # Scenario 1: salmon price ±10%
+    for delta_pct, label in [(+10, "Laksepris +10%"), (-10, "Laksepris −10%")]:
+        impact = base_price * delta_pct / 100
+        scenarios.append({
+            "label": label,
+            "impact_nok_kg": round(impact, 2),
+            "impact_fmt": _fmt(impact),
+            "type": "price",
+            "positive": delta_pct > 0,
+        })
+
+    # Scenario 2: NOK weakens 5% vs USD (exporters benefit)
+    impact_nok_weak_usd = base_price * _CERMAQ_EXPORT_USD_SHARE * 0.05
+    scenarios.append({
+        "label": "NOK svekkes 5% mot USD",
+        "impact_nok_kg": round(impact_nok_weak_usd, 2),
+        "impact_fmt": _fmt(impact_nok_weak_usd),
+        "type": "fx",
+        "positive": True,
+        "note": "Mer NOK per USD salg",
+    })
+
+    # Scenario 3: NOK strengthens 5% vs USD
+    impact_nok_strong_usd = -base_price * _CERMAQ_EXPORT_USD_SHARE * 0.05
+    scenarios.append({
+        "label": "NOK styrkes 5% mot USD",
+        "impact_nok_kg": round(impact_nok_strong_usd, 2),
+        "impact_fmt": _fmt(impact_nok_strong_usd),
+        "type": "fx",
+        "positive": False,
+        "note": "Mindre NOK per USD salg",
+    })
+
+    # Scenario 4: NOK weakens 5% vs CLP (Chile costs up in NOK terms)
+    if base_price > 0:
+        chile_cost_nok = base_price * _CERMAQ_CHILE_COST_CLP_SHARE
+        impact_clp = -chile_cost_nok * 0.05
+        scenarios.append({
+            "label": "NOK svekkes 5% mot CLP",
+            "impact_nok_kg": round(impact_clp, 2),
+            "impact_fmt": _fmt(impact_clp),
+            "type": "fx",
+            "positive": False,
+            "note": "Chile-kostnader øker i NOK",
+        })
+
+    # Scenario 5: Feed input +10% (soya/soyamel)
+    if base_price > 0:
+        feed_cost_per_kg = base_price * _CERMAQ_FEED_COST_SHARE
+        impact_feed = -feed_cost_per_kg * _CERMAQ_SOYA_INCLUSION * 0.10
+        scenarios.append({
+            "label": "Soya/Soyamel +10%",
+            "impact_nok_kg": round(impact_feed, 2),
+            "impact_fmt": _fmt(impact_feed),
+            "type": "input",
+            "positive": False,
+            "note": f"FCR {_CERMAQ_FCR}, {int(_CERMAQ_SOYA_INCLUSION*100)}% soyainklusjon",
+        })
+
+    return {
+        "base_salmon_price": base_price,
+        "scenarios": scenarios,
+        "disclaimer": "Indikative retningsberegninger basert på offentlige forutsetninger. Ikke offisielle Cermaq-tall.",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Anomaly detection
+# ---------------------------------------------------------------------------
+
+def detect_anomalies(
+    latest_rates: Optional[Dict],
+    latest_salmon: Optional[Dict],
+    history_rates: Optional[List[Dict]] = None,
+    history_salmon: Optional[List[Dict]] = None,
+) -> List[Dict]:
+    """Detect >2σ movements in key financial indicators.
+
+    Returns list of anomaly dicts with keys:
+      source, metric, value, mean, std, z_score, description
+    """
+    import math
+    anomalies = []
+
+    def _check_series(label: str, values: List[float]) -> Optional[Dict]:
+        if len(values) < 5:
+            return None
+        history = values[:-1]
+        latest = values[-1]
+        mean = sum(history) / len(history)
+        variance = sum((x - mean) ** 2 for x in history) / len(history)
+        std = math.sqrt(variance)
+        if std < 1e-6:
+            return None
+        z = (latest - mean) / std
+        if abs(z) >= 2.0:
+            direction = "opp" if z > 0 else "ned"
+            return {
+                "source": label,
+                "value": round(latest, 4),
+                "mean": round(mean, 4),
+                "std": round(std, 4),
+                "z_score": round(z, 2),
+                "direction": direction,
+                "description": f"{label} bevegde seg {direction} {abs(z):.1f}σ fra 30-dagers snitt",
+                "severity": "high" if abs(z) >= 3.0 else "medium",
+            }
+        return None
+
+    # Check FX rates
+    if latest_rates and history_rates:
+        for cur in ["USD", "EUR", "CLP"]:
+            rates_series = [r.get(cur, {}).get("rate") for r in history_rates if r.get(cur, {}).get("rate")]
+            if latest_rates.get(cur, {}).get("rate"):
+                rates_series.append(latest_rates[cur]["rate"])
+            anomaly = _check_series(f"NOK/{cur}", rates_series)
+            if anomaly:
+                anomalies.append(anomaly)
+
+    # Check 1-day change in rates as a simpler proxy when no history available
+    if latest_rates and not history_rates:
+        for cur, v in latest_rates.items():
+            chg = v.get("change_pct")
+            if chg is not None and abs(chg) >= 2.0:
+                anomalies.append({
+                    "source": f"NOK/{cur}",
+                    "value": v["rate"],
+                    "z_score": None,
+                    "direction": "opp" if chg > 0 else "ned",
+                    "description": f"NOK/{cur} endret seg {chg:+.2f}% siden siste bankdag",
+                    "severity": "high" if abs(chg) >= 3.0 else "medium",
+                })
+
+    # Check salmon spot price 1-day move (if we have current + previous)
+    if latest_salmon and history_salmon and len(history_salmon) >= 2:
+        nasdaq_series = [
+            row.get("spot_price")
+            for row in history_salmon
+            if row.get("spot_price") is not None
+        ]
+        if latest_salmon.get("spot_price"):
+            nasdaq_series.append(latest_salmon["spot_price"])
+        anomaly = _check_series("Nasdaq Salmon Index", nasdaq_series)
+        if anomaly:
+            anomalies.append(anomaly)
+
+    log.info(
+        "Avvik-deteksjon: %d avvik funnet (sjekket FX=%s, laks=%s)",
+        len(anomalies),
+        bool(latest_rates),
+        bool(latest_salmon),
+    )
+    return anomalies
+
+
 def fetch_all_salmon_prices() -> Dict:
     """Fetch all available salmon price indices."""
     result: Dict = {}

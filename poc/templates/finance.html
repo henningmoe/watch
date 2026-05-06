@@ -172,9 +172,42 @@
     .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 4px; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
+    /* Anomaly banner */
+    .anomaly-banner { display: none; background: #fef2f2; border: 1px solid #fca5a5; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; }
+    .anomaly-banner.visible { display: flex; align-items: flex-start; gap: 10px; }
+    .anomaly-icon { color: var(--red); flex-shrink: 0; margin-top: 1px; }
+    .anomaly-title { font-size: 12px; font-weight: 700; color: #991b1b; margin-bottom: 4px; }
+    .anomaly-items { list-style: none; padding: 0; margin: 0; }
+    .anomaly-items li { font-size: 12px; color: #7f1d1d; padding: 2px 0; }
+    .anomaly-items li::before { content: "⚠ "; }
+
+    /* Scenarios widget */
+    .scenarios-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    .scenario-card { border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; background: #fff; }
+    .scenario-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; font-weight: 500; }
+    .scenario-impact { font-size: 18px; font-weight: 700; }
+    .scenario-impact.pos { color: var(--green); }
+    .scenario-impact.neg { color: var(--red); }
+    .scenario-note { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .scenarios-disclaimer { font-size: 10px; color: var(--text-muted); margin-top: 10px; font-style: italic; }
+
+    /* Export row */
+    .export-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 32px; }
+    .export-btn { font-size: 12px; padding: 7px 14px; border-radius: 6px; border: 1px solid var(--border); background: #fff; cursor: pointer; color: var(--text-secondary); text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .export-btn:hover { background: #f9fafb; border-color: var(--aqua); color: var(--aqua); }
+
     @media (max-width: 1100px) { .charts-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) { .salmon-grid { grid-template-columns: 1fr; } }
     @media (max-width: 768px) { .sidebar { display: none; } .currency-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    @media print {
+      .sidebar, .topbar, .export-row, .topbar-refresh, .lang-switcher { display: none !important; }
+      .app-outer, .app-container { box-shadow: none; }
+      .main-content { padding: 0; }
+      .content-area { padding: 16px; }
+      .section-block, .finance-card { break-inside: avoid; }
+      body { font-size: 11px; }
+    }
   </style>
 </head>
 <body>
@@ -258,6 +291,32 @@
 
     <div class="content-area">
 
+      <!-- Anomaly banner (hidden until anomalies found) -->
+      <div class="anomaly-banner" id="anomaly-banner">
+        <div class="anomaly-icon">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div>
+          <div class="anomaly-title">Uvanlige markedsbevegelser detektert</div>
+          <ul class="anomaly-items" id="anomaly-items"></ul>
+        </div>
+      </div>
+
+      <!-- Export row -->
+      <div class="export-row">
+        <a href="/api/finance/export/csv" class="export-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Last ned CSV
+        </a>
+        <button class="export-btn" onclick="window.print()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Skriv ut / PDF
+        </button>
+      </div>
+
       <!-- Lakseprisindekser -->
       <div class="section-block">
         <div class="section-header">
@@ -318,6 +377,18 @@
         </div>
       </div>
 
+      <!-- Hva-om scenarier -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Hva betyr dette for Cermaq?</span>
+          <span class="section-subtitle">Direktionale marginscenarior — NOK/kg estimert</span>
+        </div>
+        <div class="scenarios-grid" id="scenarios-grid">
+          <div style="grid-column:1/-1;color:var(--text-muted);font-size:13px;font-style:italic;">Laster scenarier…</div>
+        </div>
+        <div class="scenarios-disclaimer" id="scenarios-disclaimer"></div>
+      </div>
+
       <!-- Råvarer -->
       <div class="section-block">
         <div class="section-header">
@@ -363,6 +434,20 @@
               <div class="chart-loading" id="chart-stocks-msg">Laster aksjedata…</div>
               <canvas id="chart-stocks" style="display:none;"></canvas>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Markedsverdi -->
+      <div class="section-block">
+        <div class="section-header">
+          <span class="section-title">Markedsverdi — konkurrenter</span>
+          <span class="section-subtitle">Estimert fra aksjekurs × antall aksjer</span>
+        </div>
+        <div class="finance-card">
+          <div class="chart-container" id="chart-mktcap-wrap">
+            <div class="chart-loading" id="chart-mktcap-msg">Laster markedsverdi…</div>
+            <canvas id="chart-mktcap" style="display:none;"></canvas>
           </div>
         </div>
       </div>
@@ -444,6 +529,97 @@ function fmtEventDate(iso) {
     mon: d.toLocaleString('no-NO', { month:'short' }),
     time: d.toLocaleTimeString('no-NO', { hour:'2-digit', minute:'2-digit' }),
   };
+}
+
+// ---------- anomaly check ----------
+async function loadAnomalies() {
+  try {
+    const r = await fetch('/api/finance/anomalies');
+    if (!r.ok) return;
+    const data = await r.json();
+    const anomalies = (data.anomalies || []).filter(a => a.severity === 'high' || a.severity === 'medium');
+    if (!anomalies.length) return;
+    const banner = document.getElementById('anomaly-banner');
+    const list = document.getElementById('anomaly-items');
+    list.innerHTML = anomalies.map(a => `<li>${a.description}</li>`).join('');
+    banner.classList.add('visible');
+  } catch (e) { /* silent */ }
+}
+
+// ---------- scenarios ----------
+async function loadScenarios() {
+  const grid = document.getElementById('scenarios-grid');
+  try {
+    const r = await fetch('/api/finance/scenarios');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const scenarios = data.scenarios || [];
+    if (!scenarios.length) { grid.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Ingen scenariodata tilgjengelig.</div>'; return; }
+    grid.innerHTML = scenarios.map(s => {
+      const cls = s.positive ? 'pos' : 'neg';
+      return `<div class="scenario-card">
+        <div class="scenario-label">${s.label}</div>
+        <div class="scenario-impact ${cls}">${s.impact_fmt}</div>
+        ${s.note ? `<div class="scenario-note">${s.note}</div>` : ''}
+      </div>`;
+    }).join('');
+    if (data.disclaimer) {
+      document.getElementById('scenarios-disclaimer').textContent = data.disclaimer;
+    }
+  } catch (e) { grid.innerHTML = '<div style="color:var(--text-muted);font-size:13px;font-style:italic;">Feil ved henting av scenarier.</div>'; }
+}
+
+// ---------- market cap chart ----------
+let chartMktCap = null;
+async function loadMarketCap() {
+  const msg = document.getElementById('chart-mktcap-msg');
+  const canvas = document.getElementById('chart-mktcap');
+  try {
+    const r = await fetch('/api/finance/market-cap');
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    const entries = Object.entries(data).sort((a, b) => b[1].market_cap_bnok - a[1].market_cap_bnok);
+    if (!entries.length) { msg.textContent = 'Ingen markedsverdidata.'; return; }
+    if (chartMktCap) chartMktCap.destroy();
+    const labels = entries.map(([n]) => n);
+    const caps = entries.map(([,v]) => v.market_cap_bnok);
+    const changes = entries.map(([,v]) => v.change_1d);
+    const barColors = changes.map(c => c === null ? '#94a3b8' : (c >= 0 ? '#059669' : '#dc2626'));
+    msg.style.display = 'none';
+    canvas.style.display = 'block';
+    chartMktCap = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Markedsverdi (mrd NOK)',
+          data: caps,
+          backgroundColor: barColors,
+          borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const change = changes[ctx.dataIndex];
+                const chgStr = change !== null ? ` · 1D: ${change >= 0 ? '+' : ''}${change}%` : '';
+                return `${ctx.parsed.y.toFixed(1)} mrd NOK${chgStr}`;
+              }
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+          y: { ticks: { font: { size: 10 } }, title: { display: true, text: 'mrd NOK', font: { size: 10 } } }
+        }
+      }
+    });
+  } catch (e) { msg.textContent = 'Feil ved henting av markedsverdi.'; }
 }
 
 // ---------- salmon prices ----------
@@ -768,6 +944,8 @@ async function loadNews() {
 
 // ---------- bootstrap ----------
 function loadAll() {
+  loadAnomalies();
+  loadScenarios();
   loadSalmonPrices();
   loadDigest();
   loadRates();
@@ -775,6 +953,7 @@ function loadAll() {
   loadStocks();
   loadPriceChart();
   loadStocksChart();
+  loadMarketCap();
   loadCalendar();
   loadNews();
 }
