@@ -25,8 +25,10 @@ from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
     init_db, ensure_columns, migrate_id_to_bigint, migrate_add_themes,
     migrate_add_finance_digests, migrate_add_salmon_prices, migrate_add_calendar_events,
+    migrate_add_reports,
     is_db_available, SessionLocal,
     Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest, SalmonPrice, CalendarEvent,
+    Report,
     extract_domain, get_or_create_source,
 )
 
@@ -726,6 +728,7 @@ migrate_add_themes()
 migrate_add_finance_digests()
 migrate_add_salmon_prices()
 migrate_add_calendar_events()
+migrate_add_reports()
 _load_from_db()
 
 
@@ -2598,81 +2601,122 @@ def analytics_page():
 
 
 @app.route("/reports")
-def reports_page():
+def reports_index():
     lang = request.args.get("lang", "no")
     if lang not in ("no", "en", "es", "ja"):
         lang = "no"
-    ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
-    return render_template("reports.html", lang=lang, ui_text=ui_text)
+    return render_template("reports_index.html", lang=lang)
 
 
-@app.route("/api/reports/weekly")
-def api_reports_weekly():
-    cutoff = datetime.now(timezone.utc) - timedelta(days=7)
-    relevant = []
-    with _articles_lock:
-        for a in _articles.values():
-            pub_str = a.get("published_at")
-            if pub_str:
-                try:
-                    pub_date = datetime.fromisoformat(pub_str.replace("Z", "+00:00"))
-                    if pub_date >= cutoff:
-                        relevant.append(a)
-                except Exception:
-                    pass
-            else:
-                relevant.append(a)
+@app.route("/reports/<int:report_id>")
+def report_detail(report_id):
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    return render_template("report_detail.html", lang=lang, report_id=report_id)
 
-    by_scope: dict = {}
-    by_tone: dict = {}
-    by_country: dict = {}
-    sources: set = set()
-    for a in relevant:
-        scope = a.get("scope") or "unknown"
-        tone = a.get("tone") or "unknown"
-        if tone == "kritisk":
-            tone = "negativ"
-        country = a.get("region") or "global"
-        by_scope[scope] = by_scope.get(scope, 0) + 1
-        by_tone[tone] = by_tone.get(tone, 0) + 1
-        by_country[country] = by_country.get(country, 0) + 1
-        if a.get("source_name"):
-            sources.add(a["source_name"])
 
-    top_articles = sorted(relevant, key=lambda x: x.get("relevance") or 0, reverse=True)[:10]
+@app.route("/api/reports", methods=["GET"])
+def api_reports_list():
+    lang = request.args.get("lang", "no")
+    limit = min(int(request.args.get("limit", 50)), 200)
+    if not is_db_available():
+        return jsonify({"reports": []})
+    with SessionLocal() as session:
+        rows = (
+            session.query(Report)
+            .filter(Report.lang == lang)
+            .order_by(Report.generated_at.desc())
+            .limit(limit)
+            .all()
+        )
+        return jsonify({
+            "reports": [
+                {
+                    "id": r.id,
+                    "type": r.report_type,
+                    "title": r.title,
+                    "period_start": r.period_start.isoformat(),
+                    "period_end": r.period_end.isoformat(),
+                    "generated_at": r.generated_at.isoformat(),
+                    "article_count": len(r.article_ids or []),
+                    "triggered_by": r.triggered_by,
+                }
+                for r in rows
+            ]
+        })
 
-    return jsonify({
-        "period": {
-            "from": cutoff.isoformat(),
-            "to": datetime.now(timezone.utc).isoformat(),
-            "days": 7,
-        },
-        "stats": {
-            "total": len(relevant),
-            "source_count": len(sources),
-            "by_scope": by_scope,
-            "by_tone": by_tone,
-            "by_country": by_country,
-        },
-        "top_articles": [
-            {
-                "id": a.get("id"),
-                "title": a.get("title"),
-                "url": a.get("url"),
-                "source_name": a.get("source_name"),
-                "scope": a.get("scope"),
-                "tone": "negativ" if a.get("tone") == "kritisk" else a.get("tone"),
-                "region": a.get("region"),
-                "relevance": a.get("relevance"),
-                "summary": (a.get("summaries") or {}).get("no"),
-            }
-            for a in top_articles
-        ],
-    })
+
+@app.route("/api/reports/<int:report_id>", methods=["GET"])
+def api_report_detail(report_id):
+    if not is_db_available():
+        return jsonify({"error": "Database ikke tilgjengelig"}), 503
+    with SessionLocal() as session:
+        r = session.query(Report).filter(Report.id == report_id).first()
+        if not r:
+            return jsonify({"error": "not found"}), 404
+        return jsonify({
+            "id": r.id,
+            "type": r.report_type,
+            "lang": r.lang,
+            "title": r.title,
+            "period_start": r.period_start.isoformat(),
+            "period_end": r.period_end.isoformat(),
+            "generated_at": r.generated_at.isoformat(),
+            "content": r.content,
+            "statistics": r.statistics,
+            "article_ids": r.article_ids,
+            "triggered_by": r.triggered_by,
+        })
+
+
+@app.route("/api/reports/generate", methods=["POST"])
+def api_reports_generate():
+    from poc.reports import generate_report as _generate_report
+    data = request.get_json() or {}
+    try:
+        period_start = datetime.fromisoformat(data["period_start"])
+        period_end = datetime.fromisoformat(data["period_end"])
+    except (KeyError, ValueError) as e:
+        return jsonify({"error": f"Invalid period: {e}"}), 400
+
+    if period_start.tzinfo is None:
+        period_start = period_start.replace(tzinfo=timezone.utc)
+    if period_end.tzinfo is None:
+        period_end = period_end.replace(tzinfo=timezone.utc)
+
+    lang = data.get("lang", "no")
+    title = data.get("title") or None
+    focus = data.get("focus", "all")
+    themes = data.get("themes") or None
+
+    if not is_db_available():
+        return jsonify({"error": "Database ikke tilgjengelig"}), 503
+
+    try:
+        report = _generate_report(
+            period_start=period_start,
+            period_end=period_end,
+            lang=lang,
+            report_type="custom",
+            title=title,
+            focus=focus,
+            theme_filter=themes,
+            triggered_by="manual",
+        )
+    except Exception as exc:
+        log.error("api_reports_generate feilet: %s", exc)
+        return jsonify({"error": str(exc)}), 500
+
+    if not report:
+        return jsonify({"error": "Ingen artikler i perioden"}), 404
+
+    return jsonify({"id": report.id, "title": report.title}), 201
 
 
 @app.route("/api/reports/weekly/summary")
 def api_reports_weekly_summary():
+    """Legacy weekly summary endpoint — kept for backwards compatibility."""
     lang = request.args.get("lang", "no")
     if lang not in ("no", "en", "es", "ja"):
         lang = "no"
@@ -2697,7 +2741,8 @@ def api_reports_weekly_summary():
 
     lang_names = {"no": "norsk", "en": "engelsk", "es": "spansk", "ja": "japansk"}
     article_context = "\n".join(
-        f"- [{a.get('source_name', '?')}] {a.get('title', '')} (tone: {a.get('tone', '?')}, scope: {a.get('scope', '?')})"
+        f"- [{a.get('source_name', '?')}] {a.get('title', '')} "
+        f"(tone: {a.get('tone', '?')}, scope: {a.get('scope', '?')})"
         for a in relevant[:30]
     )
 
@@ -2710,9 +2755,6 @@ def api_reports_weekly_summary():
             messages=[{"role": "user", "content": (
                 f"Lag et ukentlig sammendrag (ca 300 ord på {lang_names[lang]}) av "
                 f"medieaktiviteten rundt Cermaq og lakseoppdrettsbransjen siste 7 dager. "
-                f"Strukturer med:\n"
-                f"1. Hovedtemaer\n2. Cermaq-spesifikke saker\n"
-                f"3. Bransjeutvikling\n4. Hva vi bør følge fremover\n\n"
                 f"Artikler:\n{article_context}"
             )}],
         )

@@ -166,6 +166,24 @@ if Base is not None:
             default=lambda: datetime.now(timezone.utc),
         )
 
+    class Report(Base):
+        __tablename__ = "reports"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        report_type = Column(String(20), nullable=False)
+        lang = Column(String(8), nullable=False, index=True)
+        period_start = Column(DateTime(timezone=True), nullable=False)
+        period_end = Column(DateTime(timezone=True), nullable=False)
+        title = Column(String(255), nullable=True)
+        content = Column(JSON, nullable=False)
+        article_ids = Column(JSON, nullable=True)
+        statistics = Column(JSON, nullable=True)
+        generated_at = Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
+        triggered_by = Column(String(50), nullable=True)
+
 else:
     # Stub classes so imports don't fail when DB is unavailable
     class Source:  # type: ignore[no-redef]
@@ -190,6 +208,9 @@ else:
         pass
 
     class CalendarEvent:  # type: ignore[no-redef]
+        pass
+
+    class Report:  # type: ignore[no-redef]
         pass
 
 
@@ -287,6 +308,39 @@ def migrate_add_themes() -> None:
         logger.info("Migrert articles tabell - lagt til themes kolonne")
     except Exception as e:
         logger.warning("Themes-migrasjon: %s", e)
+
+
+def migrate_add_reports() -> None:
+    """Create reports table (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text("""
+                CREATE TABLE IF NOT EXISTS reports (
+                    id SERIAL PRIMARY KEY,
+                    report_type VARCHAR(20) NOT NULL,
+                    lang VARCHAR(8) NOT NULL,
+                    period_start TIMESTAMPTZ NOT NULL,
+                    period_end TIMESTAMPTZ NOT NULL,
+                    title VARCHAR(255),
+                    content JSON NOT NULL,
+                    article_ids JSON,
+                    statistics JSON,
+                    generated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    triggered_by VARCHAR(50)
+                )
+            """))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_reports_lang ON reports (lang)"
+            ))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_reports_generated_at ON reports (generated_at DESC)"
+            ))
+        logger.info("migrate_add_reports: tabell OK")
+    except Exception as e:
+        logger.warning("migrate_add_reports: %s", e)
 
 
 def migrate_id_to_bigint() -> None:
