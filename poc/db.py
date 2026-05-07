@@ -88,6 +88,7 @@ if Base is not None:
         __tablename__ = "digests"
         id = Column(Integer, primary_key=True, autoincrement=True)
         lang = Column(String(2), nullable=False, index=True)
+        region = Column(String(20), nullable=True)
         headline = Column(Text)
         body = Column(Text)
         article_ids = Column(JSON)
@@ -212,6 +213,21 @@ else:
 
     class Report:  # type: ignore[no-redef]
         pass
+
+
+def migrate_add_digest_region() -> None:
+    """Add region column to digests table (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text(
+                "ALTER TABLE digests ADD COLUMN IF NOT EXISTS region VARCHAR(20)"
+            ))
+        logger.info("migrate_add_digest_region: kolonne OK")
+    except Exception as e:
+        logger.warning("migrate_add_digest_region: %s", e)
 
 
 def migrate_add_finance_digests() -> None:

@@ -418,6 +418,7 @@
     .digest-timestamp { font-size: 11px; color: var(--text-muted); }
     .digest-headline { font-size: 14px; font-weight: 500; color: var(--deep-blue); line-height: 1.4; margin-bottom: 5px; }
     .digest-body { font-size: 13px; line-height: 1.6; color: #374151; }
+    .digest-fallback-note { background: #fef3d7; color: #8a6d1c; padding: 7px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 10px; }
     .digest-empty {
       background: #f9fafb; border: 1px solid var(--border);
       border-left: 3px solid var(--border); border-radius: 6px;
@@ -621,14 +622,13 @@ window.t = function(key, vars) {
             {{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}
           </span>
         </div>
+        {% if digest_fallback %}
+        <div class="digest-fallback-note">
+          &#9888; Ingen artikler i valgt region siste 24 timer. Viser globalt nyhetsbilde.
+        </div>
+        {% endif %}
         <div class="digest-headline">{{ digest.headline }}</div>
         <div class="digest-body"><p>{{ digest.body }}</p></div>
-        <div style="margin-top:8px;display:flex;justify-content:flex-end;">
-          <a href="/reports?lang={{ lang }}"
-             style="font-size:12px;color:var(--aqua);text-decoration:none;font-weight:500;">
-            {{ ui_text.see_weekly }} &rarr;
-          </a>
-        </div>
       </div>
       {% else %}
       <div class="digest-empty">{{ ui_text.digest_pending }}</div>
