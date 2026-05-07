@@ -91,6 +91,7 @@ if Base is not None:
         region = Column(String(20), nullable=True)
         headline = Column(Text)
         body = Column(Text)
+        content = Column(JSON, nullable=True)
         article_ids = Column(JSON)
         web_search_urls = Column(JSON)
         article_count = Column(Integer)
@@ -216,7 +217,7 @@ else:
 
 
 def migrate_add_digest_region() -> None:
-    """Add region column to digests table (safe to run repeatedly)."""
+    """Add region + content columns to digests table (safe to run repeatedly)."""
     if engine is None:
         return
     try:
@@ -225,7 +226,10 @@ def migrate_add_digest_region() -> None:
             conn.execute(_text(
                 "ALTER TABLE digests ADD COLUMN IF NOT EXISTS region VARCHAR(20)"
             ))
-        logger.info("migrate_add_digest_region: kolonne OK")
+            conn.execute(_text(
+                "ALTER TABLE digests ADD COLUMN IF NOT EXISTS content JSON"
+            ))
+        logger.info("migrate_add_digest_region: kolonner OK")
     except Exception as e:
         logger.warning("migrate_add_digest_region: %s", e)
 

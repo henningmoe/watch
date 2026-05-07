@@ -568,29 +568,32 @@ def _load_from_db() -> None:
                     _articles[a.id] = _article_db_to_dict(a)
             log.info("Lastet %d artikler fra Postgres", len(articles))
 
-            _regions = [None, "norge", "chile", "canada", "global"]
             for lang in ("no", "en", "es", "ja"):
-                for _region in _regions:
-                    q = session.query(Digest).filter(Digest.lang == lang)
-                    if _region is None:
-                        q = q.filter(Digest.region.is_(None))
+                latest = (
+                    session.query(Digest)
+                    .filter(Digest.lang == lang)
+                    .order_by(Digest.generated_at.desc())
+                    .first()
+                )
+                if latest:
+                    if latest.content:
+                        cached = latest.content
                     else:
-                        q = q.filter(Digest.region == _region)
-                    latest = q.order_by(Digest.generated_at.desc()).first()
-                    if latest:
-                        cache_key = f"{lang}:{_region or 'all'}"
-                        with _digest_lock:
-                            _digest_cache[cache_key] = {
-                                "headline": latest.headline,
-                                "body": latest.body,
-                                "sources": latest.web_search_urls or [],
-                                "article_count": latest.article_count or 0,
-                                "cermaq_count": latest.cermaq_count or 0,
-                                "search_count": latest.search_count or 0,
-                                "generated_at": latest.generated_at.isoformat(),
-                                "lang": lang,
-                                "region": latest.region,
-                            }
+                        # Legacy rows without content JSON
+                        cached = {
+                            "headline": latest.headline or "",
+                            "body": latest.body or "",
+                            "sections": {"global": latest.body or ""},
+                            "sources": latest.web_search_urls or [],
+                            "article_count": latest.article_count or 0,
+                            "search_count": latest.search_count or 0,
+                            "generated_at": (
+                                latest.generated_at.isoformat()
+                                if latest.generated_at else None
+                            ),
+                        }
+                    with _digest_lock:
+                        _digest_cache[lang] = cached
             log.info("Lastet %d digester fra Postgres", len(_digest_cache))
 
             for lang in ("no", "en", "es", "ja"):
@@ -708,29 +711,23 @@ def _persist_weekly_digest(lang: str, digest: dict) -> None:
         log.error("Ukentlig digest-persist-feil for %s: %s", lang, exc)
 
 
-def _persist_digest(lang: str, digest: dict, used_article_ids: list = None,
-                    region: str | None = None) -> None:
-    if not is_db_available():
-        return
-
-    try:
-        with SessionLocal() as session:
-            d = Digest(
-                lang=lang,
-                region=region,
-                headline=digest.get("headline", ""),
-                body=digest.get("body", ""),
-                article_ids=used_article_ids or [],
-                web_search_urls=digest.get("sources", []),
-                article_count=digest.get("article_count", 0),
-                cermaq_count=digest.get("cermaq_count", 0),
-                search_count=digest.get("search_count", 0),
-            )
-            session.add(d)
-            session.commit()
-            log.info("Digest persistert for lang=%s region=%s", lang, region or "all")
-    except Exception as exc:
-        log.error("Digest-persist-feil for lang=%s region=%s: %s", lang, region, exc)
+def _save_digest(lang: str, content: dict) -> None:
+    """Save a structured digest to DB and update in-memory cache."""
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                d = Digest(
+                    lang=lang,
+                    content=content,
+                    generated_at=datetime.now(timezone.utc),
+                )
+                session.add(d)
+                session.commit()
+            log.info("Digest lagret: lang=%s", lang)
+        except Exception as exc:
+            log.error("Digest-lagring feilet lang=%s: %s", lang, exc)
+    with _digest_lock:
+        _digest_cache[lang] = content
 
 
 # ---------------------------------------------------------------------------
@@ -1102,123 +1099,76 @@ def _classify_loop() -> None:
 # Digest helpers
 # ---------------------------------------------------------------------------
 
-def _fetch_articles_for_digest(
-    cutoff: datetime,
-    region: str | None,
-) -> list[dict]:
-    """Fetch articles for digest generation, filtered by region with fallback."""
+def _generate_news_digest() -> None:
+    """Generate 1 Norwegian master digest + 3 translations (4 digests total)."""
+    from poc.digest import generate_norwegian_master_digest, translate_digest
     from sqlalchemy import func as _func
 
-    if not is_db_available():
-        with _articles_lock:
-            all_recent = [
-                a for a in _articles.values()
-                if a.get("scope") in ("cermaq", "industry")
-                and _parse_dt(a.get("published_at")) >= cutoff
-            ]
-        if region:
-            region_arts = [a for a in all_recent if a.get("region") == region]
-            if len(region_arts) >= 3:
-                global_cermaq = [
-                    a for a in all_recent
-                    if a.get("scope") == "cermaq" and a.get("region") != region
-                ][:5]
-                return region_arts[:40] + global_cermaq
-            return all_recent[:50]
-        return all_recent[:50]
-
-    try:
-        with SessionLocal() as session:
-            base_q = session.query(Article).filter(
-                Article.classified_at.isnot(None),
-                Article.scope != "irrelevant",
-                _func.coalesce(Article.published_at, Article.fetched_at) >= cutoff,
-            )
-            if region:
-                region_rows = base_q.filter(Article.region == region).order_by(
-                    Article.relevance.desc(),
-                    _func.coalesce(Article.published_at, Article.fetched_at).desc(),
-                ).limit(40).all()
-
-                if len(region_rows) < 3:
-                    log.info(
-                        "Region %s har kun %d artikler — faller tilbake til globalt",
-                        region, len(region_rows),
-                    )
-                    rows = base_q.order_by(
-                        Article.relevance.desc(),
-                        _func.coalesce(Article.published_at, Article.fetched_at).desc(),
-                    ).limit(50).all()
-                    return [_article_db_to_dict(a) for a in rows]
-
-                global_cermaq_rows = base_q.filter(
-                    Article.scope == "cermaq",
-                    Article.region != region,
-                ).order_by(Article.relevance.desc()).limit(5).all()
-
-                return (
-                    [_article_db_to_dict(a) for a in region_rows]
-                    + [_article_db_to_dict(a) for a in global_cermaq_rows]
-                )
-            else:
-                rows = base_q.order_by(
-                    Article.relevance.desc(),
-                    _func.coalesce(Article.published_at, Article.fetched_at).desc(),
-                ).limit(50).all()
-                return [_article_db_to_dict(a) for a in rows]
-    except Exception as exc:
-        log.error("_fetch_articles_for_digest DB-feil region=%s: %s", region, exc)
-        with _articles_lock:
-            return [
-                a for a in _articles.values()
-                if a.get("scope") in ("cermaq", "industry")
-                and _parse_dt(a.get("published_at")) >= cutoff
-            ][:50]
-
-
-def _generate_all_digests() -> None:
-    """Generate digest for all 4 languages × 5 regions = 20 combinations."""
-    from poc.digest import generate_digest
-
+    log.info("Starter digest-generering")
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
-    regions = [None, "norge", "chile", "canada", "global"]
-    all_source_urls: set = set()
 
-    for lang in ("no", "en", "es", "ja"):
-        for region in regions:
-            try:
-                articles = _fetch_articles_for_digest(cutoff, region)
-                cermaq_count = sum(1 for a in articles if a.get("scope") == "cermaq")
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                rows = session.query(Article).filter(
+                    Article.classified_at.isnot(None),
+                    Article.scope != "irrelevant",
+                    _func.coalesce(Article.published_at, Article.fetched_at) >= cutoff,
+                ).order_by(
+                    Article.relevance.desc(),
+                    _func.coalesce(Article.published_at, Article.fetched_at).desc(),
+                ).limit(80).all()
+                articles = [_article_db_to_dict(a) for a in rows]
+        except Exception as exc:
+            log.error("_generate_news_digest DB-feil: %s", exc)
+            with _articles_lock:
+                articles = [
+                    a for a in _articles.values()
+                    if a.get("scope") in ("cermaq", "industry")
+                    and _parse_dt(a.get("published_at")) >= cutoff
+                ][:80]
+    else:
+        with _articles_lock:
+            articles = [
+                a for a in _articles.values()
+                if a.get("scope") in ("cermaq", "industry")
+                and _parse_dt(a.get("published_at")) >= cutoff
+            ][:80]
 
-                if len(articles) < 3:
-                    log.info(
-                        "For få artikler (%d) for lang=%s region=%s — hopper over",
-                        len(articles), lang, region or "all",
-                    )
-                    continue
+    if len(articles) < 3:
+        log.warning("For få artikler (%d) for digest — hopper over", len(articles))
+        return
 
-                digest = generate_digest(articles, lang=lang, region=region)
-                if not digest:
-                    continue
+    log.info("Digest grunnlag: %d artikler", len(articles))
 
-                cache_key = f"{lang}:{region or 'all'}"
-                with _digest_lock:
-                    _digest_cache[cache_key] = digest
-                log.info("Digest klar lang=%s region=%s: %s",
-                         lang, region or "all", digest["headline"][:60])
-                _persist_digest(lang, digest, [a["id"] for a in articles], region=region)
+    # Step 1: Norwegian master
+    norsk_content = generate_norwegian_master_digest(articles)
+    if not norsk_content:
+        log.error("Norsk master-digest generering feilet")
+        return
 
-                for src in digest.get("sources", []):
-                    url = src.get("url") if isinstance(src, dict) else src
-                    if url:
-                        all_source_urls.add(url)
+    _save_digest("no", norsk_content)
 
-            except Exception as exc:
-                log.error("Digest feilet lang=%s region=%s: %s", lang, region, exc)
+    # Step 2: Translations
+    for target_lang in ("en", "es", "ja"):
+        try:
+            translated = translate_digest(norsk_content, target_lang)
+            if translated:
+                _save_digest(target_lang, translated)
+        except Exception as exc:
+            log.error("Oversettelse til %s feilet: %s", target_lang, exc)
 
+    # Ingest source URLs as articles
+    all_source_urls = {
+        src.get("url") if isinstance(src, dict) else src
+        for src in norsk_content.get("sources", [])
+        if (src.get("url") if isinstance(src, dict) else src)
+    }
     if all_source_urls:
         added = _ingest_urls_as_articles(list(all_source_urls))
-        log.info("Digest-generering la til %d nye artikler fra web-søk", added)
+        log.info("Digest la til %d nye artikler fra web-søk", added)
+
+    log.info("Digest-generering ferdig")
 
 
 def _next_digest_time() -> datetime:
@@ -1234,14 +1184,15 @@ def _next_digest_time() -> datetime:
 
 
 def _digest_scheduler() -> None:
-    """Regenerate digest at 09:00, 12:00, and 18:00 Oslo time."""
+    """Regenerate digest at 08:00, 12:00, and 18:00 Oslo time."""
+    oslo_tz = ZoneInfo("Europe/Oslo")
     while True:
         try:
             target = _next_digest_time()
-            wait = (target - datetime.now(ZoneInfo("Europe/Oslo"))).total_seconds()
-            log.info("Neste digest-generering: %s (om %.1f timer)", target.isoformat(), wait / 3600)
+            wait = max(0, (target - datetime.now(oslo_tz)).total_seconds())
+            log.info("Neste digest: %s (om %.1f timer)", target.isoformat(), wait / 3600)
             time.sleep(wait)
-            _generate_all_digests()
+            _generate_news_digest()
             _generate_finance_digest_all()
         except Exception as exc:
             log.error("Digest-scheduler-feil: %s", exc)
@@ -1249,21 +1200,17 @@ def _digest_scheduler() -> None:
 
 
 def _initial_digest() -> None:
-    """Generate digest once at startup, after fetch+classify have had time to run."""
+    """Generate digest once at startup if cache is empty."""
     time.sleep(60)
     with _digest_lock:
         has_digest = len(_digest_cache) > 0
     if not has_digest:
-        _generate_all_digests()
+        _generate_news_digest()
 
 
-def get_digest(lang: str = "no", region: str | None = None) -> dict | None:
-    cache_key = f"{lang}:{region or 'all'}"
+def get_digest(lang: str = "no") -> dict | None:
     with _digest_lock:
-        digest = _digest_cache.get(cache_key)
-        if not digest and region:
-            digest = _digest_cache.get(f"{lang}:all")
-        return digest
+        return _digest_cache.get(lang)
 
 
 # ---------------------------------------------------------------------------
@@ -1859,8 +1806,6 @@ def index():
     region = request.args.get("region", "").strip() or None
     log.info("[index] theme=%r, region=%r, lang=%r", theme, region, lang)
 
-    digest = get_digest(lang, region)
-    digest_fallback = digest is not None and digest.get("region") != region
     ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
 
     error = None
@@ -1938,8 +1883,6 @@ def index():
         classified_count=classified,
         total_count=total,
         queue_size=_classify_queue.qsize(),
-        digest=digest,
-        digest_fallback=digest_fallback,
         lang=lang,
         ui_text=ui_text,
     )
@@ -1984,7 +1927,7 @@ def admin_regenerate_digest():
     if not _check_admin_token():
         return jsonify({"error": "Unauthorized"}), 401
 
-    threading.Thread(target=_generate_all_digests, daemon=True).start()
+    threading.Thread(target=_generate_news_digest, daemon=True).start()
     return jsonify({"status": "Digest-generering startet"})
 
 
@@ -2457,24 +2400,16 @@ def api_articles_search():
 @app.route("/api/digest")
 def api_digest():
     lang = request.args.get("lang", "no")
-    region = request.args.get("region", "").strip() or None
-
-    digest = get_digest(lang, region)
-    fallback = digest is not None and digest.get("region") != region
-
+    digest = get_digest(lang)
     if not digest:
-        return jsonify({
-            "content": None,
-            "generated_at": None,
-            "region": region,
-            "fallback": False,
-        })
-
+        # Fallback to Norwegian
+        digest = get_digest("no")
+    if not digest:
+        return jsonify({"content": None, "generated_at": None, "lang": lang})
     return jsonify({
         "content": digest,
         "generated_at": digest.get("generated_at"),
-        "region": digest.get("region"),
-        "fallback": fallback,
+        "lang": lang,
     })
 
 

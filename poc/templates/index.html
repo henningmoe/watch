@@ -416,9 +416,15 @@
     }
     .digest-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--aqua); font-weight: 600; }
     .digest-timestamp { font-size: 11px; color: var(--text-muted); }
-    .digest-headline { font-size: 14px; font-weight: 500; color: var(--deep-blue); line-height: 1.4; margin-bottom: 5px; }
-    .digest-body { font-size: 13px; line-height: 1.6; color: #374151; }
-    .digest-fallback-note { background: #fef3d7; color: #8a6d1c; padding: 7px 12px; border-radius: 6px; font-size: 12px; margin-bottom: 10px; }
+    .digest-headline { font-size: 15px; font-weight: 600; color: var(--deep-blue); line-height: 1.4; margin: 0 0 12px 0; }
+    .digest-body { font-size: 13px; line-height: 1.65; color: #374151; overflow: hidden; transition: max-height 0.3s ease; }
+    .digest-body.digest-collapsed { position: relative; }
+    .digest-body.digest-collapsed::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 48px; background: linear-gradient(to bottom, transparent, #f0fafa); pointer-events: none; }
+    .digest-section { margin-bottom: 12px; }
+    .digest-section:last-child { margin-bottom: 0; }
+    .digest-section-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--aqua); margin: 14px 0 5px 0; padding-bottom: 3px; border-bottom: 1px solid #c8e8ea; }
+    .digest-expand-btn { background: transparent; border: none; color: var(--aqua); font-size: 12px; font-weight: 600; cursor: pointer; padding: 6px 0 0 0; display: none; }
+    .digest-expand-btn:hover { text-decoration: underline; }
     .digest-empty {
       background: #f9fafb; border: 1px solid var(--border);
       border-left: 3px solid var(--border); border-radius: 6px;
@@ -611,28 +617,18 @@ window.t = function(key, vars) {
 
     <!-- Digest -->
     <div class="digest-wrapper">
-      {% if digest %}
-      <div class="digest-card">
+      <div class="digest-card" id="digest-card" style="display:none;">
         <div class="digest-card-hd">
           <div class="digest-card-hd-left">
             <div class="ai-badge">AI</div>
             <span class="digest-label">{{ ui_text.daily_update }}</span>
           </div>
-          <span class="digest-timestamp">
-            {{ ui_text.generated_at }} {{ digest.generated_at | fmt_dt_friendly(lang) }}
-          </span>
+          <span class="digest-timestamp" id="digest-timestamp"></span>
         </div>
-        {% if digest_fallback %}
-        <div class="digest-fallback-note">
-          &#9888; Ingen artikler i valgt region siste 24 timer. Viser globalt nyhetsbilde.
-        </div>
-        {% endif %}
-        <div class="digest-headline">{{ digest.headline }}</div>
-        <div class="digest-body"><p>{{ digest.body }}</p></div>
+        <div id="digest-content"></div>
+        <button class="digest-expand-btn" id="digest-expand-btn">Vis mer ↓</button>
       </div>
-      {% else %}
-      <div class="digest-empty">{{ ui_text.digest_pending }}</div>
-      {% endif %}
+      <div class="digest-empty" id="digest-empty" style="display:none;">{{ ui_text.digest_pending }}</div>
     </div>
 
     <!-- Result header -->
@@ -962,6 +958,96 @@ window.t = function(key, vars) {
       applyFilters();
     }, 200);
   });
+
+  /* ─── Digest ─────────────────────────────────────────────── */
+  function escapeHtml(text) {
+    if (typeof text !== 'string') return String(text || '');
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  function setupExpandButton(collapsedHeight) {
+    var body = document.getElementById('digest-body-inner');
+    var btn  = document.getElementById('digest-expand-btn');
+    if (!body || !btn) return;
+    var fullH = body.scrollHeight;
+    if (fullH > collapsedHeight) {
+      body.style.maxHeight = collapsedHeight + 'px';
+      body.classList.add('digest-collapsed');
+      btn.style.display = 'block';
+      var expanded = false;
+      btn.addEventListener('click', function() {
+        expanded = !expanded;
+        if (expanded) {
+          body.classList.remove('digest-collapsed');
+          body.style.maxHeight = 'none';
+          btn.textContent = 'Vis mindre ↑';
+        } else {
+          body.classList.add('digest-collapsed');
+          body.style.maxHeight = collapsedHeight + 'px';
+          btn.textContent = 'Vis mer ↓';
+        }
+      });
+    }
+  }
+
+  function renderDigest(data) {
+    var card  = document.getElementById('digest-card');
+    var empty = document.getElementById('digest-empty');
+    var cnt   = document.getElementById('digest-content');
+    var ts    = document.getElementById('digest-timestamp');
+
+    if (!data || !data.content) {
+      if (card)  card.style.display  = 'none';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+
+    var c        = data.content;
+    var sections = c.sections || {};
+    var regionLabels = { norge: 'Norge', chile: 'Chile', canada: 'Canada' };
+    var bodyHtml = '';
+
+    if (sections.global) {
+      bodyHtml += '<div class="digest-section">' + escapeHtml(sections.global) + '</div>';
+    }
+    for (var key in regionLabels) {
+      if (sections[key]) {
+        bodyHtml += '<div class="digest-section">'
+          + '<div class="digest-section-header">' + regionLabels[key] + '</div>'
+          + escapeHtml(sections[key])
+          + '</div>';
+      }
+    }
+
+    cnt.innerHTML = '<h3 class="digest-headline">' + escapeHtml(c.headline || '') + '</h3>'
+      + '<div class="digest-body" id="digest-body-inner">' + bodyHtml + '</div>';
+
+    if (data.generated_at && ts) {
+      var dt = new Date(data.generated_at);
+      ts.textContent = 'Sist oppdatert '
+        + dt.toLocaleDateString('no-NO') + ' kl '
+        + dt.toLocaleTimeString('no-NO', {hour:'2-digit', minute:'2-digit'});
+    }
+
+    if (card)  card.style.display  = 'block';
+    if (empty) empty.style.display = 'none';
+
+    // Setup expand button after layout paint
+    setTimeout(function() { setupExpandButton(180); }, 0);
+  }
+
+  (function loadDigest() {
+    var lang = (new URLSearchParams(window.location.search)).get('lang') || activeLang || 'no';
+    fetch('/api/digest?lang=' + encodeURIComponent(lang))
+      .then(function(r) { return r.json(); })
+      .then(renderDigest)
+      .catch(function() {
+        var empty = document.getElementById('digest-empty');
+        if (empty) empty.style.display = 'block';
+      });
+  })();
 
   /* ─── Boot ───────────────────────────────────────────────── */
   initRows();

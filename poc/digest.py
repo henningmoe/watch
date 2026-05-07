@@ -182,6 +182,268 @@ def _extract_json(text: str) -> str:
     raise ValueError(f"Kunne ikke finne JSON i: {text[:200]!r}")
 
 
+def parse_digest_json(raw_text: str) -> dict:
+    """Robust JSON-parsing with fallback strategies."""
+    text = raw_text.strip()
+
+    # Strip markdown fences
+    if text.startswith("```"):
+        parts = text.split("```", 2)
+        if len(parts) >= 2:
+            inner = parts[1]
+            if inner.startswith("json"):
+                inner = inner[4:]
+            text = inner.strip()
+
+    # Direct parse
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Extract outermost {...}
+    first = text.find("{")
+    last = text.rfind("}")
+    if first != -1 and last > first:
+        block = text[first : last + 1]
+        try:
+            return json.loads(block)
+        except json.JSONDecodeError:
+            pass
+        # Remove trailing commas
+        cleaned = re.sub(r",(\s*[}\]])", r"\1", block)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError(f"Klarte ikke parse digest-JSON. Første 500: {text[:500]!r}")
+
+
+_EVENTS_CONTEXT = """
+KJENTE BRANSJE-EVENTS (løft frem hvis 3+ artikler refererer til dem):
+- Sjømatdagene Trondheim (januar)
+- North Atlantic Seafood Forum / Bergen (mars)
+- Hav Expo (april)
+- Aqua Nor (august, annet hvert år)
+- Nor-Fishing (august, annet hvert år)
+- LandbasedAQ Konferansen
+- TEKMAR (desember, Trondheim)
+- Seafood Expo Global / Barcelona (april/mai)
+- Seafood Expo North America / Boston (mars)
+- Aquaculture America (februar/mars)
+- Salmon Chile (mars/april)
+- AquaSur Chile (oktober, annet hvert år)
+- World Seafood Congress
+- China Fisheries & Seafood Expo (oktober/november)
+- Cermaq generalforsamling
+- Mitsubishi resultatpresentasjoner
+""".strip()
+
+
+def generate_norwegian_master_digest(articles: list[dict]) -> dict | None:
+    """Generate structured Norwegian digest with per-region sections."""
+    article_context = ""
+    for a in articles[:80]:
+        title = a.get("title") or ""
+        summary = (a.get("summaries") or {}).get("no", "")[:300]
+        themes = ",".join(a.get("themes") or [])
+        meta = f"[{a.get('scope')}|{a.get('region')}|{a.get('tone')}|{themes}]"
+        src = a.get("source_name") or a.get("source_domain") or ""
+        article_context += (
+            f"\n{meta} {title}\n"
+            f"{summary}\n"
+            f"  URL: {a.get('url', '')}\n"
+            f"  Kilde: {src}\n"
+        )
+
+    system_prompt = f"""Du er en kommunikasjonsassistent for Cermaq, en \
+global laksoppdretter (Norge, Chile, Canada) eid av Mitsubishi.
+
+OPPGAVE: Lag en daglig medieoppdatering basert på artikler fra siste \
+24 timer. Bruk web_search 2-3 ganger for å finne ferske Cermaq-saker \
+som ikke er i Miniflux-feeden.
+
+STRUKTUR — fire seksjoner:
+1. "global" — Hovedseksjon: alle saker, Cermaq-konsernet, MÆA, \
+internasjonale markedsbevegelser, Mitsubishi-saker. Også store region-saker \
+som er bemerkelsesverdige globalt.
+2. "norge" — Norske forhold. Regulatorisk (Mattilsynet, Statsforvalteren), \
+trafikklys-system, lakselus, MTB, fjordlokaliteter. \
+RETURNER null hvis < 2 norske artikler.
+3. "chile" — Chilenske forhold. SAG, Sernapesca, sykdomshåndtering (SRS/ISA), \
+Magallanes/Aysén/Los Lagos, eksport. \
+RETURNER null hvis < 2 chilenske artikler.
+4. "canada" — Kanadiske forhold. First Nations, BC net-pen-policy, \
+DFO-regulering. \
+RETURNER null hvis < 2 kanadiske artikler.
+
+PRIORITERING I "global":
+1. NEGATIVE Cermaq-saker FØRST (utslipp, ulykker, regulatorisk kritikk, \
+sykdom, miljøproblemer)
+2. Positive/nøytrale Cermaq-saker
+3. Mitsubishi/MÆA
+4. Generelle bransje-bevegelser
+
+EVENT-LØFTING:
+{_EVENTS_CONTEXT}
+Hvis artikler refererer til et event, gi det ekstra omtale i relevant seksjon.
+
+KILDE-ATTRIBUSJON:
+- Etter HVER statement: kilde i klammer, f.eks. (E24), (iLaks), (Kyst.no)
+- Bruk kildens HOVEDNAVN, ikke domene
+- IKKE URL i body — kun i sources-array
+- Flere kilder for samme statement: (E24, iLaks)
+
+LENGDE OG TONE:
+- Hver seksjon: 4-12 setninger avhengig av nyhetsbildet
+- Flytende prosa, ingen markdown, ingen lister
+- Direkte, konsist, profesjonelt
+
+OUTPUT — KUN gyldig JSON, ingen fences, ingen forklaring:
+{{
+  "headline": "Én setning som fanger dagens hovedtema",
+  "sections": {{
+    "global": "4-12 setninger. Negative Cermaq-saker først. Kilder i klammer.",
+    "norge": "4-12 setninger ELLER null",
+    "chile": "4-12 setninger ELLER null",
+    "canada": "4-12 setninger ELLER null"
+  }},
+  "sources": [
+    {{"name": "E24", "url": "https://e24.no/..."}},
+    {{"name": "iLaks", "url": "https://ilaks.no/..."}}
+  ],
+  "events_mentioned": []
+}}
+
+ARTIKLER ({len(articles)} totalt):
+{article_context}"""
+
+    user_prompt = (
+        "Lag daglig medieoppdatering for Cermaq basert på artikler fra siste 24 timer. "
+        "Bruk web_search 2-3 ganger for ferske saker som ikke er i Miniflux."
+    )
+
+    log.info("Genererer norsk master-digest for %d artikler", len(articles))
+    try:
+        client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=6000,
+            temperature=0.3,
+            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+
+        search_count = sum(
+            1 for b in response.content
+            if getattr(b, "type", "") == "server_tool_use"
+            and getattr(b, "name", "") == "web_search"
+        )
+        raw_text = "".join(
+            b.text for b in response.content if getattr(b, "type", "") == "text"
+        )
+        log.info(
+            "Norsk digest AI-respons: %d tegn, web_search brukt %d ganger",
+            len(raw_text), search_count,
+        )
+
+        content = parse_digest_json(raw_text.strip())
+
+        # Normalise sources to list[{name, url}]
+        raw_src = content.get("sources") or []
+        sources = []
+        for s in raw_src:
+            if isinstance(s, dict):
+                sources.append(s)
+            elif isinstance(s, str) and s:
+                sources.append({"name": s, "url": s})
+        content["sources"] = sources
+        content["search_count"] = search_count
+        content["article_count"] = len(articles)
+        content["generated_at"] = datetime.now(timezone.utc).isoformat()
+
+        log.info("Norsk digest klar: %s", str(content.get("headline", ""))[:80])
+        return content
+
+    except Exception as exc:
+        log.error("Norsk digest generering feilet: %s", exc, exc_info=True)
+        return None
+
+
+def translate_digest(norsk_content: dict, target_lang: str) -> dict | None:
+    """Translate a Norwegian digest dict to target_lang (en, es, ja)."""
+    lang_name = {"en": "English", "es": "Spanish", "ja": "Japanese"}.get(target_lang)
+    if not lang_name:
+        return None
+
+    system_prompt = f"""You are a professional translator specializing in \
+salmon aquaculture industry terminology.
+
+TASK: Translate the following JSON document from Norwegian to {lang_name}.
+
+CRITICAL RULES:
+1. Translate ONLY: headline, sections.global, sections.norge, \
+sections.chile, sections.canada
+2. Keep source attributions in parentheses unchanged: (E24), (iLaks), (Kyst.no)
+3. Keep section keys unchanged: global, norge, chile, canada
+4. Keep "sources" array URLs unchanged; keep source "name" fields unchanged
+5. Keep "events_mentioned" array; translate event names only if a common \
+translation exists, otherwise keep Norwegian original
+6. Preserve exact JSON structure and null values
+7. Return ONLY valid JSON, no markdown fences, no explanation
+
+INDUSTRY HINTS:
+- lakseoppdrett → salmon farming / acuicultura de salmón / サケ養殖
+- lakselus → salmon lice / piojos del salmón / サケジラミ
+- rømming → escapes / escapes / 脱走
+- Mattilsynet → Norwegian Food Safety Authority / Autoridad Noruega de Seguridad Alimentaria / ノルウェー食品安全機関
+- Statsforvalteren → County Governor / Gobernador Regional / 県知事
+- Sernapesca, SAG, DFO → keep as-is in all languages
+
+{"Use proper Japanese punctuation (、and。) and write naturally for a business audience." if target_lang == "ja" else ""}
+
+Return the translated JSON object."""
+
+    user_prompt = (
+        f"Translate this JSON to {lang_name}:\n\n"
+        + json.dumps(norsk_content, ensure_ascii=False, indent=2)
+    )
+
+    log.info("Oversetter digest til %s", target_lang)
+    try:
+        client = Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+        response = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=6000,
+            temperature=0.2,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}],
+        )
+
+        raw_text = "".join(
+            b.text for b in response.content if getattr(b, "type", "") == "text"
+        )
+        translated = parse_digest_json(raw_text.strip())
+
+        # Preserve metadata from original
+        translated["generated_at"] = norsk_content.get("generated_at")
+        translated["article_count"] = norsk_content.get("article_count", 0)
+        translated["search_count"] = norsk_content.get("search_count", 0)
+
+        log.info("Oversettelse til %s ferdig", target_lang)
+        return translated
+
+    except Exception as exc:
+        log.error("Oversettelse til %s feilet: %s", target_lang, exc, exc_info=True)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Legacy daily digest (kept for reference — new code uses generate_norwegian_master_digest)
+# ---------------------------------------------------------------------------
+
 def generate_digest(
     articles: list[dict],
     lang: str = "no",
