@@ -31,6 +31,7 @@ from poc.db import (
     Report,
     extract_domain, get_or_create_source,
 )
+from poc.translations import TRANSLATIONS, t as _t, theme_label as _theme_label
 
 log = logging.getLogger(__name__)
 
@@ -76,12 +77,20 @@ def inject_sidebar_counts():
         except Exception as exc:
             log.warning("inject_sidebar_counts feilet: %s", exc)
 
+    _lang = _req.args.get("lang", "no")
+    if _lang not in TRANSLATIONS:
+        _lang = "no"
+
     return dict(
         theme_counts=theme_counts,
         region_counts=region_counts,
         total_classified=total_classified,
         active_region=active_region,
         active_theme=active_theme,
+        # i18n helpers
+        t=lambda key, **kw: _t(key, _lang, **kw),
+        theme_label=lambda theme: _theme_label(theme, _lang),
+        translations=TRANSLATIONS.get(_lang, {}),
     )
 
 

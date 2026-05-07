@@ -549,10 +549,8 @@
     }
     .load-more-btn:hover { border-color: var(--text-muted); background: #f9fafb; }
 
-    /* Mobile */
-    @media (max-width: 768px) {
-      .sidebar { display: none; }
-      .app-container { display: block; }
+    /* Mobile article layout */
+    @media (max-width: 1023px) {
       .article-row { grid-template-columns: 1fr; }
       .article-img-wrap { display: none; }
       .page-hd, .digest-wrapper, .result-hd, .article-feed,
@@ -561,194 +559,20 @@
   </style>
 </head>
 <body>
+<script>
+window.translations = {{ translations | tojson | safe }};
+window.lang = '{{ lang }}';
+window.t = function(key, vars) {
+  var s = (window.translations && window.translations[key]) || key;
+  if (vars) { for (var k in vars) { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); } }
+  return s;
+};
+</script>
 
 <div class="app-outer">
 <div class="app-container">
 
-  <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
-  <aside class="sidebar">
-
-    <!-- Logo -->
-    <div class="sidebar-logo">
-      <div class="brand-eyebrow">Cermaq</div>
-      <div class="brand-name">Media <span>Watch</span></div>
-    </div>
-
-    <!-- Search -->
-    <div class="sidebar-search">
-      <input type="text" id="search-input"
-             placeholder="{{ ui_text.search_placeholder }}" autocomplete="off" />
-    </div>
-
-    <!-- Language -->
-    <div class="sidebar-langs">
-      {% set _langs = [('no','NO'),('en','EN'),('es','ES'),('ja','JA')] %}
-      {% for lc, label in _langs %}
-      <a href="?{{ request.query_string.decode().replace('lang=no','').replace('lang=en','').replace('lang=es','').replace('lang=ja','') | trim('&') }}&lang={{ lc }}"
-         class="{% if lang == lc %}active{% endif %}">{{ label }}</a>
-      {% endfor %}
-    </div>
-
-    <!-- NEWS WATCH -->
-    <div class="sidebar-pillar">
-      <div class="sidebar-pillar-label">News Watch</div>
-    </div>
-
-    <a href="/?lang={{ lang }}"
-       class="nav-item{% if not active_region and not active_theme %} active{% endif %}"
-       onclick="setRegionFilter('all');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-      Alle nyheter
-      <span class="nav-count" id="nav-count-all">{{ articles | length }}</span>
-    </a>
-    <a href="/?region=norge&lang={{ lang }}"
-       class="nav-item{% if active_region == 'norge' %} active{% endif %}"
-       onclick="setRegionFilter('norge');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-      Norge
-      <span class="nav-count">{{ region_counts.norge }}</span>
-    </a>
-    <a href="/?region=chile&lang={{ lang }}"
-       class="nav-item{% if active_region == 'chile' %} active{% endif %}"
-       onclick="setRegionFilter('chile');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-      Chile
-      <span class="nav-count">{{ region_counts.chile }}</span>
-    </a>
-    <a href="/?region=canada&lang={{ lang }}"
-       class="nav-item{% if active_region == 'canada' %} active{% endif %}"
-       onclick="setRegionFilter('canada');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-      Canada
-      <span class="nav-count">{{ region_counts.canada }}</span>
-    </a>
-    <a href="/?region=global&lang={{ lang }}"
-       class="nav-item{% if active_region == 'global' %} active{% endif %}"
-       onclick="setRegionFilter('global');return false;">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>
-      Globalt
-      <span class="nav-count">{{ region_counts.global }}</span>
-    </a>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- TEMA (collapsible) -->
-    <button class="sidebar-collapsible-toggle{% if not active_theme %} collapsed{% endif %}"
-            id="tema-toggle" onclick="toggleTema()">
-      <span class="coll-label">Tema</span>
-      <span class="coll-arrow">&#9660;</span>
-    </button>
-    <div class="sidebar-collapsible-body{% if not active_theme %} collapsed{% endif %}" id="tema-body">
-      {% set _themes_list = ['Sjø','Landbasert','Fôr','Fiskehelse','Teknologi','Digitalisering','Finans','Marked'] %}
-      {% for t in _themes_list %}
-      <a href="/?theme={{ t | urlencode }}&lang={{ lang }}"
-         class="nav-item{% if active_theme == t %} active{% endif %}"
-         onclick="setThemeFilter('{{ t }}');return false;">
-        <span class="theme-dot" data-theme="{{ t }}"></span>
-        {{ t }}
-        <span class="nav-count">{{ theme_counts.get(t, 0) }}</span>
-      </a>
-      {% endfor %}
-    </div>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- INNSIKT -->
-    <div class="sidebar-group">
-      <div class="sidebar-group-label">Innsikt</div>
-      <a href="/reports?lang={{ lang }}" class="nav-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-        </svg>
-        Rapporter
-      </a>
-      <a href="/analytics?lang={{ lang }}" class="nav-item">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
-        </svg>
-        Analytics
-      </a>
-    </div>
-
-    <!-- FILTRE -->
-    <div class="sidebar-filters">
-      <h3>Filtre</h3>
-
-      <div class="sidebar-filter-group">
-        <label>Omtale-nivå</label>
-        <select id="filter-scope">
-          <option value="all">Alle</option>
-          <option value="cermaq">Cermaq direkte</option>
-          <option value="industry-core">Bransje i Cermaq-områder</option>
-          <option value="industry-global">Bransje generelt</option>
-        </select>
-      </div>
-
-      <div class="sidebar-filter-group">
-        <label>Kilde</label>
-        <select id="filter-source">
-          <option value="all">Alle</option>
-          <option value="nyheter" selected>Nyheter</option>
-          <option value="some">SoMe</option>
-        </select>
-      </div>
-
-      <div class="sidebar-filter-group">
-        <label>Tone</label>
-        <select id="filter-tone">
-          <option value="all">Alle</option>
-          <option value="positiv">Positiv</option>
-          <option value="noytral">Nøytral</option>
-          <option value="negativ">Negativ</option>
-        </select>
-      </div>
-
-      <div class="sidebar-filter-group">
-        <label>Tidsperiode</label>
-        <select id="filter-date">
-          <option value="all">Alt</option>
-          <option value="today">I dag</option>
-          <option value="week">Siste uke</option>
-          <option value="month">Siste måned</option>
-        </select>
-      </div>
-
-      <div class="sidebar-filter-group">
-        <label>Sortér</label>
-        <select id="filter-sort">
-          <option value="newest" selected>Nyeste først</option>
-          <option value="oldest">Eldste først</option>
-          <option value="relevance">Relevans</option>
-          <option value="negative">Negativ tone først</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="sidebar-divider" style="margin-top:14px;"></div>
-
-    <!-- FINANCE WATCH -->
-    <div class="sidebar-pillar" style="padding-top:10px;">
-      <div class="sidebar-pillar-label">Finance Watch</div>
-    </div>
-    <a href="/finance?lang={{ lang }}" class="nav-item">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-        <polyline points="16 7 22 7 22 13"/>
-      </svg>
-      Finans &amp; Marked
-    </a>
-    <a href="/alerts?lang={{ lang }}" class="nav-item">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-      </svg>
-      {{ ui_text.nav_alerts }}
-    </a>
-
-  </aside>
+  {% include '_sidebar.html' %}
 
   <!-- ═══ Main content ══════════════════════════════════════════ -->
   <div class="main-content">
