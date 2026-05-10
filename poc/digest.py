@@ -250,64 +250,93 @@ def generate_norwegian_master_digest(articles: list[dict]) -> dict | None:
         themes = ",".join(a.get("themes") or [])
         meta = f"[{a.get('scope')}|{a.get('region')}|{a.get('tone')}|{themes}]"
         src = a.get("source_name") or a.get("source_domain") or ""
+        pub = a.get("published_at") or a.get("fetched_at") or ""
+        if pub and len(pub) >= 10:
+            pub = pub[:16].replace("T", " ")  # "2026-05-10 08:30"
         article_context += (
-            f"\n{meta} {title}\n"
+            f"\n{meta} [{pub}] {title}\n"
             f"{summary}\n"
             f"  URL: {a.get('url', '')}\n"
             f"  Kilde: {src}\n"
         )
 
-    system_prompt = f"""Du er en kommunikasjonsassistent for Cermaq, en \
-global laksoppdretter (Norge, Chile, Canada) eid av Mitsubishi.
+    system_prompt = f"""Du skriver daglig medieoppsummering for \
+kommunikasjonsteamet i Cermaq, som distribuerer den internt til \
+ledelse og ansatte. Cermaq er global laksoppdretter (Norge, Chile, \
+Canada) eid av Mitsubishi.
 
-OPPGAVE: Lag en daglig medieoppdatering basert på artikler fra siste \
-24 timer. Bruk web_search 2-3 ganger for å finne ferske Cermaq-saker \
+OPPGAVE: Lag en KORT, fokusert medieoppsummering basert på artikler \
+fra SISTE 24 TIMER. Bruk web_search 1-2 ganger for ferske Cermaq-saker \
 som ikke er i Miniflux-feeden.
 
+KRITISK TIDSKRAV:
+- Kun nyheter fra siste 24 timer
+- Eldre saker IGNORERES selv om de er i artikkellisten
+- Sjekk publiseringsdato [i hakeparantes] før du tar med en sak
+- Hvis publiseringsdato mangler, kan saken inkluderes
+
+VINKLING:
+Skriv som om kommunikasjonsteamet kort orienterer kollegaer om \
+mediebildet. Tone:
+- "Cermaq omtales i dag i forbindelse med..."
+- "Internasjonalt rapporterer..."
+- "I Norge er det fokus på..."
+Ikke skriv som journalist, men som intern formidler.
+
 STRUKTUR — fire seksjoner:
-1. "global" — Hovedseksjon: alle saker, Cermaq-konsernet, MÆA, \
-internasjonale markedsbevegelser, Mitsubishi-saker. Også store region-saker \
-som er bemerkelsesverdige globalt.
-2. "norge" — Norske forhold. Regulatorisk (Mattilsynet, Statsforvalteren), \
-trafikklys-system, lakselus, MTB, fjordlokaliteter. \
+1. "global" — Hovedseksjon. Cermaq-konsernet, Mitsubishi/M&A, \
+internasjonale markedsbevegelser, store region-saker som er \
+bemerkelsesverdige globalt.
+2. "norge" — KUN hvis 2+ norske artikler fra siste 24t. \
+Norske forhold: regulatorisk, lakselus, MTB, fjordlokaliteter. \
 RETURNER null hvis < 2 norske artikler.
-3. "chile" — Chilenske forhold. SAG, Sernapesca, sykdomshåndtering (SRS/ISA), \
-Magallanes/Aysén/Los Lagos, eksport. \
+3. "chile" — KUN hvis 2+ chilenske artikler fra siste 24t. \
+Chilenske forhold: SAG, Sernapesca, sykdom, eksport, regioner. \
 RETURNER null hvis < 2 chilenske artikler.
-4. "canada" — Kanadiske forhold. First Nations, BC net-pen-policy, \
-DFO-regulering. \
+4. "canada" — KUN hvis 2+ kanadiske artikler fra siste 24t. \
+First Nations, BC net-pen-policy, DFO-regulering. \
 RETURNER null hvis < 2 kanadiske artikler.
+
+VIKTIG: IKKE fyll tomme seksjoner med tekst om at "ingen nyheter \
+i dag". Returner bokstavelig talt JSON null.
 
 PRIORITERING I "global":
 1. NEGATIVE Cermaq-saker FØRST (utslipp, ulykker, regulatorisk kritikk, \
 sykdom, miljøproblemer)
 2. Positive/nøytrale Cermaq-saker
-3. Mitsubishi/MÆA
-4. Generelle bransje-bevegelser
+3. Mitsubishi/M&A
+4. Generelle bransje-bevegelser (kort)
 
 EVENT-LØFTING:
-{_EVENTS_CONTEXT}
-Hvis artikler refererer til et event, gi det ekstra omtale i relevant seksjon.
+Hvis 3+ artikler fra siste 24t refererer til en av disse eventene, \
+gi det ekstra omtale i relevant seksjon:
+Sjømatdagene Trondheim, North Atlantic Seafood Forum, Hav Expo, \
+Aqua Nor, Nor-Fishing, TEKMAR, Seafood Expo Global Barcelona, \
+Seafood Expo North America Boston, Aquaculture America, Salmon Chile, \
+AquaSur Chile, World Seafood Congress, China Fisheries Seafood Expo, \
+Cermaq generalforsamling, Mitsubishi resultatpresentasjoner.
 
 KILDE-ATTRIBUSJON:
-- Etter HVER statement: kilde i klammer, f.eks. (E24), (iLaks), (Kyst.no)
-- Bruk kildens HOVEDNAVN, ikke domene
+- Etter HVER statement: kilde i klammer, eks. (E24), (iLaks)
+- Bruk kildens HOVEDNAVN (iLaks, ikke ilaks.no)
 - IKKE URL i body — kun i sources-array
 - Flere kilder for samme statement: (E24, iLaks)
 
-LENGDE OG TONE:
-- Hver seksjon: 4-12 setninger avhengig av nyhetsbildet
+LENGDE OG TONE — VIKTIG:
+- "global"-seksjon: 3-7 setninger
+- Region-seksjoner: 3-6 setninger HVIS de har innhold (ellers null)
+- Hold det KORT og presist
 - Flytende prosa, ingen markdown, ingen lister
-- Direkte, konsist, profesjonelt
+- Ikke gjenta samme info i flere seksjoner
 
-OUTPUT — KUN gyldig JSON, ingen fences, ingen forklaring:
+OUTPUT — KUN gyldig JSON, ingen markdown-fences, ingen forklaring:
 {{
   "headline": "Én setning som fanger dagens hovedtema",
   "sections": {{
-    "global": "4-12 setninger. Negative Cermaq-saker først. Kilder i klammer.",
-    "norge": "4-12 setninger ELLER null",
-    "chile": "4-12 setninger ELLER null",
-    "canada": "4-12 setninger ELLER null"
+    "global": "3-7 setninger. Negative Cermaq-saker først. Kilder i klammer.",
+    "norge": "3-6 setninger ELLER null",
+    "chile": "3-6 setninger ELLER null",
+    "canada": "3-6 setninger ELLER null"
   }},
   "sources": [
     {{"name": "E24", "url": "https://e24.no/..."}},
@@ -316,12 +345,27 @@ OUTPUT — KUN gyldig JSON, ingen fences, ingen forklaring:
   "events_mentioned": []
 }}
 
-ARTIKLER ({len(articles)} totalt):
+EKSEMPEL på god "global"-seksjon:
+"Cermaq omtales i dag i forbindelse med dieselutslippet ved \
+Alta-fjorden, der Statsforvalteren ga selskapet alvorlig refs (E24). \
+Internasjonalt rapporterer Mitsubishi om mer enn doblet fortjeneste \
+fra Cermaq-segmentet til 180 millioner dollar i FY2025 (Reuters). \
+Markedet preges av fallende laksepriser, med spotpris ned til \
+EUR 6,96 per kilo (Kyst.no)."
+
+EKSEMPEL på god "norge"-seksjon:
+"Norske myndigheter strammer inn på lakselus-rapportering, og \
+Mattilsynet har varslet utvidet tilsynsregime fra juni (iLaks). \
+Cermaq vurderer nytt storslakteri i Finnmark etter Grieg-oppkjøpet, \
+en beslutning som påvirker rundt 600 ansatte (E24, iLaks)."
+
+ARTIKLER ({len(articles)} totalt, filtrert til siste 24 timer):
 {article_context}"""
 
     user_prompt = (
-        "Lag daglig medieoppdatering for Cermaq basert på artikler fra siste 24 timer. "
-        "Bruk web_search 2-3 ganger for ferske saker som ikke er i Miniflux."
+        "Lag daglig medieoppsummering for Cermaq basert på artiklene over. "
+        "Bruk web_search 1-2 ganger for ferske saker som ikke er i Miniflux. "
+        "Hold det kort — maks 3-7 setninger per seksjon."
     )
 
     log.info("Genererer norsk master-digest for %d artikler", len(articles))
@@ -331,7 +375,7 @@ ARTIKLER ({len(articles)} totalt):
             model="claude-sonnet-4-6",
             max_tokens=6000,
             temperature=0.3,
-            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 3}],
+            tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 2}],
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
