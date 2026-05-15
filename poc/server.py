@@ -2865,6 +2865,59 @@ def analytics_page():
     return render_template("analytics.html", lang=lang)
 
 
+# ---------------------------------------------------------------------------
+# Bulletin archive + standalone viewer
+# ---------------------------------------------------------------------------
+
+_BULLETINS = [
+    {
+        "nr": 23,
+        "dato": "2026-05-16",
+        "dato_display": "Fredag 15. mai 2026",
+        "oneliner": "Cermaq varsler kapasitetsutvidelse i Nord-Norge etter Grieg-oppkjøpet",
+        "html_url": "/bulletin/23",
+        "pdf_url": "/bulletin/23/pdf",
+    },
+    {
+        "nr": 22,
+        "dato": "2026-05-08",
+        "dato_display": "Fredag 8. mai 2026",
+        "oneliner": "Laksepriser faller 8 % — Cermaq Chile styrker eksportandel til EU",
+        "html_url": "/bulletin/22",
+        "pdf_url": "/bulletin/22/pdf",
+    },
+    {
+        "nr": 21,
+        "dato": "2026-05-01",
+        "dato_display": "Fredag 1. mai 2026",
+        "oneliner": "Mitsubishi-rapport: Cermaq bidrar med rekordresultat i FY2025",
+        "html_url": "/bulletin/21",
+        "pdf_url": "/bulletin/21/pdf",
+    },
+]
+
+
+@app.route("/bulletin")
+def bulletin_archive():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    return render_template("bulletin_archive.html", lang=lang, bulletins=_BULLETINS)
+
+
+@app.route("/bulletin/<int:nr>")
+def bulletin_view(nr):
+    bulletin = next((b for b in _BULLETINS if b["nr"] == nr), None)
+    if bulletin is None:
+        return f"Bulletin #{nr} ikke funnet", 404
+    return render_template("bulletin_standalone.html", bulletin=bulletin)
+
+
+@app.route("/bulletin/<int:nr>/pdf")
+def bulletin_pdf(nr):
+    return f"PDF for bulletin #{nr} er ikke tilgjengelig ennå.", 404
+
+
 @app.route("/reports")
 def reports_index():
     lang = request.args.get("lang", "no")

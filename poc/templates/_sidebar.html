@@ -128,6 +128,16 @@
       </svg>
       {{ t('analytics') }}
     </a>
+    <a href="/bulletin?lang={{ lang }}"
+       class="nav-item{% if request.path.startswith('/bulletin') %} active{% endif %}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16v2H4z"/><path d="M4 9h10v2H4z"/>
+        <path d="M4 14h7v2H4z"/>
+        <rect x="13" y="12" width="7" height="8" rx="1"/>
+      </svg>
+      {{ t('bulletin') }}
+    </a>
   </div>
 
   <!-- FILTRE (news page only) -->
