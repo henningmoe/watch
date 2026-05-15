@@ -42,15 +42,15 @@
     .header-link:hover { background: rgba(255,255,255,0.1); }
 
     /* ─── Layout ─────────────────────────────────────────────── */
-    .admin-body { max-width: 900px; margin: 0 auto; padding: 28px 20px 48px; }
+    .admin-body { max-width: 960px; margin: 0 auto; padding: 28px 20px 60px; }
 
     /* ─── Token card ─────────────────────────────────────────── */
     .token-card {
       background: #fff;
       border: 2px solid #0c4a3e;
       border-radius: 8px;
-      padding: 16px 20px;
-      margin-bottom: 20px;
+      padding: 14px 20px;
+      margin-bottom: 28px;
       display: flex;
       align-items: center;
       gap: 12px;
@@ -86,28 +86,83 @@
     .token-status { font-size: 11px; color: #9ca3af; }
     .token-status.ok { color: #15803d; }
 
-    /* ─── Cards ──────────────────────────────────────────────── */
-    .card {
+    /* ─── Sections ───────────────────────────────────────────── */
+    .admin-section {
+      margin: 32px 0;
+      padding-bottom: 28px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .admin-section:last-child { border-bottom: none; }
+    .admin-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .admin-section h2 {
+      font-size: 17px;
+      font-weight: 600;
+      color: #0c4a3e;
+      margin: 0;
+    }
+    .admin-section > h2 { margin-bottom: 16px; }
+
+    /* ─── Subsections ────────────────────────────────────────── */
+    .admin-subsection {
+      margin: 16px 0;
+      padding: 16px 20px;
       background: #fff;
       border: 1px solid #e5e7eb;
       border-radius: 8px;
-      padding: 22px 24px;
-      margin-bottom: 16px;
     }
-    .card-title {
-      font-size: 13px;
+    .admin-subsection + .admin-subsection { margin-top: 12px; }
+    .admin-subsection h3 {
+      font-size: 12px;
       font-weight: 600;
-      color: #111827;
+      color: #374151;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       margin-bottom: 4px;
     }
-    .card-desc {
+    .admin-description {
       font-size: 12px;
       color: #6b7280;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       line-height: 1.5;
     }
+
+    /* ─── Buttons ────────────────────────────────────────────── */
+    .btn {
+      padding: 7px 14px;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, opacity 0.12s;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #0c4a3e; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #0a3d33; }
+    .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+    .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .secondary-btn {
+      background: #fff;
+      color: #374151;
+      border: 1px solid #d1d5db;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.12s, color 0.12s;
+    }
+    .secondary-btn:hover { border-color: #0c4a3e; color: #0c4a3e; }
 
     /* ─── Form rows ──────────────────────────────────────────── */
     .form-row {
@@ -134,31 +189,10 @@
     .form-control.wide { min-width: 360px; }
     .form-control.short { width: 80px; }
 
-    /* ─── Buttons ────────────────────────────────────────────── */
-    .btn {
-      padding: 7px 14px;
-      border: none;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.12s, opacity 0.12s;
-      white-space: nowrap;
-    }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: #0c4a3e; color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: #0a3d33; }
-    .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
-    .btn-secondary:hover:not(:disabled) { background: #e5e7eb; }
-    .btn-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
-    .btn-danger:hover:not(:disabled) { background: #fee2e2; }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-
     /* ─── Feedback boxes ─────────────────────────────────────── */
     .feedback {
-      margin-top: 12px;
-      padding: 10px 14px;
+      margin-top: 10px;
+      padding: 9px 13px;
       border-radius: 6px;
       font-size: 12px;
       line-height: 1.5;
@@ -172,12 +206,12 @@
     .feedback.info    { background: #f0f9ff; border: 1px solid #7dd3fc; color: #0369a1; }
     .feedback.loading { background: #f9fafb; border: 1px solid #e5e7eb; color: #6b7280; }
 
-    /* ─── Status grid ────────────────────────────────────────── */
+    /* ─── System status grid ─────────────────────────────────── */
     .status-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
       gap: 10px;
-      margin-top: 12px;
+      margin-top: 14px;
     }
     .status-cell {
       background: #f9fafb;
@@ -190,13 +224,79 @@
     .status-cell-value.green { color: #0c4a3e; }
     .status-cell-value.red   { color: #b91c1c; }
 
-    /* ─── Hint text ──────────────────────────────────────────── */
+    /* ─── Module cards (trigger grid) ───────────────────────── */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+    .module-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .module-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .module-card-name { font-size: 12px; font-weight: 600; color: #111827; }
+    .module-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .badge-idle    { background: #f3f4f6; color: #6b7280; }
+    .badge-running { background: #fef9c3; color: #92400e; }
+    .badge-ok      { background: #dcfce7; color: #166534; }
+    .badge-error   { background: #fee2e2; color: #991b1b; }
+    .module-card-desc { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
+    .module-card-meta { font-size: 11px; color: #9ca3af; margin-bottom: 10px; min-height: 14px; }
+    .module-trigger-btn {
+      width: 100%;
+      padding: 6px 0;
+      background: #0c4a3e;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, opacity 0.12s;
+    }
+    .module-trigger-btn:hover:not(:disabled) { background: #0a3d33; }
+    .module-trigger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ─── Backfill days input ────────────────────────────────── */
+    .backfill-input {
+      margin: 8px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .backfill-input label { font-size: 11px; color: #6b7280; font-weight: 500; }
+    .backfill-input input {
+      width: 60px;
+      padding: 4px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 13px;
+      text-align: center;
+      font-family: inherit;
+    }
+
+    /* ─── Hint ───────────────────────────────────────────────── */
     .hint { font-size: 11px; color: #9ca3af; margin-top: 6px; line-height: 1.5; }
   </style>
 </head>
 <body>
 
-<!-- Header -->
 <header class="admin-header">
   <div class="admin-header-left">
     <div class="admin-logo">CW</div>
@@ -212,7 +312,6 @@
   </div>
 </header>
 
-<!-- Body -->
 <div class="admin-body">
 
   <!-- Token -->
@@ -223,120 +322,107 @@
     <span class="token-status" id="token-status">Ikke satt</span>
   </div>
 
-  <!-- Card 1: Status -->
-  <div class="card">
-    <div class="card-title">System-status</div>
-    <div class="card-desc">Hent sanntidsstatus for artikler, klassifisering og Postgres.</div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="loadStatus()">Last status</button>
+  <!-- ══ SEKSJON 1: AUTOMATISERING ══════════════════════════════ -->
+  <div class="admin-section">
+    <div class="admin-section-header">
+      <h2>Automatisering</h2>
+      <button class="secondary-btn" onclick="refreshAll()">↻ Oppdater status</button>
     </div>
-    <div id="status-grid" class="status-grid" style="display:none"></div>
+    <div id="system-status-grid" class="status-grid" style="display:none"></div>
+    <div id="module-grid" class="module-grid" style="margin-top:14px"></div>
     <div id="status-feedback" class="feedback"></div>
   </div>
 
-  <!-- Card 2: Backfill -->
-  <div class="card">
-    <div class="card-title">Backfill — hent historiske artikler</div>
-    <div class="card-desc">Søker etter Cermaq-relaterte artikler via websøk og legger dem i klassifiseringskøen. Tar 2–5 min.</div>
-    <div class="form-row">
-      <div class="form-field">
-        <label for="bf-days">Antall dager bakover</label>
-        <input type="number" id="bf-days" class="form-control short" value="7" min="1" max="30" />
-      </div>
-      <div class="form-field">
-        <label for="bf-max">Maks artikler</label>
-        <input type="number" id="bf-max" class="form-control short" value="30" min="1" max="100" />
-      </div>
-      <button class="btn btn-primary" onclick="startBackfill()">Start backfill</button>
-    </div>
-    <p class="hint">Sjekk Railway-logg eller last siden på nytt etter noen minutter for å se resultatene.</p>
-    <div id="backfill-feedback" class="feedback"></div>
+  <!-- ══ SEKSJON 2: DAGLIG INNHOLD ══════════════════════════════ -->
+  <div class="admin-section">
+    <h2>Manuelle triggere — Daglig innhold</h2>
+    <div id="module-grid-daily" class="module-grid"></div>
+    <div id="daily-feedback" class="feedback"></div>
   </div>
 
-  <!-- Card 2b: Web-søk -->
-  <div class="card">
-    <div class="card-title">Web-søk — ferske Cermaq-artikler</div>
-    <div class="card-desc">Kjører web-søk på 7 Cermaq-relaterte søketermer. Nye URL-er legges som artikler og klassifiseres automatisk. Tar 1–3 minutter.</div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="startWebsearch()">Start web-søk</button>
-    </div>
-    <p class="hint">Sjekk Railway-logg for: «Manuelt web-søk: fant X URL-er, la til Y nye artikler»</p>
-    <div id="websearch-feedback" class="feedback"></div>
+  <!-- ══ SEKSJON 3: MARKEDSDATA ══════════════════════════════════ -->
+  <div class="admin-section">
+    <h2>Manuelle triggere — Markedsdata</h2>
+    <div id="module-grid-market" class="module-grid"></div>
+    <div id="market-feedback" class="feedback"></div>
   </div>
 
-  <!-- Card 3: Legg til artikkel -->
-  <div class="card">
-    <div class="card-title">Legg til artikkel manuelt</div>
-    <div class="card-desc">Henter OG-metadata og innhold fra URL-en, og legger artikkelen i klassifiseringskøen.</div>
-    <div class="form-row">
-      <div class="form-field" style="flex:1">
-        <label for="add-url">URL</label>
-        <input type="url" id="add-url" class="form-control wide" placeholder="https://ilaks.no/artikkel/…" />
+  <!-- ══ SEKSJON 4: REKLASSIFISERING ════════════════════════════ -->
+  <div class="admin-section">
+    <h2>Reklassifisering</h2>
+    <div class="module-grid">
+      <div class="module-card" id="mc-reclassify_backfill">
+        <div class="module-card-header">
+          <span class="module-card-name">Backfill — siste N dager</span>
+          <span class="module-badge badge-idle" id="badge-reclassify_backfill">idle</span>
+        </div>
+        <div class="module-card-desc">Reklassifiser artikler fra siste N dager med gjeldende klassifiseringsprompt.</div>
+        <div class="module-card-meta" id="meta-reclassify_backfill">Aldri kjørt</div>
+        <div class="backfill-input">
+          <label for="backfill-days">Antall dager:</label>
+          <input type="number" id="backfill-days" value="3" min="1" max="90" step="1">
+        </div>
+        <button class="module-trigger-btn" id="btn-reclassify_backfill" onclick="triggerBackfill()">▶ Kjør nå</button>
+        <div id="feedback-reclassify_backfill" class="feedback"></div>
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-field">
-        <label for="add-source">Kilde-navn (valgfritt)</label>
-        <input type="text" id="add-source" class="form-control" placeholder="f.eks. iLaks" style="width:200px" />
+  </div>
+
+  <!-- ══ SEKSJON 5: ARTIKKEL-INNHENTING ════════════════════════ -->
+  <div class="admin-section">
+    <h2>Artikkel-innhenting</h2>
+
+    <div class="admin-subsection">
+      <h3>Backfill — hent historiske artikler</h3>
+      <p class="admin-description">Søker etter Cermaq-relaterte artikler via websøk og legger dem i klassifiseringskøen. Tar 2–5 min.</p>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="bf-days">Antall dager bakover</label>
+          <input type="number" id="bf-days" class="form-control short" value="7" min="1" max="30" />
+        </div>
+        <div class="form-field">
+          <label for="bf-max">Maks artikler</label>
+          <input type="number" id="bf-max" class="form-control short" value="30" min="1" max="100" />
+        </div>
+        <button class="btn btn-primary" onclick="startBackfill()">Start backfill</button>
       </div>
-      <div class="form-field">
-        <label for="add-date">Publisert dato (YYYY-MM-DD, valgfritt)</label>
-        <input type="date" id="add-date" class="form-control" style="width:170px" />
+      <p class="hint">Sjekk Railway-logg eller last siden på nytt etter noen minutter.</p>
+      <div id="backfill-feedback" class="feedback"></div>
+    </div>
+
+    <div class="admin-subsection">
+      <h3>Web-søk — ferske Cermaq-artikler</h3>
+      <p class="admin-description">Kjører web-søk på 7 Cermaq-relaterte søketermer. Nye URL-er legges som artikler og klassifiseres automatisk. Tar 1–3 minutter.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="startWebsearch()">Start web-søk</button>
       </div>
-      <button class="btn btn-primary" onclick="addArticle()">Legg til artikkel</button>
+      <p class="hint">Sjekk Railway-logg for: «Manuelt web-søk: fant X URL-er, la til Y nye artikler»</p>
+      <div id="websearch-feedback" class="feedback"></div>
     </div>
-    <div id="add-feedback" class="feedback"></div>
-  </div>
 
-  <!-- Card 4: Reklassifisering -->
-  <div class="card">
-    <div class="card-title">Reklassifisering</div>
-    <div class="card-desc">Sett artikler i klassifiseringskøen på nytt. "Kun uklassifiserte" er trygt å kjøre alltid.</div>
-    <div class="btn-row">
-      <button class="btn btn-secondary" onclick="reclassify('missing')">Reklassifiser kun uklassifiserte</button>
-      <button class="btn btn-danger" onclick="reclassifyAll()">Reklassifiser alle</button>
+    <div class="admin-subsection">
+      <h3>Legg til artikkel manuelt</h3>
+      <p class="admin-description">Henter OG-metadata og innhold fra URL-en, og legger artikkelen i klassifiseringskøen.</p>
+      <div class="form-row">
+        <div class="form-field" style="flex:1">
+          <label for="add-url">URL</label>
+          <input type="url" id="add-url" class="form-control wide" placeholder="https://ilaks.no/artikkel/…" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label for="add-source">Kilde-navn (valgfritt)</label>
+          <input type="text" id="add-source" class="form-control" placeholder="f.eks. iLaks" style="width:200px" />
+        </div>
+        <div class="form-field">
+          <label for="add-date">Publisert dato (YYYY-MM-DD, valgfritt)</label>
+          <input type="date" id="add-date" class="form-control" style="width:170px" />
+        </div>
+        <button class="btn btn-primary" onclick="addArticle()">Legg til artikkel</button>
+      </div>
+      <div id="add-feedback" class="feedback"></div>
     </div>
-    <div id="reclassify-feedback" class="feedback"></div>
-  </div>
 
-  <!-- Card 5: Regenerer daglig digest -->
-  <div class="card">
-    <div class="card-title">Daglig AI-oppdatering</div>
-    <div class="card-desc">Generer daglig oppsummering på nytt for alle fire språk (NO/EN/ES/JA). Tar ca. 30–60 sek. Kjøres automatisk kl. 06:00.</div>
-    <div class="btn-row">
-      <button class="btn btn-primary" onclick="regenerateDigest()">Generer daglig digest</button>
-    </div>
-    <div id="digest-feedback" class="feedback"></div>
-  </div>
-
-  <!-- Card 5b: Ukentlig digest -->
-  <div class="card">
-    <div class="card-title">Uken oppsummert</div>
-    <div class="card-desc">Generer ukentlig medieoppsummering. Bruker web-søk for bredere kontekst. Tar 1–3 minutter per språk (4 språk). Vises på <a href="/uken" style="color:#0c4a3e">/uken</a>-siden.</div>
-    <div class="btn-row">
-      <button class="btn btn-primary" id="btn-weekly-digest" onclick="generateWeekly()">Generer ukens oppsummering</button>
-    </div>
-    <div id="weekly-feedback" class="feedback"></div>
-  </div>
-
-  <!-- Card 6: Reklassifiser alle -->
-  <div class="card">
-    <div class="card-title">Reklassifiser alle artikler</div>
-    <div class="card-desc">Reklassifiser alle artikler med ny prompt (inkluderer themes-akse). Nyeste artikler reklassifiseres først for minst påvirkning på brukerne. Tar 5-10 minutter.</div>
-    <div class="btn-row">
-      <button class="btn btn-danger" id="btn-reclassify-all" onclick="triggerFullReclassify()">Reklassifiser alle</button>
-    </div>
-    <div id="reclassify-all-feedback" class="feedback"></div>
-  </div>
-
-  <!-- Card 7: Migrer tone -->
-  <div class="card">
-    <div class="card-title">Migrer tone-verdier</div>
-    <div class="card-desc">Engangs-operasjon: oppdaterer alle artikler med <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px">tone='kritisk'</code> til <code style="background:#f3f4f6;padding:1px 5px;border-radius:3px">tone='negativ'</code> i databasen og in-memory cache. Trygt å kjøre flere ganger.</div>
-    <div class="btn-row">
-      <button class="btn btn-secondary" onclick="migrateTone()">Migrer 'kritisk' → 'negativ'</button>
-    </div>
-    <div id="migrate-feedback" class="feedback"></div>
   </div>
 
 </div><!-- /admin-body -->
@@ -355,10 +441,7 @@
 
   function saveToken() {
     token = document.getElementById("admin-token").value.trim();
-    if (!token) {
-      showFeedback("token-status", "Tomt token!", "error", true);
-      return;
-    }
+    if (!token) { alert("Token kan ikke være tomt"); return; }
     sessionStorage.setItem("cermaq_admin_token", token);
     var el = document.getElementById("token-status");
     el.textContent = "Lagret ✓";
@@ -369,22 +452,17 @@
     if (e.key === "Enter") saveToken();
   });
 
-  /* ─── Generic feedback helper ────────────────────────────── */
+  /* ─── Helpers ────────────────────────────────────────────── */
   function showFeedback(id, message, type, isText) {
     var el = document.getElementById(id);
     if (!el) return;
     el.style.display = "block";
     el.className = "feedback " + (type || "info");
-    if (isText) {
-      el.textContent = message;
-    } else {
-      el.textContent = typeof message === "string" ? message : JSON.stringify(message, null, 2);
-    }
+    el.textContent = isText ? message
+      : (typeof message === "string" ? message : JSON.stringify(message, null, 2));
   }
 
-  function tokenParam() {
-    return "token=" + encodeURIComponent(token);
-  }
+  function tokenParam() { return "token=" + encodeURIComponent(token); }
 
   function requireToken(feedbackId) {
     if (!token) {
@@ -394,75 +472,280 @@
     return true;
   }
 
-  /* ─── Card 1: Status ─────────────────────────────────────── */
-  async function loadStatus() {
-    if (!requireToken("status-feedback")) return;
+  function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  /* ─── Module configs ─────────────────────────────────────── */
+  var MODULES_STATUS = [
+    { key: "news_digest",    label: "Nyhets-digest",  desc: "Automatisk 08:00 + 12:00" },
+    { key: "finance_digest", label: "Finans-digest",  desc: "Pauset — manuell trigger" },
+    { key: "salmon_prices",  label: "Laksepriser",    desc: "Pauset — manuell trigger" },
+    { key: "rates_stocks",   label: "Valuta + aksjer",desc: "Pauset — manuell trigger" },
+    { key: "calendar",       label: "Kalender",       desc: "Pauset — manuell trigger" },
+  ];
+
+  var MODULES_DAILY = [
+    { key: "news_digest",    label: "Nyhets-digest",       endpoint: "/admin/trigger/news-digest",    desc: "Norsk master + oversettelser til EN/ES/JA" },
+    { key: "finance_digest", label: "Finans-digest",       endpoint: "/admin/trigger/finance-digest", desc: "Markedsbrief for alle 4 språk" },
+    { key: "weekly_summary", label: "Uken oppsummert",     endpoint: "/admin/generate-weekly",        desc: "Ukentlig medieoppsummering for /uken-siden" },
+    { key: "bulletin",       label: "News Bulletin",       endpoint: "/admin/trigger/bulletin",       desc: "Generer ukentlig Bulletin (generator + faktasjekk, ~3–5 min)" },
+  ];
+
+  var MODULES_MARKET = [
+    { key: "salmon_prices",  label: "Laksepriser",         endpoint: "/admin/trigger/salmon-prices",  desc: "Fish Pool + Nasdaq Salmon Index" },
+    { key: "rates_stocks",   label: "Valuta + aksjer",     endpoint: "/admin/trigger/rates-stocks",   desc: "Norges Bank-kurser + Mowi/SalMar/Grieg/Bakkafrost/Lerøy + råvarer" },
+    { key: "calendar",       label: "Kalender",            endpoint: "/admin/trigger/calendar",       desc: "Kommende bransje-events og Q-rapport-datoer" },
+  ];
+
+  var _moduleStatus = {};
+
+  function badgeClass(status) {
+    return { running: "badge-running", ok: "badge-ok", error: "badge-error" }[status] || "badge-idle";
+  }
+
+  /* ─── Render status overview (seksjon 1) ─────────────────── */
+  function renderStatusOverview() {
+    var grid = document.getElementById("module-grid");
+    grid.innerHTML = MODULES_STATUS.map(function(m) {
+      var s = _moduleStatus[m.key] || {};
+      var status = s.status || "idle";
+      var lastRun = s.last_run_at
+        ? new Date(s.last_run_at).toLocaleString("nb-NO")
+        : "Aldri kjørt";
+      return '<div class="module-card">'
+        + '<div class="module-card-header">'
+        + '<span class="module-card-name">' + esc(m.label) + '</span>'
+        + '<span class="module-badge ' + badgeClass(status) + '">' + esc(status) + '</span>'
+        + '</div>'
+        + '<div class="module-card-desc">' + esc(m.desc) + '</div>'
+        + '<div class="module-card-meta">' + esc(lastRun)
+        + (s.last_message ? ' — ' + esc(s.last_message) : '') + '</div>'
+        + '</div>';
+    }).join("");
+    grid.style.display = "grid";
+  }
+
+  /* ─── Render trigger grids (seksjon 2 + 3) ──────────────── */
+  function renderTriggerGrid(containerId, modules, feedbackId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = modules.map(function(m) {
+      var s = _moduleStatus[m.key] || {};
+      var status = s.status || "idle";
+      var lastRun = s.last_run_at
+        ? new Date(s.last_run_at).toLocaleString("nb-NO")
+        : "Aldri kjørt";
+      return '<div class="module-card" id="mc-' + m.key + '">'
+        + '<div class="module-card-header">'
+        + '<span class="module-card-name">' + esc(m.label) + '</span>'
+        + '<span class="module-badge ' + badgeClass(status) + '">' + esc(status) + '</span>'
+        + '</div>'
+        + '<div class="module-card-desc">' + esc(m.desc) + '</div>'
+        + '<div class="module-card-meta">' + esc(lastRun)
+        + (s.last_message ? ' — ' + esc(s.last_message) : '') + '</div>'
+        + '<button class="module-trigger-btn" id="btn-' + m.key + '" '
+        + 'onclick="triggerModule(' + JSON.stringify(m.key) + ',' + JSON.stringify(m.endpoint) + ',' + JSON.stringify(feedbackId) + ')" '
+        + (status === "running" ? 'disabled' : '') + '>▶ Kjør nå</button>'
+        + '</div>';
+    }).join("");
+  }
+
+  function renderAllGrids() {
+    renderStatusOverview();
+    renderTriggerGrid("module-grid-daily",  MODULES_DAILY,  "daily-feedback");
+    renderTriggerGrid("module-grid-market", MODULES_MARKET, "market-feedback");
+    updateBackfillCard();
+  }
+
+  /* ─── Update backfill card status (seksjon 4) ───────────── */
+  function updateBackfillCard() {
+    var s = _moduleStatus["reclassify_backfill"] || {};
+    var status = s.status || "idle";
+    var badge = document.getElementById("badge-reclassify_backfill");
+    var meta  = document.getElementById("meta-reclassify_backfill");
+    if (badge) { badge.className = "module-badge " + badgeClass(status); badge.textContent = status; }
+    if (meta) {
+      meta.textContent = s.last_run_at
+        ? new Date(s.last_run_at).toLocaleString("nb-NO") + (s.last_message ? " — " + s.last_message : "")
+        : (s.last_message || "Aldri kjørt");
+    }
+    var btn = document.getElementById("btn-reclassify_backfill");
+    if (btn) btn.disabled = (status === "running");
+  }
+
+  /* ─── Load module statuses ───────────────────────────────── */
+  async function loadModuleStatus() {
+    if (!token) return;
+    try {
+      var resp = await fetch("/admin/module-status?" + tokenParam());
+      var data = await resp.json();
+      if (resp.ok) {
+        _moduleStatus = data.modules || {};
+        renderAllGrids();
+      }
+    } catch (e) {
+      /* silent — status is non-critical */
+    }
+  }
+
+  /* ─── Load system status (articles, queue, postgres) ─────── */
+  async function loadSystemStatus() {
+    if (!token) return;
     showFeedback("status-feedback", "Henter status…", "loading", true);
-    document.getElementById("status-grid").style.display = "none";
     try {
       var resp = await fetch("/admin/status?" + tokenParam());
       var data = await resp.json();
       if (!resp.ok) { showFeedback("status-feedback", data.error || "Feil", "error", true); return; }
 
-      var grid = document.getElementById("status-grid");
       var arts = data.articles || {};
       var cells = [
-        ["Totalt", arts.total || 0, ""],
-        ["Klassifisert", arts.classified || 0, "green"],
-        ["Postgres", data.postgres_available ? "✓" : "✗", data.postgres_available ? "green" : "red"],
-        ["I kø", data.queue_size || 0, ""],
+        ["Totalt",      arts.total || 0,                         ""],
+        ["Klassifisert",arts.classified || 0,                    "green"],
+        ["Postgres",    data.postgres_available ? "✓" : "✗",    data.postgres_available ? "green" : "red"],
+        ["I kø",        data.queue_size || 0,                    ""],
       ];
       var byScope = arts.by_scope || {};
-      Object.keys(byScope).forEach(function(k) {
-        cells.push([k, byScope[k], ""]);
-      });
+      Object.keys(byScope).forEach(function(k) { cells.push([k, byScope[k], ""]); });
 
+      var grid = document.getElementById("system-status-grid");
       grid.innerHTML = cells.map(function(c) {
         return '<div class="status-cell">'
           + '<div class="status-cell-label">' + esc(String(c[0])) + '</div>'
           + '<div class="status-cell-value ' + c[2] + '">' + esc(String(c[1])) + '</div>'
           + '</div>';
       }).join("");
-
       grid.style.display = "grid";
 
       var digestInfo = "";
       if (data.digests) {
         Object.keys(data.digests).forEach(function(lang) {
           var d = data.digests[lang];
-          digestInfo += lang.toUpperCase() + ": " + (d.headline || "—").substring(0, 60) + "\n";
+          digestInfo += lang.toUpperCase() + ": " + (d.headline || "—").substring(0, 70) + "\n";
         });
       }
-      showFeedback("status-feedback", digestInfo.trim() || "OK", "success", true);
+      showFeedback("status-feedback", digestInfo.trim() || "System OK", "success", true);
     } catch (e) {
       showFeedback("status-feedback", "Nettverksfeil: " + e.message, "error", true);
     }
   }
 
-  /* ─── Card 2: Backfill ───────────────────────────────────── */
+  /* ─── Combined refresh ───────────────────────────────────── */
+  async function refreshAll() {
+    if (!requireToken("status-feedback")) return;
+    await Promise.all([loadModuleStatus(), loadSystemStatus()]);
+  }
+
+  /* ─── Trigger a module ───────────────────────────────────── */
+  async function triggerModule(moduleKey, endpoint, feedbackId) {
+    if (!requireToken(feedbackId || "status-feedback")) return;
+    var btn = document.getElementById("btn-" + moduleKey);
+    if (btn) { btn.disabled = true; btn.textContent = "Starter…"; }
+    showFeedback(feedbackId, "Starter " + moduleKey + "…", "loading", true);
+    try {
+      var resp = await fetch(endpoint + "?" + tokenParam(), { method: "POST" });
+      var data = await resp.json();
+      if (!resp.ok) {
+        showFeedback(feedbackId, data.error || "Feil", "error", true);
+        if (btn) { btn.disabled = false; btn.textContent = "▶ Kjør nå"; }
+        return;
+      }
+      _moduleStatus[moduleKey] = Object.assign(_moduleStatus[moduleKey] || {}, { status: "running", last_message: "Startet" });
+      renderAllGrids();
+      showFeedback(feedbackId, "✓ " + (data.status || moduleKey) + " startet.", "success", true);
+    } catch (e) {
+      showFeedback(feedbackId, "Nettverksfeil: " + e.message, "error", true);
+      if (btn) { btn.disabled = false; btn.textContent = "▶ Kjør nå"; }
+    }
+  }
+
+  /* ─── Reklassifisering backfill ──────────────────────────── */
+  async function triggerBackfill() {
+    var daysInput = document.getElementById("backfill-days");
+    var days = parseInt(daysInput ? daysInput.value : 3);
+    if (!days || days < 1 || days > 90) {
+      showFeedback("feedback-reclassify_backfill", "Antall dager må være mellom 1 og 90.", "error", true);
+      return;
+    }
+    if (!requireToken("feedback-reclassify_backfill")) return;
+
+    var btn = document.getElementById("btn-reclassify_backfill");
+    if (btn) btn.disabled = true;
+    showFeedback("feedback-reclassify_backfill", "Beregner antall artikler…", "loading", true);
+
+    try {
+      var formData = new FormData();
+      formData.append("days", days);
+
+      var resp = await fetch("/admin/reclassify-backfill?" + tokenParam(), { method: "POST", body: formData });
+      var data = await resp.json();
+
+      if (!resp.ok) {
+        showFeedback("feedback-reclassify_backfill", "Feil: " + (data.error || "ukjent"), "error", true);
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      if (data.article_count > 100) {
+        var confirmed = confirm(
+          "Reklassifisere " + data.article_count + " artikler (siste " + days + " dager)?\n\n"
+          + "Estimert tid: " + data.estimated_minutes + " minutter\n"
+          + "Estimert kostnad: ~$" + data.estimated_cost_usd + "\n\nTrykk OK for å fortsette."
+        );
+        if (!confirmed) {
+          showFeedback("feedback-reclassify_backfill", "Avbrutt av bruker.", "info", true);
+          if (btn) btn.disabled = false;
+          return;
+        }
+      }
+
+      _moduleStatus["reclassify_backfill"] = Object.assign(
+        _moduleStatus["reclassify_backfill"] || {}, { status: "running", last_message: "Startet" }
+      );
+      renderAllGrids();
+      showFeedback("feedback-reclassify_backfill", data.message, "success", true);
+
+      setTimeout(loadModuleStatus, 10000);
+      setTimeout(loadModuleStatus, 30000);
+      setTimeout(loadModuleStatus, 90000);
+      setTimeout(loadModuleStatus, 300000);
+    } catch (e) {
+      showFeedback("feedback-reclassify_backfill", "Nettverksfeil: " + e.message, "error", true);
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  /* ─── Artikkel-innhenting ─────────────────────────────────── */
   async function startBackfill() {
     if (!requireToken("backfill-feedback")) return;
     var days = parseInt(document.getElementById("bf-days").value) || 7;
-    var max = parseInt(document.getElementById("bf-max").value) || 30;
+    var max  = parseInt(document.getElementById("bf-max").value) || 30;
     showFeedback("backfill-feedback", "Starter backfill…", "loading", true);
     try {
-      var resp = await fetch("/admin/backfill?" + tokenParam() + "&days=" + days + "&max=" + max, {
-        method: "POST"
-      });
+      var resp = await fetch("/admin/backfill?" + tokenParam() + "&days=" + days + "&max=" + max, { method: "POST" });
       var data = await resp.json();
       if (!resp.ok) { showFeedback("backfill-feedback", data.error || "Feil", "error", true); return; }
       showFeedback("backfill-feedback",
-        "✓ Backfill startet!\n"
-        + "Søker " + data.days + " dager bakover, maks " + data.max_articles + " artikler.\n"
-        + data.note,
-        "success", true
-      );
+        "✓ Backfill startet!\nSøker " + data.days + " dager bakover, maks " + data.max_articles + " artikler.\n" + data.note,
+        "success", true);
     } catch (e) {
       showFeedback("backfill-feedback", "Nettverksfeil: " + e.message, "error", true);
     }
   }
 
-  /* ─── Card 3: Legg til artikkel ──────────────────────────── */
+  async function startWebsearch() {
+    if (!requireToken("websearch-feedback")) return;
+    showFeedback("websearch-feedback", "Starter web-søk…", "loading", true);
+    try {
+      var resp = await fetch("/admin/run-websearch?" + tokenParam(), { method: "POST" });
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("websearch-feedback", data.error || "Feil", "error", true); return; }
+      showFeedback("websearch-feedback", "✓ " + data.status + " — " + data.note, "success", true);
+    } catch (e) {
+      showFeedback("websearch-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
   async function addArticle() {
     if (!requireToken("add-feedback")) return;
     var url = document.getElementById("add-url").value.trim();
@@ -474,25 +757,21 @@
     try {
       var body = { url: url };
       var src = document.getElementById("add-source").value.trim();
-      var dt = document.getElementById("add-date").value.trim();
+      var dt  = document.getElementById("add-date").value.trim();
       if (src) body.source_name = src;
-      if (dt) body.published_at = dt;
+      if (dt)  body.published_at = dt;
 
       var resp = await fetch("/admin/add-article?" + tokenParam(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
       var data = await resp.json();
       if (!resp.ok) { showFeedback("add-feedback", data.error || "Feil", "error", true); return; }
       showFeedback("add-feedback",
-        "✓ Artikkel lagt til!\n"
-        + "Tittel: " + data.title + "\n"
-        + "Kilde: " + data.source + "\n"
-        + "ID: " + data.id + "\n"
-        + "Status: " + data.status,
-        "success", true
-      );
+        "✓ Artikkel lagt til!\nTittel: " + data.title + "\nKilde: " + data.source
+        + "\nID: " + data.id + "\nStatus: " + data.status,
+        "success", true);
       document.getElementById("add-url").value = "";
       document.getElementById("add-source").value = "";
       document.getElementById("add-date").value = "";
@@ -501,132 +780,26 @@
     }
   }
 
-  /* ─── Card 4: Reklassifisering ───────────────────────────── */
+  /* ─── Kept for backend compatibility (no UI buttons) ─────── */
   async function reclassify(mode) {
-    if (!requireToken("reclassify-feedback")) return;
-    showFeedback("reclassify-feedback", "Sender reklassifiseringsforespørsel…", "loading", true);
     var qs = tokenParam() + (mode === "missing" ? "&missing=true" : "&all=true");
-    try {
-      var resp = await fetch("/admin/reclassify?" + qs);
-      var data = await resp.json();
-      if (!resp.ok) { showFeedback("reclassify-feedback", data.error || "Feil", "error", true); return; }
-      showFeedback("reclassify-feedback",
-        "✓ " + data.queued + " artikler lagt i klassifiseringskøen.", "success", true
-      );
-    } catch (e) {
-      showFeedback("reclassify-feedback", "Nettverksfeil: " + e.message, "error", true);
-    }
+    await fetch("/admin/reclassify?" + qs);
   }
-
-  function reclassifyAll() {
-    if (!confirm("Reklassifiser ALLE artikler? Dette tar tid og bruker API-kvoter.")) return;
-    reclassify("all");
-  }
-
-  /* ─── Card 6: Full reklassifisering med ny prompt ───────── */
   async function triggerFullReclassify() {
-    if (!requireToken("reclassify-all-feedback")) return;
-    if (!confirm("Reklassifiser ALLE artikler med ny prompt (inkl. themes)?\n\nTar 5-10 minutter og bruker API-kvoter.\nNyeste artikler reklassifiseres først.")) return;
-    var btn = document.getElementById("btn-reclassify-all");
-    btn.disabled = true;
-    btn.textContent = "Starter…";
-    showFeedback("reclassify-all-feedback", "Sender forespørsel…", "loading", true);
-    try {
-      var resp = await fetch("/admin/reclassify-all?" + tokenParam(), {method: "POST"});
-      var data = await resp.json();
-      if (!resp.ok) {
-        showFeedback("reclassify-all-feedback", data.error || "Feil", "error", true);
-      } else {
-        showFeedback("reclassify-all-feedback",
-          "✓ " + data.status + "\n" + (data.note || ""), "success", true
-        );
-      }
-    } catch (e) {
-      showFeedback("reclassify-all-feedback", "Nettverksfeil: " + e.message, "error", true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Reklassifiser alle";
-    }
+    await fetch("/admin/reclassify-all?" + tokenParam(), { method: "POST" });
   }
-
-  /* ─── Card 2b: Web-søk ──────────────────────────────────── */
-  async function startWebsearch() {
-    if (!requireToken("websearch-feedback")) return;
-    showFeedback("websearch-feedback", "Starter web-søk…", "loading", true);
-    try {
-      var resp = await fetch("/admin/run-websearch?" + tokenParam(), {method: "POST"});
-      var data = await resp.json();
-      if (!resp.ok) { showFeedback("websearch-feedback", data.error || "Feil", "error", true); return; }
-      showFeedback("websearch-feedback",
-        "✓ " + data.status + " — " + data.note, "success", true
-      );
-    } catch (e) {
-      showFeedback("websearch-feedback", "Nettverksfeil: " + e.message, "error", true);
-    }
-  }
-
-  /* ─── Card 5: Regenerer digest ───────────────────────────── */
-  async function regenerateDigest() {
-    if (!requireToken("digest-feedback")) return;
-    showFeedback("digest-feedback", "Starter digest-generering…", "loading", true);
-    try {
-      var resp = await fetch("/admin/regenerate-digest?" + tokenParam());
-      var data = await resp.json();
-      if (!resp.ok) { showFeedback("digest-feedback", data.error || "Feil", "error", true); return; }
-      showFeedback("digest-feedback",
-        "✓ Digest-generering startet. Sjekk hovedsiden om 30–60 sek.", "success", true
-      );
-    } catch (e) {
-      showFeedback("digest-feedback", "Nettverksfeil: " + e.message, "error", true);
-    }
-  }
-
-  /* ─── Card 5b: Ukentlig digest ──────────────────────────── */
-  async function generateWeekly() {
-    if (!requireToken("weekly-feedback")) return;
-    var btn = document.getElementById("btn-weekly-digest");
-    btn.disabled = true;
-    btn.textContent = "Genererer…";
-    showFeedback("weekly-feedback", "Starter ukentlig digest-generering for alle 4 språk…", "loading", true);
-    try {
-      var resp = await fetch("/admin/generate-weekly?" + tokenParam(), {method: "POST"});
-      var data = await resp.json();
-      if (!resp.ok) {
-        showFeedback("weekly-feedback", data.error || "Feil", "error", true);
-      } else {
-        showFeedback("weekly-feedback",
-          "✓ " + data.status + "\n" + (data.note || ""), "success", true
-        );
-      }
-    } catch (e) {
-      showFeedback("weekly-feedback", "Nettverksfeil: " + e.message, "error", true);
-    } finally {
-      btn.disabled = false;
-      btn.textContent = "Generer ukens oppsummering";
-    }
-  }
-
-  /* ─── Card 6: Migrer tone ────────────────────────────────── */
   async function migrateTone() {
-    if (!requireToken("migrate-feedback")) return;
-    showFeedback("migrate-feedback", "Kjører migrering…", "loading", true);
-    try {
-      var resp = await fetch("/admin/migrate-tone?" + tokenParam());
-      var data = await resp.json();
-      if (!resp.ok) { showFeedback("migrate-feedback", data.error || "Feil", "error", true); return; }
-      showFeedback("migrate-feedback",
-        "✓ Migrering fullført! " + data.migrated + " artikler oppdatert fra 'kritisk' til 'negativ'.",
-        "success", true
-      );
-    } catch (e) {
-      showFeedback("migrate-feedback", "Nettverksfeil: " + e.message, "error", true);
-    }
+    await fetch("/admin/migrate-tone?" + tokenParam());
+  }
+  async function regenerateDigest() {
+    await fetch("/admin/regenerate-digest?" + tokenParam());
   }
 
-  /* ─── Escape helper ──────────────────────────────────────── */
-  function esc(s) {
-    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  }
+  /* ─── Auto-load on page ready ────────────────────────────── */
+  window.addEventListener("load", function() {
+    renderAllGrids();
+    if (token) refreshAll();
+  });
 </script>
 </body>
 </html>

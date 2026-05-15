@@ -24,11 +24,12 @@ from poc.classify import classify
 from poc.fetch import fetch_miniflux, _fetch_og_image
 from poc.db import (
     init_db, ensure_columns, migrate_id_to_bigint, migrate_add_themes,
+    migrate_add_digest_region,
     migrate_add_finance_digests, migrate_add_salmon_prices, migrate_add_calendar_events,
-    migrate_add_reports,
+    migrate_add_reports, migrate_add_module_status,
     is_db_available, SessionLocal,
     Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest, SalmonPrice, CalendarEvent,
-    Report,
+    Report, ModuleStatus,
     extract_domain, get_or_create_source,
 )
 from poc.translations import TRANSLATIONS, t as _t, theme_label as _theme_label
@@ -570,22 +571,29 @@ def _load_from_db() -> None:
             for lang in ("no", "en", "es", "ja"):
                 latest = (
                     session.query(Digest)
-                    .filter_by(lang=lang)
+                    .filter(Digest.lang == lang)
                     .order_by(Digest.generated_at.desc())
                     .first()
                 )
                 if latest:
-                    with _digest_lock:
-                        _digest_cache[lang] = {
-                            "headline": latest.headline,
-                            "body": latest.body,
+                    if latest.content:
+                        cached = latest.content
+                    else:
+                        # Legacy rows without content JSON
+                        cached = {
+                            "headline": latest.headline or "",
+                            "body": latest.body or "",
+                            "sections": {"global": latest.body or ""},
                             "sources": latest.web_search_urls or [],
                             "article_count": latest.article_count or 0,
-                            "cermaq_count": latest.cermaq_count or 0,
                             "search_count": latest.search_count or 0,
-                            "generated_at": latest.generated_at.isoformat(),
-                            "lang": lang,
+                            "generated_at": (
+                                latest.generated_at.isoformat()
+                                if latest.generated_at else None
+                            ),
                         }
+                    with _digest_lock:
+                        _digest_cache[lang] = cached
             log.info("Lastet %d digester fra Postgres", len(_digest_cache))
 
             for lang in ("no", "en", "es", "ja"):
@@ -703,27 +711,23 @@ def _persist_weekly_digest(lang: str, digest: dict) -> None:
         log.error("Ukentlig digest-persist-feil for %s: %s", lang, exc)
 
 
-def _persist_digest(lang: str, digest: dict, used_article_ids: list = None) -> None:
-    if not is_db_available():
-        return
-
-    try:
-        with SessionLocal() as session:
-            d = Digest(
-                lang=lang,
-                headline=digest.get("headline", ""),
-                body=digest.get("body", ""),
-                article_ids=used_article_ids or [],
-                web_search_urls=digest.get("sources", []),
-                article_count=digest.get("article_count", 0),
-                cermaq_count=digest.get("cermaq_count", 0),
-                search_count=digest.get("search_count", 0),
-            )
-            session.add(d)
-            session.commit()
-            log.info("Digest persistert for %s", lang)
-    except Exception as exc:
-        log.error("Digest-persist-feil for %s: %s", lang, exc)
+def _save_digest(lang: str, content: dict) -> None:
+    """Save a structured digest to DB and update in-memory cache."""
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                d = Digest(
+                    lang=lang,
+                    content=content,
+                    generated_at=datetime.now(timezone.utc),
+                )
+                session.add(d)
+                session.commit()
+            log.info("Digest lagret: lang=%s", lang)
+        except Exception as exc:
+            log.error("Digest-lagring feilet lang=%s: %s", lang, exc)
+    with _digest_lock:
+        _digest_cache[lang] = content
 
 
 # ---------------------------------------------------------------------------
@@ -734,11 +738,42 @@ init_db()
 ensure_columns()
 migrate_id_to_bigint()
 migrate_add_themes()
+migrate_add_digest_region()
 migrate_add_finance_digests()
 migrate_add_salmon_prices()
 migrate_add_calendar_events()
 migrate_add_reports()
+migrate_add_module_status()
 _load_from_db()
+
+
+def update_module_status(
+    module_key: str,
+    status: str,
+    message: str = "",
+    data_summary: dict | None = None,
+) -> None:
+    """Upsert module run status in DB and log it."""
+    log.info("ModuleStatus [%s] → %s  %s", module_key, status, message)
+    if not is_db_available():
+        return
+    try:
+        now = datetime.now(timezone.utc)
+        with SessionLocal() as session:
+            row = session.query(ModuleStatus).filter_by(module_key=module_key).first()
+            if row is None:
+                row = ModuleStatus(module_key=module_key)
+                session.add(row)
+            row.status = status
+            row.last_message = message
+            if status not in ("idle", "running"):
+                row.last_run_at = now
+            if data_summary is not None:
+                row.data_summary = data_summary
+            row.updated_at = now
+            session.commit()
+    except Exception as exc:
+        log.warning("update_module_status feilet: %s", exc)
 
 
 def seed_calendar_events() -> None:
@@ -1094,120 +1129,112 @@ def _classify_loop() -> None:
 # Digest helpers
 # ---------------------------------------------------------------------------
 
-def _generate_all_digests() -> None:
-    """Generate digest for all four languages from the last 24 hours of articles."""
+def _generate_news_digest() -> None:
+    """Generate 1 Norwegian master digest + 3 translations (4 digests total)."""
+    from poc.digest import generate_norwegian_master_digest, translate_digest
+    from sqlalchemy import func as _func
+
+    log.info("Starter digest-generering")
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
 
     if is_db_available():
         try:
-            from sqlalchemy import func as _func
             with SessionLocal() as session:
-                db_rows = session.query(Article).filter(
+                rows = session.query(Article).filter(
                     Article.classified_at.isnot(None),
-                    Article.scope.in_(("cermaq", "industry")),
+                    Article.scope != "irrelevant",
                     _func.coalesce(Article.published_at, Article.fetched_at) >= cutoff,
                 ).order_by(
-                    _func.coalesce(Article.published_at, Article.fetched_at).desc()
-                ).all()
-                recent = [_article_db_to_dict(a) for a in db_rows]
+                    Article.relevance.desc(),
+                    _func.coalesce(Article.published_at, Article.fetched_at).desc(),
+                ).limit(60).all()
+                articles = [_article_db_to_dict(a) for a in rows]
         except Exception as exc:
-            log.error("_generate_all_digests DB-feil, faller tilbake til in-memory: %s", exc)
+            log.error("_generate_news_digest DB-feil: %s", exc)
             with _articles_lock:
-                recent = [
+                articles = [
                     a for a in _articles.values()
                     if a.get("scope") in ("cermaq", "industry")
                     and _parse_dt(a.get("published_at")) >= cutoff
-                ]
+                ][:60]
     else:
         with _articles_lock:
-            recent = [
+            articles = [
                 a for a in _articles.values()
                 if a.get("scope") in ("cermaq", "industry")
                 and _parse_dt(a.get("published_at")) >= cutoff
-            ]
+            ][:60]
 
-    cermaq_count = sum(1 for a in recent if a.get("scope") == "cermaq")
-    log.info("Genererer digest for %d artikler (%d Cermaq)", len(recent), cermaq_count)
-
-    if len(recent) < 5:
-        log.info("For få artikler (%d) — setter stille-melding", len(recent))
-        _minimal = {
-            "no": ("Stille mediedøgn", "<p>Få relevante artikler siste 24 timer.</p>"),
-            "en": ("Quiet news cycle", "<p>Few relevant articles in the last 24 hours.</p>"),
-            "es": ("Ciclo de noticias tranquilo", "<p>Pocos artículos relevantes en las últimas 24 horas.</p>"),
-            "ja": ("静かなニュースサイクル", "<p>過去24時間の関連記事は少数です。</p>"),
-        }
-        now_iso = datetime.now(timezone.utc).isoformat()
-        with _digest_lock:
-            for lang, (headline, body) in _minimal.items():
-                _digest_cache[lang] = {
-                    "headline": headline,
-                    "body": body,
-                    "generated_at": now_iso,
-                    "lang": lang,
-                    "article_count": len(recent),
-                    "cermaq_count": cermaq_count,
-                    "search_count": 0,
-                    "sources": [],
-                }
+    if len(articles) < 3:
+        log.warning("For få artikler (%d) for digest — hopper over", len(articles))
         return
 
-    from poc.digest import generate_digest
-    article_ids = [a["id"] for a in recent]
-    all_sources: set = set()
-    for lang in ("no", "en", "es", "ja"):
-        try:
-            digest = generate_digest(recent, lang=lang)
-            if digest:
-                with _digest_lock:
-                    _digest_cache[lang] = digest
-                log.info("Digest klar lang=%s: %s", lang, digest["headline"][:60])
-                _persist_digest(lang, digest, article_ids)
-                for url in digest.get("sources", []):
-                    if url:
-                        all_sources.add(url)
-        except Exception as exc:
-            log.error("Digest feilet for lang=%s: %s", lang, exc)
+    log.info("Digest grunnlag: %d artikler", len(articles))
 
-    if all_sources:
-        added = _ingest_urls_as_articles(list(all_sources))
-        log.info("Digest-generering la til %d nye artikler fra web-søk", added)
+    # Step 1: Norwegian master
+    norsk_content = generate_norwegian_master_digest(articles)
+    if not norsk_content:
+        log.error("Norsk master-digest generering feilet")
+        return
+
+    _save_digest("no", norsk_content)
+
+    # Step 2: Translations
+    for target_lang in ("en", "es", "ja"):
+        try:
+            translated = translate_digest(norsk_content, target_lang)
+            if translated:
+                _save_digest(target_lang, translated)
+        except Exception as exc:
+            log.error("Oversettelse til %s feilet: %s", target_lang, exc)
+
+    # Ingest source URLs as articles
+    all_source_urls = {
+        src.get("url") if isinstance(src, dict) else src
+        for src in norsk_content.get("sources", [])
+        if (src.get("url") if isinstance(src, dict) else src)
+    }
+    if all_source_urls:
+        added = _ingest_urls_as_articles(list(all_source_urls))
+        log.info("Digest la til %d nye artikler fra web-søk", added)
+
+    log.info("Digest-generering ferdig")
 
 
 def _next_digest_time() -> datetime:
-    """Return next scheduled digest time: 09:00, 12:00, or 18:00 Oslo time."""
+    """Return next scheduled digest time: 08:00 or 12:00 Oslo time."""
     oslo_tz = ZoneInfo("Europe/Oslo")
     now = datetime.now(oslo_tz)
-    for hour in (9, 12, 18):
+    for hour in (8, 12):
         candidate = now.replace(hour=hour, minute=0, second=0, microsecond=0)
         if candidate > now:
             return candidate
     tomorrow = now + timedelta(days=1)
-    return tomorrow.replace(hour=9, minute=0, second=0, microsecond=0)
+    return tomorrow.replace(hour=8, minute=0, second=0, microsecond=0)
 
 
 def _digest_scheduler() -> None:
-    """Regenerate digest at 09:00, 12:00, and 18:00 Oslo time."""
+    """Regenerate news digest at 08:00 and 12:00 Oslo time."""
+    oslo_tz = ZoneInfo("Europe/Oslo")
     while True:
         try:
             target = _next_digest_time()
-            wait = (target - datetime.now(ZoneInfo("Europe/Oslo"))).total_seconds()
-            log.info("Neste digest-generering: %s (om %.1f timer)", target.isoformat(), wait / 3600)
+            wait = max(0, (target - datetime.now(oslo_tz)).total_seconds())
+            log.info("Neste digest: %s (om %.1f timer)", target.isoformat(), wait / 3600)
             time.sleep(wait)
-            _generate_all_digests()
-            _generate_finance_digest_all()
+            _generate_news_digest()
         except Exception as exc:
             log.error("Digest-scheduler-feil: %s", exc)
             time.sleep(3600)
 
 
 def _initial_digest() -> None:
-    """Generate digest once at startup, after fetch+classify have had time to run."""
+    """Generate digest once at startup if cache is empty."""
     time.sleep(60)
     with _digest_lock:
         has_digest = len(_digest_cache) > 0
     if not has_digest:
-        _generate_all_digests()
+        _generate_news_digest()
 
 
 def get_digest(lang: str = "no") -> dict | None:
@@ -1705,7 +1732,7 @@ def _start_background_threads() -> None:
         (_backfill_og_images, "og-backfill-thread"),
         (_digest_scheduler, "digest-scheduler-thread"),
         (_initial_digest, "digest-initial-thread"),
-        (_salmon_price_scheduler, "salmon-price-thread"),
+        # (_salmon_price_scheduler, "salmon-price-thread"),  # paused — trigger manually via admin
     ]:
         t = threading.Thread(target=target, name=name, daemon=True)
         t.start()
@@ -1808,7 +1835,6 @@ def index():
     region = request.args.get("region", "").strip() or None
     log.info("[index] theme=%r, region=%r, lang=%r", theme, region, lang)
 
-    digest = get_digest(lang)
     ui_text = _UI_TEXTS.get(lang, _UI_TEXTS["no"])
 
     error = None
@@ -1886,7 +1912,6 @@ def index():
         classified_count=classified,
         total_count=total,
         queue_size=_classify_queue.qsize(),
-        digest=digest,
         lang=lang,
         ui_text=ui_text,
     )
@@ -1931,7 +1956,7 @@ def admin_regenerate_digest():
     if not _check_admin_token():
         return jsonify({"error": "Unauthorized"}), 401
 
-    threading.Thread(target=_generate_all_digests, daemon=True).start()
+    threading.Thread(target=_generate_news_digest, daemon=True).start()
     return jsonify({"status": "Digest-generering startet"})
 
 
@@ -2059,6 +2084,136 @@ def admin_reclassify_all():
     return jsonify({
         "status": "Reklassifisering startet",
         "note": "Tar 5-10 minutter. Nyeste artikler reklassifiseres først.",
+    })
+
+
+@app.route("/admin/reclassify-backfill", methods=["POST"])
+def admin_reclassify_backfill():
+    """Reklassifiser artikler fra siste N dager."""
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        days = int(request.form.get("days") or request.args.get("days") or 3)
+    except (ValueError, TypeError):
+        return jsonify({"error": "days må være et tall"}), 400
+
+    if days < 1 or days > 90:
+        return jsonify({"error": "days må være mellom 1 og 90"}), 400
+
+    if not is_db_available():
+        return jsonify({"error": "Ingen database tilgjengelig"}), 503
+
+    from sqlalchemy import func as _func
+
+    window_start = datetime.now(timezone.utc) - timedelta(days=days)
+
+    with SessionLocal() as session:
+        article_count = session.query(Article).filter(
+            _func.coalesce(Article.published_at, Article.fetched_at) >= window_start
+        ).count()
+
+    estimated_minutes = round(article_count * _CLASSIFY_RATE / 60, 1)
+    estimated_cost = round(article_count * 0.025, 2)
+
+    def _run():
+        from poc.classify import classify as _classify
+        from sqlalchemy import func as _func2
+
+        window = datetime.now(timezone.utc) - timedelta(days=days)
+        update_module_status("reclassify_backfill", "running", f"0/? ferdig (siste {days} dager)")
+
+        try:
+            with SessionLocal() as session:
+                articles = session.query(Article).filter(
+                    _func2.coalesce(Article.published_at, Article.fetched_at) >= window
+                ).order_by(
+                    _func2.coalesce(Article.published_at, Article.fetched_at).desc()
+                ).all()
+                total = len(articles)
+                log.info("Backfill-reklassifisering: %d artikler fra siste %d dager", total, days)
+                for a in articles:
+                    a.classified_at = None
+                session.commit()
+
+            processed = 0
+            failed = 0
+            for db_art in articles:
+                try:
+                    art_dict = {
+                        "id": db_art.id,
+                        "title": db_art.title or "",
+                        "url": db_art.url or "",
+                        "content": db_art.content or "",
+                        "source_name": db_art.source_name or "",
+                    }
+                    result = _classify(art_dict)
+
+                    with SessionLocal() as session:
+                        a = session.get(Article, db_art.id)
+                        if a:
+                            a.scope = result.get("scope")
+                            a.region = result.get("region")
+                            a.tone = result.get("tone")
+                            a.category = result.get("category")
+                            a.themes = result.get("themes", [])
+                            a.relevance = result.get("relevance")
+                            a.summaries = result.get("summaries") or a.summaries
+                            a.titles = result.get("titles") or a.titles
+                            a.classified_at = datetime.now(timezone.utc)
+                            session.commit()
+
+                    with _articles_lock:
+                        if db_art.id in _articles:
+                            _articles[db_art.id].update({
+                                "scope": result.get("scope"),
+                                "region": result.get("region"),
+                                "tone": result.get("tone"),
+                                "category": result.get("category"),
+                                "themes": result.get("themes", []),
+                                "relevance": result.get("relevance"),
+                                "classified_at": datetime.now(timezone.utc).isoformat(),
+                            })
+
+                    processed += 1
+                    if processed % 10 == 0:
+                        log.info("Backfill: %d/%d reklassifisert", processed, total)
+                        update_module_status(
+                            "reclassify_backfill", "running",
+                            f"{processed}/{total} ferdig",
+                            {"days": days, "processed": processed, "total": total},
+                        )
+
+                    time.sleep(_CLASSIFY_RATE)
+
+                except Exception as exc:
+                    failed += 1
+                    log.error("Backfill reklassifisering feilet id=%s: %s", db_art.id, exc)
+
+            summary = f"Backfill ferdig: {processed} reklassifisert, {failed} feilet (siste {days} dager)"
+            log.info(summary)
+            update_module_status(
+                "reclassify_backfill",
+                "ok" if failed < max(1, total // 2) else "error",
+                summary,
+                {"days": days, "processed": processed, "failed": failed, "total": total},
+            )
+
+        except Exception as exc:
+            log.exception("Backfill-reklassifisering feilet: %s", exc)
+            update_module_status("reclassify_backfill", "error", str(exc))
+
+    threading.Thread(target=_run, daemon=True, name="reclassify-backfill-thread").start()
+    return jsonify({
+        "status": "started",
+        "days": days,
+        "article_count": article_count,
+        "estimated_minutes": estimated_minutes,
+        "estimated_cost_usd": estimated_cost,
+        "message": (
+            f"Reklassifisering startet for {article_count} artikler. "
+            f"Estimert tid: {estimated_minutes} min, kostnad: ~${estimated_cost}"
+        ),
     })
 
 
@@ -2278,6 +2433,125 @@ def admin_run_websearch():
 
 
 # ---------------------------------------------------------------------------
+# Admin module triggers
+# ---------------------------------------------------------------------------
+
+def _run_async(module_key: str, target_fn, *args) -> None:
+    """Run target_fn in a daemon thread, updating ModuleStatus before and after."""
+    def _wrapper():
+        update_module_status(module_key, "running", "Startet")
+        try:
+            target_fn(*args)
+            update_module_status(module_key, "ok", "Fullført")
+        except Exception as exc:
+            update_module_status(module_key, "error", str(exc))
+    threading.Thread(target=_wrapper, daemon=True, name=f"trigger-{module_key}").start()
+
+
+@app.route("/admin/trigger/news-digest", methods=["POST"])
+def admin_trigger_news_digest():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("news_digest", _generate_news_digest)
+    return jsonify({"status": "startet", "module": "news_digest"})
+
+
+@app.route("/admin/trigger/finance-digest", methods=["POST"])
+def admin_trigger_finance_digest():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("finance_digest", _generate_finance_digest_all)
+    return jsonify({"status": "startet", "module": "finance_digest"})
+
+
+@app.route("/admin/trigger/salmon-prices", methods=["POST"])
+def admin_trigger_salmon_prices():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("salmon_prices", _fetch_and_persist_salmon_prices)
+    return jsonify({"status": "startet", "module": "salmon_prices"})
+
+
+def _fetch_rates_and_stocks() -> None:
+    """Refresh exchange rates and stock quotes into the finance cache."""
+    from poc.finance import fetch_norges_bank_rates, fetch_all_stocks, fetch_commodities
+    rates = fetch_norges_bank_rates() or {}
+    stocks = fetch_all_stocks() or {}
+    commodities = fetch_commodities() or {}
+    entry = {
+        "rates": rates,
+        "stocks": stocks,
+        "commodities": commodities,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+    }
+    with _finance_digest_lock:
+        _finance_digest_cache["_rates_stocks"] = entry
+    log.info("Rates+stocks refreshet: %d kurser, %d aksjer", len(rates), len(stocks))
+
+
+@app.route("/admin/trigger/rates-stocks", methods=["POST"])
+def admin_trigger_rates_stocks():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("rates_stocks", _fetch_rates_and_stocks)
+    return jsonify({"status": "startet", "module": "rates_stocks"})
+
+
+@app.route("/admin/trigger/calendar", methods=["POST"])
+def admin_trigger_calendar():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("calendar", seed_calendar_events)
+    return jsonify({"status": "startet", "module": "calendar"})
+
+
+@app.route("/admin/trigger/bulletin", methods=["POST"])
+def admin_trigger_bulletin():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    def _run_bulletin():
+        from poc.bulletin.pipeline import generate_weekly_bulletin
+        update_module_status("bulletin", "running", "Starter generering")
+        try:
+            verified = generate_weekly_bulletin()
+            update_module_status(
+                "bulletin", "ok",
+                f"Utgave {verified.utgave_nummer}: {verified.hovedsak.headline[:60]}",
+                {"utgave_nummer": verified.utgave_nummer, "dato": verified.publisert_dato},
+            )
+        except Exception as exc:
+            update_module_status("bulletin", "error", str(exc)[:200])
+            raise
+
+    threading.Thread(target=_run_bulletin, daemon=True, name="bulletin-pipeline-thread").start()
+    return jsonify({"status": "startet", "module": "bulletin",
+                    "note": "Pipeline kjøres i bakgrunnen — tar 3–5 minutter"})
+
+
+@app.route("/admin/module-status")
+def admin_module_status():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    modules = {}
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                rows = session.query(ModuleStatus).all()
+                for row in rows:
+                    modules[row.module_key] = {
+                        "status": row.status,
+                        "last_run_at": row.last_run_at.isoformat() if row.last_run_at else None,
+                        "last_message": row.last_message,
+                        "data_summary": row.data_summary,
+                        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+                    }
+        except Exception as exc:
+            log.warning("admin_module_status feilet: %s", exc)
+    return jsonify({"modules": modules})
+
+
+# ---------------------------------------------------------------------------
 # API endpoints
 # ---------------------------------------------------------------------------
 
@@ -2404,11 +2678,17 @@ def api_articles_search():
 @app.route("/api/digest")
 def api_digest():
     lang = request.args.get("lang", "no")
-    with _digest_lock:
-        digest = _digest_cache.get(lang)
+    digest = get_digest(lang)
     if not digest:
-        return jsonify({"error": "No digest available"}), 404
-    return jsonify(digest)
+        # Fallback to Norwegian
+        digest = get_digest("no")
+    if not digest:
+        return jsonify({"content": None, "generated_at": None, "lang": lang})
+    return jsonify({
+        "content": digest,
+        "generated_at": digest.get("generated_at"),
+        "lang": lang,
+    })
 
 
 @app.route("/api/sources")
@@ -2607,6 +2887,87 @@ def analytics_page():
     if lang not in ("no", "en", "es", "ja"):
         lang = "no"
     return render_template("analytics.html", lang=lang)
+
+
+# ---------------------------------------------------------------------------
+# Bulletin archive + standalone viewer
+# ---------------------------------------------------------------------------
+
+_BULLETIN_SEED = [
+    {
+        "nr": 23,
+        "dato": "2026-05-16",
+        "dato_display": "Fredag 16. mai 2026",
+        "oneliner": "Cermaq varsler kapasitetsutvidelse i Nord-Norge etter Grieg-oppkjøpet",
+        "html_url": "/bulletin/23",
+        "pdf_url": "/bulletin/23/pdf",
+    },
+    {
+        "nr": 22,
+        "dato": "2026-05-08",
+        "dato_display": "Fredag 8. mai 2026",
+        "oneliner": "Laksepriser faller 8 % — Cermaq Chile styrker eksportandel til EU",
+        "html_url": "/bulletin/22",
+        "pdf_url": "/bulletin/22/pdf",
+    },
+    {
+        "nr": 21,
+        "dato": "2026-05-01",
+        "dato_display": "Fredag 1. mai 2026",
+        "oneliner": "Mitsubishi-rapport: Cermaq bidrar med rekordresultat i FY2025",
+        "html_url": "/bulletin/21",
+        "pdf_url": "/bulletin/21/pdf",
+    },
+]
+
+
+def _load_bulletins() -> list[dict]:
+    """Load bulletin index from pipeline data dir, falling back to seed data."""
+    from pathlib import Path as _Path
+    import json as _json
+    index_file = _Path(__file__).parent / "bulletin" / "data" / "index.json"
+    if index_file.exists():
+        try:
+            return _json.loads(index_file.read_text(encoding="utf-8"))
+        except Exception as exc:
+            log.warning("Could not read bulletin index: %s", exc)
+    return _BULLETIN_SEED
+
+
+def _load_bulletin_content(nr: int) -> dict | None:
+    """Load full bulletin JSON for a specific edition number."""
+    from pathlib import Path as _Path
+    import json as _json
+    data_dir = _Path(__file__).parent / "bulletin" / "data"
+    for path in data_dir.glob(f"bulletin-{nr:04d}-*.json"):
+        try:
+            return _json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return None
+
+
+@app.route("/bulletin")
+def bulletin_archive():
+    lang = request.args.get("lang", "no")
+    if lang not in ("no", "en", "es", "ja"):
+        lang = "no"
+    return render_template("bulletin_archive.html", lang=lang, bulletins=_load_bulletins())
+
+
+@app.route("/bulletin/<int:nr>")
+def bulletin_view(nr):
+    bulletins = _load_bulletins()
+    meta = next((b for b in bulletins if b["nr"] == nr), None)
+    if meta is None:
+        return f"Bulletin #{nr} ikke funnet", 404
+    content = _load_bulletin_content(nr)
+    return render_template("bulletin_standalone.html", bulletin=meta, content=content)
+
+
+@app.route("/bulletin/<int:nr>/pdf")
+def bulletin_pdf(nr):
+    return f"PDF for bulletin #{nr} er ikke tilgjengelig ennå.", 404
 
 
 @app.route("/reports")
