@@ -545,10 +545,22 @@
         + '<div class="module-card-meta">' + esc(lastRun)
         + (s.last_message ? ' — ' + esc(s.last_message) : '') + '</div>'
         + '<button class="module-trigger-btn" id="btn-' + m.key + '" '
-        + 'onclick="triggerModule(' + JSON.stringify(m.key) + ',' + JSON.stringify(m.endpoint) + ',' + JSON.stringify(feedbackId) + ')" '
+        + 'data-module="' + esc(m.key) + '" '
+        + 'data-endpoint="' + esc(m.endpoint) + '" '
+        + 'data-feedback="' + esc(feedbackId) + '" '
         + (status === "running" ? 'disabled' : '') + '>▶ Kjør nå</button>'
         + '</div>';
     }).join("");
+
+    container.querySelectorAll(".module-trigger-btn").forEach(function(btn) {
+      btn.addEventListener("click", function() {
+        triggerModule(
+          btn.getAttribute("data-module"),
+          btn.getAttribute("data-endpoint"),
+          btn.getAttribute("data-feedback")
+        );
+      });
+    });
   }
 
   function renderAllGrids() {
