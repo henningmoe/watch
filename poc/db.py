@@ -186,6 +186,20 @@ if Base is not None:
         )
         triggered_by = Column(String(50), nullable=True)
 
+    class ModuleStatus(Base):
+        __tablename__ = "module_status"
+        id = Column(Integer, primary_key=True, autoincrement=True)
+        module_key = Column(String(50), nullable=False, unique=True, index=True)
+        status = Column(String(20), nullable=False, default="idle")  # idle|running|ok|error
+        last_run_at = Column(DateTime(timezone=True), nullable=True)
+        last_message = Column(Text, nullable=True)
+        data_summary = Column(JSON, nullable=True)
+        updated_at = Column(
+            DateTime(timezone=True),
+            nullable=False,
+            default=lambda: datetime.now(timezone.utc),
+        )
+
 else:
     # Stub classes so imports don't fail when DB is unavailable
     class Source:  # type: ignore[no-redef]
@@ -214,6 +228,35 @@ else:
 
     class Report:  # type: ignore[no-redef]
         pass
+
+    class ModuleStatus:  # type: ignore[no-redef]
+        pass
+
+
+def migrate_add_module_status() -> None:
+    """Create module_status table (safe to run repeatedly)."""
+    if engine is None:
+        return
+    try:
+        from sqlalchemy import text as _text
+        with engine.begin() as conn:
+            conn.execute(_text("""
+                CREATE TABLE IF NOT EXISTS module_status (
+                    id SERIAL PRIMARY KEY,
+                    module_key VARCHAR(50) NOT NULL UNIQUE,
+                    status VARCHAR(20) NOT NULL DEFAULT 'idle',
+                    last_run_at TIMESTAMPTZ,
+                    last_message TEXT,
+                    data_summary JSON,
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                )
+            """))
+            conn.execute(_text(
+                "CREATE INDEX IF NOT EXISTS ix_module_status_module_key ON module_status (module_key)"
+            ))
+        logger.info("migrate_add_module_status: tabell OK")
+    except Exception as e:
+        logger.warning("migrate_add_module_status: %s", e)
 
 
 def migrate_add_digest_region() -> None:

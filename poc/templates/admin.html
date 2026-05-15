@@ -192,6 +192,55 @@
 
     /* ─── Hint text ──────────────────────────────────────────── */
     .hint { font-size: 11px; color: #9ca3af; margin-top: 6px; line-height: 1.5; }
+
+    /* ─── Automation module grid ─────────────────────────────── */
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .module-card {
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+    .module-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .module-card-name { font-size: 12px; font-weight: 600; color: #111827; }
+    .module-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .badge-idle    { background: #f3f4f6; color: #6b7280; }
+    .badge-running { background: #fef9c3; color: #92400e; }
+    .badge-ok      { background: #dcfce7; color: #166534; }
+    .badge-error   { background: #fee2e2; color: #991b1b; }
+    .module-card-meta { font-size: 11px; color: #9ca3af; margin-bottom: 10px; min-height: 16px; }
+    .module-trigger-btn {
+      width: 100%;
+      padding: 6px 0;
+      background: #0c4a3e;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s, opacity 0.12s;
+    }
+    .module-trigger-btn:hover:not(:disabled) { background: #0a3d33; }
+    .module-trigger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -221,6 +270,17 @@
     <input type="password" id="admin-token" class="token-input" placeholder="Skriv inn ADMIN_TOKEN…" autocomplete="off" />
     <button class="token-save-btn" onclick="saveToken()">Lagre</button>
     <span class="token-status" id="token-status">Ikke satt</span>
+  </div>
+
+  <!-- Automation: Module status + triggers -->
+  <div class="card">
+    <div class="card-title">Automatisering — modulstatus</div>
+    <div class="card-desc">Alle automatiske bakgrunnsjobber er pauset. Kjør moduler manuelt ved behov. Status oppdateres fra databasen.</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="loadModuleStatus()">Oppdater status</button>
+    </div>
+    <div id="module-grid" class="module-grid"></div>
+    <div id="module-feedback" class="feedback"></div>
   </div>
 
   <!-- Card 1: Status -->
@@ -622,6 +682,83 @@
       showFeedback("migrate-feedback", "Nettverksfeil: " + e.message, "error", true);
     }
   }
+
+  /* ─── Automation module grid ─────────────────────────────── */
+  var MODULE_CONFIG = [
+    { key: "news_digest",    label: "Nyhets-digest",    endpoint: "/admin/trigger/news-digest",    desc: "Generer daglig AI-oppsummering (NO + 3 overs.)" },
+    { key: "finance_digest", label: "Finans-digest",    endpoint: "/admin/trigger/finance-digest", desc: "Generer finans-AI-brief for alle 4 språk" },
+    { key: "salmon_prices",  label: "Laksepriser",      endpoint: "/admin/trigger/salmon-prices",  desc: "Hent Fish Pool / Nasdaq Salmon priser" },
+    { key: "rates_stocks",   label: "Valuta + aksjer",  endpoint: "/admin/trigger/rates-stocks",   desc: "Refresh Norges Bank-kurser og børsdata" },
+    { key: "calendar",       label: "Kalender",         endpoint: "/admin/trigger/calendar",       desc: "Seed bransjehendelser og Q-rapport-datoer" },
+  ];
+
+  var _moduleStatus = {};
+
+  function badgeClass(status) {
+    return { running: "badge-running", ok: "badge-ok", error: "badge-error" }[status] || "badge-idle";
+  }
+
+  function renderModuleGrid() {
+    var grid = document.getElementById("module-grid");
+    grid.innerHTML = MODULE_CONFIG.map(function(m) {
+      var s = _moduleStatus[m.key] || {};
+      var status = s.status || "idle";
+      var meta = s.last_run_at
+        ? "Sist: " + new Date(s.last_run_at).toLocaleString("nb-NO") + (s.last_message ? " — " + esc(s.last_message) : "")
+        : (s.last_message ? esc(s.last_message) : "Aldri kjørt");
+      return '<div class="module-card" id="mc-' + m.key + '">'
+        + '<div class="module-card-header">'
+        + '<span class="module-card-name">' + esc(m.label) + '</span>'
+        + '<span class="module-badge ' + badgeClass(status) + '">' + esc(status) + '</span>'
+        + '</div>'
+        + '<div class="module-card-meta">' + meta + '</div>'
+        + '<button class="module-trigger-btn" id="btn-' + m.key + '" onclick="triggerModule(' + JSON.stringify(m.key) + ',' + JSON.stringify(m.endpoint) + ')" '
+        + (status === "running" ? 'disabled' : '') + '>▶ Kjør nå</button>'
+        + '</div>';
+    }).join("");
+  }
+
+  async function loadModuleStatus() {
+    if (!requireToken("module-feedback")) return;
+    showFeedback("module-feedback", "Henter modulstatus…", "loading", true);
+    try {
+      var resp = await fetch("/admin/module-status?" + tokenParam());
+      var data = await resp.json();
+      if (!resp.ok) { showFeedback("module-feedback", data.error || "Feil", "error", true); return; }
+      _moduleStatus = data.modules || {};
+      renderModuleGrid();
+      showFeedback("module-feedback", "Status oppdatert.", "success", true);
+      setTimeout(function() { document.getElementById("module-feedback").style.display = "none"; }, 2000);
+    } catch (e) {
+      showFeedback("module-feedback", "Nettverksfeil: " + e.message, "error", true);
+    }
+  }
+
+  async function triggerModule(moduleKey, endpoint) {
+    if (!requireToken("module-feedback")) return;
+    var btn = document.getElementById("btn-" + moduleKey);
+    if (btn) { btn.disabled = true; btn.textContent = "Starter…"; }
+    try {
+      var resp = await fetch(endpoint + "?" + tokenParam(), { method: "POST" });
+      var data = await resp.json();
+      if (!resp.ok) {
+        showFeedback("module-feedback", data.error || "Feil", "error", true);
+        if (btn) { btn.disabled = false; btn.textContent = "▶ Kjør nå"; }
+        return;
+      }
+      _moduleStatus[moduleKey] = Object.assign(_moduleStatus[moduleKey] || {}, { status: "running", last_message: "Startet" });
+      renderModuleGrid();
+      showFeedback("module-feedback", "✓ " + moduleKey + " startet. Last status på nytt for å se resultat.", "success", true);
+    } catch (e) {
+      showFeedback("module-feedback", "Nettverksfeil: " + e.message, "error", true);
+      if (btn) { btn.disabled = false; btn.textContent = "▶ Kjør nå"; }
+    }
+  }
+
+  // Auto-load module status on page load if token is available
+  window.addEventListener("load", function() {
+    if (token) { loadModuleStatus(); }
+  });
 
   /* ─── Escape helper ──────────────────────────────────────── */
   function esc(s) {

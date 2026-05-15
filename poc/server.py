@@ -26,10 +26,10 @@ from poc.db import (
     init_db, ensure_columns, migrate_id_to_bigint, migrate_add_themes,
     migrate_add_digest_region,
     migrate_add_finance_digests, migrate_add_salmon_prices, migrate_add_calendar_events,
-    migrate_add_reports,
+    migrate_add_reports, migrate_add_module_status,
     is_db_available, SessionLocal,
     Source, Article, Digest, Alert, WeeklyDigest, FinanceDigest, SalmonPrice, CalendarEvent,
-    Report,
+    Report, ModuleStatus,
     extract_domain, get_or_create_source,
 )
 from poc.translations import TRANSLATIONS, t as _t, theme_label as _theme_label
@@ -743,7 +743,37 @@ migrate_add_finance_digests()
 migrate_add_salmon_prices()
 migrate_add_calendar_events()
 migrate_add_reports()
+migrate_add_module_status()
 _load_from_db()
+
+
+def update_module_status(
+    module_key: str,
+    status: str,
+    message: str = "",
+    data_summary: dict | None = None,
+) -> None:
+    """Upsert module run status in DB and log it."""
+    log.info("ModuleStatus [%s] → %s  %s", module_key, status, message)
+    if not is_db_available():
+        return
+    try:
+        now = datetime.now(timezone.utc)
+        with SessionLocal() as session:
+            row = session.query(ModuleStatus).filter_by(module_key=module_key).first()
+            if row is None:
+                row = ModuleStatus(module_key=module_key)
+                session.add(row)
+            row.status = status
+            row.last_message = message
+            if status not in ("idle", "running"):
+                row.last_run_at = now
+            if data_summary is not None:
+                row.data_summary = data_summary
+            row.updated_at = now
+            session.commit()
+    except Exception as exc:
+        log.warning("update_module_status feilet: %s", exc)
 
 
 def seed_calendar_events() -> None:
@@ -1172,10 +1202,10 @@ def _generate_news_digest() -> None:
 
 
 def _next_digest_time() -> datetime:
-    """Return next scheduled digest time: 08:00, 12:00, or 18:00 Oslo time."""
+    """Return next scheduled digest time: 08:00 or 12:00 Oslo time."""
     oslo_tz = ZoneInfo("Europe/Oslo")
     now = datetime.now(oslo_tz)
-    for hour in (8, 12, 18):
+    for hour in (8, 12):
         candidate = now.replace(hour=hour, minute=0, second=0, microsecond=0)
         if candidate > now:
             return candidate
@@ -1184,7 +1214,7 @@ def _next_digest_time() -> datetime:
 
 
 def _digest_scheduler() -> None:
-    """Regenerate digest at 08:00, 12:00, and 18:00 Oslo time."""
+    """Regenerate news digest at 08:00 and 12:00 Oslo time."""
     oslo_tz = ZoneInfo("Europe/Oslo")
     while True:
         try:
@@ -1193,7 +1223,6 @@ def _digest_scheduler() -> None:
             log.info("Neste digest: %s (om %.1f timer)", target.isoformat(), wait / 3600)
             time.sleep(wait)
             _generate_news_digest()
-            _generate_finance_digest_all()
         except Exception as exc:
             log.error("Digest-scheduler-feil: %s", exc)
             time.sleep(3600)
@@ -1703,7 +1732,7 @@ def _start_background_threads() -> None:
         (_backfill_og_images, "og-backfill-thread"),
         (_digest_scheduler, "digest-scheduler-thread"),
         (_initial_digest, "digest-initial-thread"),
-        (_salmon_price_scheduler, "salmon-price-thread"),
+        # (_salmon_price_scheduler, "salmon-price-thread"),  # paused — trigger manually via admin
     ]:
         t = threading.Thread(target=target, name=name, daemon=True)
         t.start()
@@ -2271,6 +2300,101 @@ def admin_run_websearch():
 
     threading.Thread(target=_run, daemon=True).start()
     return jsonify({"status": "Web-søk startet", "note": "Sjekk Railway-logg eller hovedsiden om 1–3 minutter"})
+
+
+# ---------------------------------------------------------------------------
+# Admin module triggers
+# ---------------------------------------------------------------------------
+
+def _run_async(module_key: str, target_fn, *args) -> None:
+    """Run target_fn in a daemon thread, updating ModuleStatus before and after."""
+    def _wrapper():
+        update_module_status(module_key, "running", "Startet")
+        try:
+            target_fn(*args)
+            update_module_status(module_key, "ok", "Fullført")
+        except Exception as exc:
+            update_module_status(module_key, "error", str(exc))
+    threading.Thread(target=_wrapper, daemon=True, name=f"trigger-{module_key}").start()
+
+
+@app.route("/admin/trigger/news-digest", methods=["POST"])
+def admin_trigger_news_digest():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("news_digest", _generate_news_digest)
+    return jsonify({"status": "startet", "module": "news_digest"})
+
+
+@app.route("/admin/trigger/finance-digest", methods=["POST"])
+def admin_trigger_finance_digest():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("finance_digest", _generate_finance_digest_all)
+    return jsonify({"status": "startet", "module": "finance_digest"})
+
+
+@app.route("/admin/trigger/salmon-prices", methods=["POST"])
+def admin_trigger_salmon_prices():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("salmon_prices", _fetch_and_persist_salmon_prices)
+    return jsonify({"status": "startet", "module": "salmon_prices"})
+
+
+def _fetch_rates_and_stocks() -> None:
+    """Refresh exchange rates and stock quotes into the finance cache."""
+    from poc.finance import fetch_norges_bank_rates, fetch_all_stocks, fetch_commodities
+    rates = fetch_norges_bank_rates() or {}
+    stocks = fetch_all_stocks() or {}
+    commodities = fetch_commodities() or {}
+    entry = {
+        "rates": rates,
+        "stocks": stocks,
+        "commodities": commodities,
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+    }
+    with _finance_digest_lock:
+        _finance_digest_cache["_rates_stocks"] = entry
+    log.info("Rates+stocks refreshet: %d kurser, %d aksjer", len(rates), len(stocks))
+
+
+@app.route("/admin/trigger/rates-stocks", methods=["POST"])
+def admin_trigger_rates_stocks():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("rates_stocks", _fetch_rates_and_stocks)
+    return jsonify({"status": "startet", "module": "rates_stocks"})
+
+
+@app.route("/admin/trigger/calendar", methods=["POST"])
+def admin_trigger_calendar():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    _run_async("calendar", seed_calendar_events)
+    return jsonify({"status": "startet", "module": "calendar"})
+
+
+@app.route("/admin/module-status")
+def admin_module_status():
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+    modules = {}
+    if is_db_available():
+        try:
+            with SessionLocal() as session:
+                rows = session.query(ModuleStatus).all()
+                for row in rows:
+                    modules[row.module_key] = {
+                        "status": row.status,
+                        "last_run_at": row.last_run_at.isoformat() if row.last_run_at else None,
+                        "last_message": row.last_message,
+                        "data_summary": row.data_summary,
+                        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+                    }
+        except Exception as exc:
+            log.warning("admin_module_status feilet: %s", exc)
+    return jsonify({"modules": modules})
 
 
 # ---------------------------------------------------------------------------
