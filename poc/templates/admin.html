@@ -241,6 +241,24 @@
     }
     .module-trigger-btn:hover:not(:disabled) { background: #0a3d33; }
     .module-trigger-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ─── Backfill days input ────────────────────────────────── */
+    .backfill-input {
+      margin: 8px 0 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .backfill-input label { font-size: 11px; color: #6b7280; font-weight: 500; }
+    .backfill-input input {
+      width: 60px;
+      padding: 4px 8px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 13px;
+      text-align: center;
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -685,11 +703,12 @@
 
   /* ─── Automation module grid ─────────────────────────────── */
   var MODULE_CONFIG = [
-    { key: "news_digest",    label: "Nyhets-digest",    endpoint: "/admin/trigger/news-digest",    desc: "Generer daglig AI-oppsummering (NO + 3 overs.)" },
-    { key: "finance_digest", label: "Finans-digest",    endpoint: "/admin/trigger/finance-digest", desc: "Generer finans-AI-brief for alle 4 språk" },
-    { key: "salmon_prices",  label: "Laksepriser",      endpoint: "/admin/trigger/salmon-prices",  desc: "Hent Fish Pool / Nasdaq Salmon priser" },
-    { key: "rates_stocks",   label: "Valuta + aksjer",  endpoint: "/admin/trigger/rates-stocks",   desc: "Refresh Norges Bank-kurser og børsdata" },
-    { key: "calendar",       label: "Kalender",         endpoint: "/admin/trigger/calendar",       desc: "Seed bransjehendelser og Q-rapport-datoer" },
+    { key: "news_digest",         label: "Nyhets-digest",               endpoint: "/admin/trigger/news-digest",    desc: "Generer daglig AI-oppsummering (NO + 3 overs.)" },
+    { key: "finance_digest",      label: "Finans-digest",               endpoint: "/admin/trigger/finance-digest", desc: "Generer finans-AI-brief for alle 4 språk" },
+    { key: "salmon_prices",       label: "Laksepriser",                 endpoint: "/admin/trigger/salmon-prices",  desc: "Hent Fish Pool / Nasdaq Salmon priser" },
+    { key: "rates_stocks",        label: "Valuta + aksjer",             endpoint: "/admin/trigger/rates-stocks",   desc: "Refresh Norges Bank-kurser og børsdata" },
+    { key: "calendar",            label: "Kalender",                    endpoint: "/admin/trigger/calendar",       desc: "Seed bransjehendelser og Q-rapport-datoer" },
+    { key: "reclassify_backfill", label: "Reklassifiser (backfill)",    endpoint: "/admin/reclassify-backfill",    desc: "Reklassifiser artikler fra siste N dager med gjeldende klassifiseringsprompt", custom: true },
   ];
 
   var _moduleStatus = {};
@@ -706,6 +725,24 @@
       var meta = s.last_run_at
         ? "Sist: " + new Date(s.last_run_at).toLocaleString("nb-NO") + (s.last_message ? " — " + esc(s.last_message) : "")
         : (s.last_message ? esc(s.last_message) : "Aldri kjørt");
+
+      if (m.custom && m.key === "reclassify_backfill") {
+        return '<div class="module-card" id="mc-' + m.key + '">'
+          + '<div class="module-card-header">'
+          + '<span class="module-card-name">' + esc(m.label) + '</span>'
+          + '<span class="module-badge ' + badgeClass(status) + '">' + esc(status) + '</span>'
+          + '</div>'
+          + '<div class="module-card-meta">' + esc(m.desc) + '<br>' + meta + '</div>'
+          + '<div class="backfill-input">'
+          + '<label for="backfill-days">Antall dager:</label>'
+          + '<input type="number" id="backfill-days" value="3" min="1" max="90" step="1">'
+          + '</div>'
+          + '<button class="module-trigger-btn" id="btn-' + m.key + '" onclick="triggerBackfill()" '
+          + (status === "running" ? 'disabled' : '') + '>▶ Kjør nå</button>'
+          + '<div id="feedback-' + m.key + '" class="feedback" style="display:none;margin-top:8px;"></div>'
+          + '</div>';
+      }
+
       return '<div class="module-card" id="mc-' + m.key + '">'
         + '<div class="module-card-header">'
         + '<span class="module-card-name">' + esc(m.label) + '</span>'
@@ -716,6 +753,68 @@
         + (status === "running" ? 'disabled' : '') + '>▶ Kjør nå</button>'
         + '</div>';
     }).join("");
+  }
+
+  async function triggerBackfill() {
+    var daysInput = document.getElementById("backfill-days");
+    var days = parseInt(daysInput ? daysInput.value : 3);
+    if (!days || days < 1 || days > 90) {
+      showFeedback("feedback-reclassify_backfill", "Antall dager må være mellom 1 og 90", "error", true);
+      return;
+    }
+    if (!requireToken("feedback-reclassify_backfill")) return;
+
+    var btn = document.getElementById("btn-reclassify_backfill");
+    var feedback = document.getElementById("feedback-reclassify_backfill");
+    if (btn) btn.disabled = true;
+    if (feedback) feedback.style.display = "block";
+    showFeedback("feedback-reclassify_backfill", "Beregner antall artikler…", "loading", true);
+
+    try {
+      var formData = new FormData();
+      formData.append("days", days);
+
+      var resp = await fetch("/admin/reclassify-backfill?" + tokenParam(), {
+        method: "POST",
+        body: formData,
+      });
+      var data = await resp.json();
+
+      if (!resp.ok) {
+        showFeedback("feedback-reclassify_backfill", "Feil: " + (data.error || "ukjent"), "error", true);
+        if (btn) btn.disabled = false;
+        return;
+      }
+
+      if (data.article_count > 100) {
+        var confirmed = confirm(
+          "Reklassifisere " + data.article_count + " artikler (siste " + days + " dager)?\n\n"
+          + "Estimert tid: " + data.estimated_minutes + " minutter\n"
+          + "Estimert kostnad: ~$" + data.estimated_cost_usd + "\n\n"
+          + "Trykk OK for å fortsette."
+        );
+        if (!confirmed) {
+          showFeedback("feedback-reclassify_backfill", "Avbrutt av bruker.", "info", true);
+          if (btn) btn.disabled = false;
+          return;
+        }
+      }
+
+      _moduleStatus["reclassify_backfill"] = Object.assign(
+        _moduleStatus["reclassify_backfill"] || {},
+        { status: "running", last_message: "Startet" }
+      );
+      renderModuleGrid();
+      showFeedback("feedback-reclassify_backfill", data.message, "success", true);
+
+      setTimeout(loadModuleStatus, 10000);
+      setTimeout(loadModuleStatus, 30000);
+      setTimeout(loadModuleStatus, 90000);
+      setTimeout(loadModuleStatus, 300000);
+    } catch (e) {
+      showFeedback("feedback-reclassify_backfill", "Nettverksfeil: " + e.message, "error", true);
+      if (btn) btn.disabled = false;
+    }
   }
 
   async function loadModuleStatus() {

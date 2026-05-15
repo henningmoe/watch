@@ -2087,6 +2087,136 @@ def admin_reclassify_all():
     })
 
 
+@app.route("/admin/reclassify-backfill", methods=["POST"])
+def admin_reclassify_backfill():
+    """Reklassifiser artikler fra siste N dager."""
+    if not _check_admin_token():
+        return jsonify({"error": "Unauthorized"}), 401
+
+    try:
+        days = int(request.form.get("days") or request.args.get("days") or 3)
+    except (ValueError, TypeError):
+        return jsonify({"error": "days må være et tall"}), 400
+
+    if days < 1 or days > 90:
+        return jsonify({"error": "days må være mellom 1 og 90"}), 400
+
+    if not is_db_available():
+        return jsonify({"error": "Ingen database tilgjengelig"}), 503
+
+    from sqlalchemy import func as _func
+
+    window_start = datetime.now(timezone.utc) - timedelta(days=days)
+
+    with SessionLocal() as session:
+        article_count = session.query(Article).filter(
+            _func.coalesce(Article.published_at, Article.fetched_at) >= window_start
+        ).count()
+
+    estimated_minutes = round(article_count * _CLASSIFY_RATE / 60, 1)
+    estimated_cost = round(article_count * 0.025, 2)
+
+    def _run():
+        from poc.classify import classify as _classify
+        from sqlalchemy import func as _func2
+
+        window = datetime.now(timezone.utc) - timedelta(days=days)
+        update_module_status("reclassify_backfill", "running", f"0/? ferdig (siste {days} dager)")
+
+        try:
+            with SessionLocal() as session:
+                articles = session.query(Article).filter(
+                    _func2.coalesce(Article.published_at, Article.fetched_at) >= window
+                ).order_by(
+                    _func2.coalesce(Article.published_at, Article.fetched_at).desc()
+                ).all()
+                total = len(articles)
+                log.info("Backfill-reklassifisering: %d artikler fra siste %d dager", total, days)
+                for a in articles:
+                    a.classified_at = None
+                session.commit()
+
+            processed = 0
+            failed = 0
+            for db_art in articles:
+                try:
+                    art_dict = {
+                        "id": db_art.id,
+                        "title": db_art.title or "",
+                        "url": db_art.url or "",
+                        "content": db_art.content or "",
+                        "source_name": db_art.source_name or "",
+                    }
+                    result = _classify(art_dict)
+
+                    with SessionLocal() as session:
+                        a = session.get(Article, db_art.id)
+                        if a:
+                            a.scope = result.get("scope")
+                            a.region = result.get("region")
+                            a.tone = result.get("tone")
+                            a.category = result.get("category")
+                            a.themes = result.get("themes", [])
+                            a.relevance = result.get("relevance")
+                            a.summaries = result.get("summaries") or a.summaries
+                            a.titles = result.get("titles") or a.titles
+                            a.classified_at = datetime.now(timezone.utc)
+                            session.commit()
+
+                    with _articles_lock:
+                        if db_art.id in _articles:
+                            _articles[db_art.id].update({
+                                "scope": result.get("scope"),
+                                "region": result.get("region"),
+                                "tone": result.get("tone"),
+                                "category": result.get("category"),
+                                "themes": result.get("themes", []),
+                                "relevance": result.get("relevance"),
+                                "classified_at": datetime.now(timezone.utc).isoformat(),
+                            })
+
+                    processed += 1
+                    if processed % 10 == 0:
+                        log.info("Backfill: %d/%d reklassifisert", processed, total)
+                        update_module_status(
+                            "reclassify_backfill", "running",
+                            f"{processed}/{total} ferdig",
+                            {"days": days, "processed": processed, "total": total},
+                        )
+
+                    time.sleep(_CLASSIFY_RATE)
+
+                except Exception as exc:
+                    failed += 1
+                    log.error("Backfill reklassifisering feilet id=%s: %s", db_art.id, exc)
+
+            summary = f"Backfill ferdig: {processed} reklassifisert, {failed} feilet (siste {days} dager)"
+            log.info(summary)
+            update_module_status(
+                "reclassify_backfill",
+                "ok" if failed < max(1, total // 2) else "error",
+                summary,
+                {"days": days, "processed": processed, "failed": failed, "total": total},
+            )
+
+        except Exception as exc:
+            log.exception("Backfill-reklassifisering feilet: %s", exc)
+            update_module_status("reclassify_backfill", "error", str(exc))
+
+    threading.Thread(target=_run, daemon=True, name="reclassify-backfill-thread").start()
+    return jsonify({
+        "status": "started",
+        "days": days,
+        "article_count": article_count,
+        "estimated_minutes": estimated_minutes,
+        "estimated_cost_usd": estimated_cost,
+        "message": (
+            f"Reklassifisering startet for {article_count} artikler. "
+            f"Estimert tid: {estimated_minutes} min, kostnad: ~${estimated_cost}"
+        ),
+    })
+
+
 @app.route("/admin/migrate-tone")
 def admin_migrate_tone():
     if not _check_admin_token():
