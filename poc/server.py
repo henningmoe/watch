@@ -1147,7 +1147,7 @@ def _generate_news_digest() -> None:
                 ).order_by(
                     Article.relevance.desc(),
                     _func.coalesce(Article.published_at, Article.fetched_at).desc(),
-                ).limit(80).all()
+                ).limit(60).all()
                 articles = [_article_db_to_dict(a) for a in rows]
         except Exception as exc:
             log.error("_generate_news_digest DB-feil: %s", exc)
@@ -1156,14 +1156,14 @@ def _generate_news_digest() -> None:
                     a for a in _articles.values()
                     if a.get("scope") in ("cermaq", "industry")
                     and _parse_dt(a.get("published_at")) >= cutoff
-                ][:80]
+                ][:60]
     else:
         with _articles_lock:
             articles = [
                 a for a in _articles.values()
                 if a.get("scope") in ("cermaq", "industry")
                 and _parse_dt(a.get("published_at")) >= cutoff
-            ][:80]
+            ][:60]
 
     if len(articles) < 3:
         log.warning("For få artikler (%d) for digest — hopper over", len(articles))
