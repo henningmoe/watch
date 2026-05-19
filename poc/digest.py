@@ -311,10 +311,12 @@ Cermaq generalforsamling osv.), nevn det kort innenfor 5-setnings-\
 grensen. Ikke utvide ramme for event-omtale.
 
 KILDE-ATTRIBUSJON:
-- Etter hver påstand: kilde i klammer (E24), (iLaks), (SeaWestNews)
+- Etter hver påstand: kilde i parentes som markdown-lenke til artikkel-URL
+- Format: ([E24](https://e24.no/artikkel-url)), ([iLaks](https://ilaks.no/...))
 - Bruk kildens hovednavn, ikke domene
-- IKKE inkluder URL i body — kun i sources-array
-- Flere kilder samme påstand: (E24, iLaks)
+- Bruk den eksakte URL fra "URL:"-feltet i artikkellisten over
+- Flere kilder samme påstand: ([E24](url1), [iLaks](url2))
+- Hvis ingen URL finnes: vanlig parentes (KildeNavn) uten lenke
 
 WEB SEARCH:
 Bruk web_search MAKS 1 gang. Bare hvis det er en kritisk fersk \
@@ -336,26 +338,33 @@ OUTPUT — KUN gyldig JSON, ingen markdown-fences, ingen forklaring:
   "events_mentioned": []
 }}
 
-EKSEMPEL — riktig lengde og tone for "global":
+EKSEMPEL — riktig lengde, tone og lenkeformat for "global":
 
 "Cermaq omtales i dag etter en arbeidsulykke ved Bogen-anlegget i \
-Steigen, der en ansatt ble sendt til sykehus (SalmonBusiness). \
+Steigen, der en ansatt ble sendt til sykehus \
+([SalmonBusiness](https://salmonbusiness.com/cermaq-accident)). \
 Selskapet vurderer å utvide prosesseringskapasiteten i Nord-Norge \
-etter Grieg-oppkjøpet (Undercurrent News). Norske laksepotpriser \
-falt 8,5% denne uken til EUR 6,66/kilo (SalmonBusiness). Internasjonalt \
-slo Austevoll Seafood konsensus med 11% i Q1 (SalmonBusiness). \
+etter Grieg-oppkjøpet \
+([Undercurrent News](https://undercurrentnews.com/cermaq-expansion)). \
+Norske laksepotpriser falt 8,5% denne uken til EUR 6,66/kilo \
+([SalmonBusiness](https://salmonbusiness.com/salmon-prices-weekly)). \
+Internasjonalt slo Austevoll Seafood konsensus med 11% i Q1 \
+([SalmonBusiness](https://salmonbusiness.com/austevoll-q1)). \
 Stingray åpner ny Oslo-fabrikk i august, der Cermaq er stor kunde \
-(iLaks)."
+([iLaks](https://ilaks.no/stingray-fabrikk))."
 
 EKSEMPEL — riktig "norge":
 
 "En ansatt ved Cermaqs prosesseringsanlegg i Bogen ble fraktet til \
-sykehus mandag morgen etter en industriulykke (SalmonBusiness). \
+sykehus mandag morgen etter en industriulykke \
+([SalmonBusiness](https://salmonbusiness.com/bogen-ulykke)). \
 Havforskningsinstituttets risikorapport 2026 slår fast at \
-lakselusmitte på villfisk fortsatt er en hovedutfordring (iLaks). \
+lakselusmitte på villfisk fortsatt er en hovedutfordring \
+([iLaks](https://ilaks.no/hi-risikorapport-2026)). \
 Rederiet Frøy har sikret seg en lånepakke på 1 milliard kroner med \
-DNB Carnegie som rådgiver (iLaks). Regjeringen foreslår å kutte 100 \
-millioner kroner i tiltak mot marin forsøpling (NRK)."
+DNB Carnegie som rådgiver ([iLaks](https://ilaks.no/froy-laan)). \
+Regjeringen foreslår å kutte 100 millioner kroner i tiltak mot \
+marin forsøpling ([NRK](https://nrk.no/miljo/forsoplingsbudsjettet))."
 
 ARTIKLER FRA SISTE 24 TIMER:
 {article_context}"""

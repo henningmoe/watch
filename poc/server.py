@@ -1898,9 +1898,7 @@ def index():
 
     generated_at = _fmt_dt(datetime.now(timezone.utc).isoformat())
 
-    with _counters_lock:
-        classified = _classified_count
-        total = _total_count or len(articles)
+    article_count = len(articles)
 
     return render_template(
         "index.html",
@@ -1908,9 +1906,9 @@ def index():
         error=error,
         generated_at=generated_at,
         today=_today_no(),
-        cache_count=total,
-        classified_count=classified,
-        total_count=total,
+        cache_count=article_count,
+        classified_count=article_count,
+        total_count=article_count,
         queue_size=_classify_queue.qsize(),
         lang=lang,
         ui_text=ui_text,

@@ -967,6 +967,20 @@ window.t = function(key, vars) {
     return d.innerHTML;
   }
 
+  // Render digest section text: escape HTML then convert [name](url) markdown
+  // links (emitted by the AI prompt) to clickable <a> tags.
+  function renderSectionText(text) {
+    if (typeof text !== 'string') return String(text || '');
+    var escaped = escapeHtml(text);
+    // Match [name](url) — the URL was already safe in the prompt output
+    return escaped.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      function(_, name, url) {
+        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + name + '</a>';
+      }
+    );
+  }
+
   function setupExpandButton(collapsedHeight) {
     var body = document.getElementById('digest-body-inner');
     var btn  = document.getElementById('digest-expand-btn');
@@ -1010,13 +1024,13 @@ window.t = function(key, vars) {
     var bodyHtml = '';
 
     if (sections.global) {
-      bodyHtml += '<div class="digest-section">' + escapeHtml(sections.global) + '</div>';
+      bodyHtml += '<div class="digest-section">' + renderSectionText(sections.global) + '</div>';
     }
     for (var key in regionLabels) {
       if (sections[key]) {
         bodyHtml += '<div class="digest-section">'
           + '<div class="digest-section-header">' + regionLabels[key] + '</div>'
-          + escapeHtml(sections[key])
+          + renderSectionText(sections[key])
           + '</div>';
       }
     }
