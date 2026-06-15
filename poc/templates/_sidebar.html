@@ -1,0 +1,361 @@
+<!-- ═══ Mobile hamburger (fixed, outside sidebar) ════════════════ -->
+<button class="mobile-menu-toggle" id="mobile-menu-toggle"
+        aria-label="Åpne meny">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2">
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <line x1="3" y1="12" x2="21" y2="12"/>
+    <line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+
+<!-- ═══ Sidebar ════════════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+
+  <!-- Mobile close -->
+  <button class="mobile-menu-close" id="mobile-menu-close"
+          aria-label="Lukk meny">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <line x1="18" y1="6" x2="6" y2="18"/>
+      <line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+
+  <!-- Logo -->
+  <div class="sidebar-logo">
+    <div class="brand-eyebrow">Cermaq</div>
+    <div class="brand-name">Media <span>Watch</span></div>
+  </div>
+
+  <!-- Search -->
+  <div class="sidebar-search">
+    <input type="text" id="search-input"
+           placeholder="{{ t('search_placeholder') }}" autocomplete="off" />
+  </div>
+
+  <!-- Language switcher -->
+  <div class="sidebar-langs">
+    {%- set _qs = request.query_string.decode()
+        | replace('lang=no','') | replace('lang=en','')
+        | replace('lang=es','') | replace('lang=ja','')
+        | trim('&') -%}
+    {% for _lc, _label in [('no','NO'),('en','EN'),('es','ES'),('ja','JA')] %}
+    <a href="{{ request.path }}{% if _qs %}?{{ _qs }}&lang={{ _lc }}{% else %}?lang={{ _lc }}{% endif %}"
+       class="{% if lang == _lc %}active{% endif %}">{{ _label }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- NEWS WATCH -->
+  <div class="sidebar-pillar">
+    <div class="sidebar-pillar-label">{{ t('news_watch') }}</div>
+  </div>
+
+  <a href="/?lang={{ lang }}"
+     class="nav-item{% if request.path == '/' and not active_theme and not active_region %} active{% endif %}"
+     onclick="setRegionFilter('all');return false;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+    </svg>
+    {{ t('all_news') }}
+    <span class="nav-count" id="nav-count-all">{{ total_classified }}</span>
+  </a>
+
+  {% for _rkey, _rval in [
+      ('norge','norge'), ('chile','chile'),
+      ('canada','canada'), ('global','global')
+  ] %}
+  <a href="/?region={{ _rkey }}&lang={{ lang }}"
+     class="nav-item{% if active_region == _rkey %} active{% endif %}"
+     onclick="setRegionFilter('{{ _rkey }}');return false;">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/>
+    </svg>
+    {{ t(_rkey) }}
+    <span class="nav-count">{{ region_counts.get(_rkey, 0) }}</span>
+  </a>
+  {% endfor %}
+
+  <div class="sidebar-divider"></div>
+
+  <!-- TEMA (collapsible) -->
+  <button class="sidebar-collapsible-toggle{% if not active_theme %} collapsed{% endif %}"
+          id="tema-toggle" onclick="toggleTema()">
+    <span class="coll-label">{{ t('tema') }}</span>
+    <span class="coll-arrow">&#9660;</span>
+  </button>
+  <div class="sidebar-collapsible-body{% if not active_theme %} collapsed{% endif %}"
+       id="tema-body">
+    {% set _themes_list = ['Sjø','Landbasert','Fôr','Fiskehelse',
+                           'Teknologi','Digitalisering','Finans','Marked'] %}
+    {% for _th in _themes_list %}
+    <a href="/?theme={{ _th | urlencode }}&lang={{ lang }}"
+       class="nav-item{% if active_theme == _th %} active{% endif %}"
+       onclick="setThemeFilter('{{ _th }}');return false;">
+      <span class="theme-dot" data-theme="{{ _th }}"></span>
+      {{ theme_label(_th) }}
+      <span class="nav-count">{{ theme_counts.get(_th, 0) }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="sidebar-divider"></div>
+
+  <!-- INNSIKT -->
+  <div class="sidebar-group">
+    <div class="sidebar-group-label">{{ t('innsikt') }}</div>
+    <a href="/reports?lang={{ lang }}"
+       class="nav-item{% if request.path.startswith('/reports') %} active{% endif %}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      {{ t('reports') }}
+    </a>
+    <a href="/analytics?lang={{ lang }}"
+       class="nav-item{% if request.path == '/analytics' %} active{% endif %}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="20" x2="18" y2="10"/>
+        <line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      {{ t('analytics') }}
+    </a>
+    <a href="/bulletin?lang={{ lang }}"
+       class="nav-item{% if request.path.startswith('/bulletin') %} active{% endif %}">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2">
+        <path d="M4 4h16v2H4z"/><path d="M4 9h10v2H4z"/>
+        <path d="M4 14h7v2H4z"/>
+        <rect x="13" y="12" width="7" height="8" rx="1"/>
+      </svg>
+      {{ t('bulletin') }}
+    </a>
+  </div>
+
+  <!-- FILTRE (news page only) -->
+  {% if request.path == '/' %}
+  <div class="sidebar-filters">
+    <h3>{{ t('filtre') }}</h3>
+    <div class="sidebar-filter-group">
+      <label>{{ t('filter_omtale') }}</label>
+      <select id="filter-scope">
+        <option value="all">{{ t('filter_alle') }}</option>
+        <option value="cermaq">{{ t('filter_cermaq') }}</option>
+        <option value="industry-core">{{ t('filter_industry') }}</option>
+        <option value="industry-global">{{ t('filter_industry') }} (global)</option>
+      </select>
+    </div>
+    <div class="sidebar-filter-group">
+      <label>{{ t('filter_kilde') }}</label>
+      <select id="filter-source">
+        <option value="all">{{ t('filter_alle') }}</option>
+        <option value="nyheter" selected>{{ t('filter_news') }}</option>
+        <option value="some">{{ t('filter_some') }}</option>
+      </select>
+    </div>
+    <div class="sidebar-filter-group">
+      <label>{{ t('filter_tone') }}</label>
+      <select id="filter-tone">
+        <option value="all">{{ t('filter_alle') }}</option>
+        <option value="positiv">{{ t('filter_positiv') }}</option>
+        <option value="noytral">{{ t('filter_noytral') }}</option>
+        <option value="negativ">{{ t('filter_negativ') }}</option>
+      </select>
+    </div>
+    <div class="sidebar-filter-group">
+      <label>{{ t('filter_tidsperiode') }}</label>
+      <select id="filter-date">
+        <option value="all">{{ t('filter_all_time') }}</option>
+        <option value="today">{{ t('filter_today') }}</option>
+        <option value="week">{{ t('filter_week') }}</option>
+        <option value="month">{{ t('filter_month') }}</option>
+      </select>
+    </div>
+    <div class="sidebar-filter-group">
+      <label>{{ t('filter_sorter') }}</label>
+      <select id="filter-sort">
+        <option value="newest" selected>{{ t('sort_newest') }}</option>
+        <option value="oldest">{{ t('sort_oldest') }}</option>
+        <option value="relevance">{{ t('sort_relevance') }}</option>
+        <option value="negative">{{ t('sort_negative') }}</option>
+      </select>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="sidebar-divider" style="margin-top:14px;"></div>
+
+  <!-- FINANCE WATCH -->
+  <div class="sidebar-pillar" style="padding-top:10px;">
+    <div class="sidebar-pillar-label">{{ t('finance_watch') }}</div>
+  </div>
+  <a href="/finance?lang={{ lang }}"
+     class="nav-item{% if request.path == '/finance' %} active{% endif %}">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+      <polyline points="16 7 22 7 22 13"/>
+    </svg>
+    {{ t('finance_market') }}
+  </a>
+  <a href="/alerts?lang={{ lang }}"
+     class="nav-item{% if request.path == '/alerts' %} active{% endif %}">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+    </svg>
+    {{ t('alerts') }}
+  </a>
+
+</aside>
+
+<!-- Overlay for mobile -->
+<div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
+
+<!-- ═══ Sidebar-specific CSS (mobile + shared elements) ════════════ -->
+<style>
+  /* Sidebar search (may not exist in all page CSS) */
+  .sidebar-search { margin: 12px 16px; position: relative; }
+  .sidebar-search input {
+    width: 100%; padding: 8px 12px 8px 32px;
+    border: 1px solid var(--scale-grey, #d2d2cd);
+    border-radius: 8px; font-size: 13px; font-family: inherit;
+    background: #fff; box-sizing: border-box;
+  }
+  .sidebar-search input:focus { outline: none; border-color: var(--aqua, #0096a0); }
+  .sidebar-search::before {
+    content: '🔍'; position: absolute; left: 10px; top: 50%;
+    transform: translateY(-50%); font-size: 11px; opacity: 0.55; pointer-events: none;
+  }
+
+  /* Lang buttons */
+  .sidebar-langs { display: flex; gap: 4px; padding: 0 16px; margin-bottom: 14px; }
+  .sidebar-langs a {
+    flex: 1; text-align: center; padding: 5px 0; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--scale-grey, #d2d2cd); border-radius: 6px;
+    color: var(--deep-blue, #324664); text-decoration: none; background: #fff;
+    transition: all 0.15s;
+  }
+  .sidebar-langs a:hover { border-color: var(--aqua, #0096a0); }
+  .sidebar-langs a.active {
+    background: var(--aqua, #0096a0); color: #fff;
+    border-color: var(--aqua, #0096a0);
+  }
+
+  /* Mobile hamburger — hidden on desktop */
+  .mobile-menu-toggle {
+    display: none;
+    position: fixed; top: 12px; left: 12px; z-index: 1002;
+    background: #fff; border: 1px solid var(--border, #e5e7eb);
+    border-radius: 8px; padding: 8px; cursor: pointer;
+    color: var(--deep-blue, #324664);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  /* Mobile close button — hidden on desktop */
+  .mobile-menu-close {
+    display: none;
+    position: absolute; top: 12px; right: 12px;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--deep-blue, #324664); padding: 8px;
+  }
+
+  /* Overlay */
+  .mobile-menu-overlay {
+    display: none; position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.45); z-index: 999;
+  }
+  .mobile-menu-overlay.active { display: block; }
+
+  @media (max-width: 1023px) {
+    /* Show hamburger */
+    .mobile-menu-toggle { display: flex; align-items: center; justify-content: center; }
+
+    /* Sidebar becomes a slide-in panel */
+    .sidebar {
+      position: fixed !important;
+      top: 0; left: 0; bottom: 0;
+      width: 280px !important; max-width: 85vw;
+      height: 100vh !important;
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.28s ease;
+      overflow-y: auto;
+      padding-top: 52px;
+      box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+    }
+    .sidebar.mobile-open { transform: translateX(0) !important; }
+
+    /* Show close button on mobile */
+    .mobile-menu-close { display: block; }
+
+    /* Main content fills full width */
+    .main-content { margin-left: 0 !important; padding-top: 56px; }
+
+    /* Topbar needs space for hamburger */
+    .topbar { padding-left: 56px !important; }
+
+    /* app-container stacks vertically */
+    .app-container { display: block !important; }
+  }
+
+  @media (min-width: 1024px) {
+    .mobile-menu-toggle,
+    .mobile-menu-close,
+    .mobile-menu-overlay { display: none !important; }
+  }
+</style>
+
+<!-- ═══ Sidebar JS ═══════════════════════════════════════════════════ -->
+<script>
+(function () {
+  var toggle = document.getElementById('mobile-menu-toggle');
+  var closeBtn = document.getElementById('mobile-menu-close');
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('mobile-menu-overlay');
+
+  function openMenu() {
+    if (sidebar) sidebar.classList.add('mobile-open');
+    if (overlay) overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeMenu() {
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  if (toggle) toggle.addEventListener('click', openMenu);
+  if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+  if (overlay) overlay.addEventListener('click', closeMenu);
+
+  /* Close on nav-link click (mobile) */
+  if (sidebar) {
+    sidebar.querySelectorAll('a.nav-item').forEach(function (link) {
+      link.addEventListener('click', function () {
+        if (window.innerWidth < 1024) closeMenu();
+      });
+    });
+  }
+
+  /* Fallback toggleTema for non-news pages (news page overrides below) */
+  if (typeof toggleTema === 'undefined') {
+    window.toggleTema = function () {
+      var btn = document.getElementById('tema-toggle');
+      var body = document.getElementById('tema-body');
+      if (btn) btn.classList.toggle('collapsed');
+      if (body) body.classList.toggle('collapsed');
+    };
+  }
+})();
+</script>

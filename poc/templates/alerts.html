@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch — Varsling</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif; background: #f7f8fa; color: #111827; }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .app-layout {
+      display: block;
+      min-height: 100vh;
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      background: #1a2332;
+      width: 220px;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      padding: 20px;
+      border-bottom: 1px solid #2a3441;
+    }
+    .sidebar-logo .brand-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
+    .sidebar-logo .brand-name { font-size: 15px; font-weight: 500; color: #fff; margin-top: 2px; }
+
+    .nav-section { padding: 18px 0 4px; }
+    .nav-section-label {
+      padding: 0 20px 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #6e7884;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 20px;
+      font-size: 13px;
+      color: #c9d1d9;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      transition: background 0.12s;
+    }
+    .nav-item:hover { background: #243044; }
+    .nav-item.active {
+      background: rgba(12,74,62,0.25);
+      color: #fff;
+      border-left: 3px solid #0c4a3e;
+      padding-left: 17px;
+    }
+    .nav-item svg { flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active svg { opacity: 1; }
+
+    .competitor-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ─── Main content ───────────────────────────────────────── */
+    .main-content {
+      margin-left: 220px;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ─── Top bar ────────────────────────────────────────────── */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 14px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .topbar-title { font-size: 14px; font-weight: 500; color: #374151; }
+
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    .lang-selector { display: flex; gap: 4px; }
+    .lang-btn {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      color: #6b7280;
+      font-family: inherit;
+      font-size: 11px;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .lang-btn.active { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
+    .lang-btn:hover:not(.active) { border-color: #9ca3af; }
+
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #0c4a3e;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ─── Page header ────────────────────────────────────────── */
+    .page-hd {
+      padding: 24px 28px 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .page-hd h1 { font-size: 22px; font-weight: 500; color: #111827; }
+    .page-hd-sub { font-size: 13px; color: #6b7280; margin-top: 3px; }
+
+    /* ─── Content area ───────────────────────────────────────── */
+    .content-area {
+      padding: 20px 28px 40px;
+      max-width: none;
+    }
+
+    /* ─── DB warning ─────────────────────────────────────────── */
+    .db-warning {
+      background: #fffbeb;
+      border: 1px solid #f59e0b;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #92400e;
+      margin-bottom: 20px;
+    }
+
+    /* ─── Card ───────────────────────────────────────────────── */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 22px 26px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    /* ─── Form ───────────────────────────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-group:last-of-type { margin-bottom: 0; }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 5px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      color: #111827;
+      background: #fff;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-control:focus {
+      border-color: #0c4a3e;
+      box-shadow: 0 0 0 3px rgba(12,74,62,0.08);
+    }
+    textarea.form-control { resize: vertical; min-height: 68px; }
+
+    .demo-notice {
+      font-size: 11px;
+      color: #9ca3af;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 4px;
+      padding: 6px 10px;
+      margin-bottom: 14px;
+    }
+
+    .btn-primary {
+      background: #0c4a3e;
+      color: #fff;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #0a3d33; }
+    .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
+
+    /* ─── Alert list rows ────────────────────────────────────── */
+    .alert-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .alert-row:first-child { padding-top: 0; }
+    .alert-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .alert-info { flex: 1; min-width: 0; }
+    .alert-name { font-size: 14px; font-weight: 500; color: #111827; }
+    .alert-desc { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .alert-meta { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+
+    .btn-delete {
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      color: #b91c1c;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .btn-delete:hover { background: #fef2f2; border-color: #fca5a5; }
+
+    .empty-alerts { font-size: 13px; color: #9ca3af; padding: 8px 0; }
+
+    /* ─── Mobile ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; }
+      .content-area { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand-sub">Cermaq</div>
+      <div class="brand-name">Media Watch</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">{{ ui_text.nav_overview }}</div>
+
+      <a href="/?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        {{ ui_text.nav_news }}
+      </a>
+
+      <a href="/uken?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        {{ ui_text.nav_weekly }}
+      </a>
+
+      <a href="/alerts?lang={{ lang }}" class="nav-item active">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {{ ui_text.nav_alerts }}
+      </a>
+
+      <a href="/?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        {{ ui_text.nav_search }}
+      </a>
+
+      <a href="/reports?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        {{ ui_text.nav_reports }}
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">{{ ui_text.nav_competitors }}</div>
+
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Mowi
+        <span class="competitor-dot" style="background:#10b981"></span>
+      </span>
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        SalMar
+        <span class="competitor-dot" style="background:#f59e0b"></span>
+      </span>
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Grieg Seafood
+        <span class="competitor-dot" style="background:#ef4444"></span>
+      </span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">{{ ui_text.nav_settings }}</div>
+      <a href="/api/sources" target="_blank" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+        </svg>
+        {{ ui_text.nav_sources }}
+      </a>
+    </div>
+  </aside>
+
+  <!-- ═══ Main content ══════════════════════════════════════════ -->
+  <div class="main-content">
+
+    <header class="topbar">
+      <span class="topbar-title">{{ ui_text.nav_alerts }}</span>
+      <div class="topbar-right">
+        <div class="lang-selector">
+          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" data-lang="no">NO</button>
+          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" data-lang="en">EN</button>
+          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" data-lang="es">ES</button>
+          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" data-lang="ja">JA</button>
+        </div>
+        <div class="avatar">HM</div>
+      </div>
+    </header>
+
+    <div class="page-hd">
+      <div>
+        <h1>{{ ui_text.nav_alerts }}</h1>
+        <p class="page-hd-sub">Opprett og administrer varsler for Cermaq-relaterte saker</p>
+      </div>
+    </div>
+
+    <div class="content-area">
+
+      {% if db_unavailable %}
+      <div class="db-warning">
+        ⚠ Database ikke tilgjengelig. Varsler krever Postgres-tilkobling (DATABASE_URL).
+      </div>
+      {% endif %}
+
+      <!-- Create alert form -->
+      <div class="card">
+        <div class="card-title">Nytt varsel</div>
+        <div class="demo-notice">⚠ Varselet sendes ikke faktisk i denne demo-versjonen</div>
+        <form id="alert-form">
+          <div class="form-group">
+            <label for="alert-name">Navn på varsel</label>
+            <input type="text" id="alert-name" class="form-control" name="name" placeholder="f.eks. Cermaq Chile-kriser" required />
+          </div>
+          <div class="form-group">
+            <label for="alert-desc">Hva skal varsles om</label>
+            <textarea id="alert-desc" class="form-control" name="description" placeholder="Beskriv hva slags saker som skal utløse varselet…"></textarea>
+          </div>
+          <div class="form-group">
+            <label for="alert-frequency">Varslerfrekvens</label>
+            <select id="alert-frequency" class="form-control" name="frequency">
+              <option value="umiddelbart">Umiddelbart ved nye treff</option>
+              <option value="hver_time">Hver time (oppsamling)</option>
+              <option value="daglig" selected>Daglig sammendrag</option>
+              <option value="ukentlig">Ukentlig sammendrag</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="alert-email">E-post</label>
+            <input type="email" id="alert-email" class="form-control" name="email" placeholder="navn@cermaq.com" required />
+          </div>
+          <button type="submit" class="btn-primary"{% if db_unavailable %} disabled{% endif %}>Opprett varsel</button>
+        </form>
+      </div>
+
+      <!-- Active alerts list -->
+      <div class="card">
+        <div class="card-title">Aktive varsler</div>
+        <div id="alerts-list">
+          {% if alerts %}
+            {% for alert in alerts %}
+            <div class="alert-row" data-id="{{ alert.id }}">
+              <div class="alert-info">
+                <div class="alert-name">{{ alert.name }}</div>
+                {% if alert.description %}
+                <div class="alert-desc">{{ alert.description }}</div>
+                {% endif %}
+                <div class="alert-meta">{{ alert.email }} · {{ alert.frequency }}</div>
+              </div>
+              <button class="btn-delete" onclick="deleteAlert({{ alert.id }})">✕ Slett</button>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="empty-alerts" id="empty-state">Ingen aktive varsler ennå.</div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /content-area -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<script>
+  /* ─── Language switching ─────────────────────────────────── */
+  var _urlLang = new URLSearchParams(window.location.search).get("lang");
+  var _savedLang = localStorage.getItem("cermaq_lang");
+  if (!_urlLang && _savedLang && _savedLang !== "no") {
+    var _u = new URL(window.location);
+    _u.searchParams.set("lang", _savedLang);
+    window.location.replace(_u.toString());
+  }
+
+  document.querySelectorAll(".lang-btn").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      localStorage.setItem("cermaq_lang", btn.dataset.lang);
+      var u = new URL(window.location);
+      u.searchParams.set("lang", btn.dataset.lang);
+      window.location.href = u.toString();
+    });
+  });
+
+  /* ─── Alert form submit ──────────────────────────────────── */
+  document.getElementById("alert-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+    var btn = this.querySelector("button[type=submit]");
+    btn.disabled = true;
+    btn.textContent = "Oppretter…";
+    var data = {
+      name: document.getElementById("alert-name").value,
+      description: document.getElementById("alert-desc").value,
+      frequency: document.getElementById("alert-frequency").value,
+      email: document.getElementById("alert-email").value,
+    };
+    try {
+      var resp = await fetch("/api/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!resp.ok) {
+        var err = await resp.json();
+        alert(err.error || "Feil ved opprettelse av varsel");
+        return;
+      }
+      var created = await resp.json();
+      addAlertRow(created);
+      this.reset();
+    } catch (err) {
+      alert("Nettverksfeil: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Opprett varsel";
+    }
+  });
+
+  function addAlertRow(alert) {
+    var list = document.getElementById("alerts-list");
+    var empty = document.getElementById("empty-state");
+    if (empty) empty.remove();
+
+    var div = document.createElement("div");
+    div.className = "alert-row";
+    div.dataset.id = alert.id;
+    div.innerHTML =
+      '<div class="alert-info">' +
+        '<div class="alert-name">' + esc(alert.name) + '</div>' +
+        '<div class="alert-meta">' + esc(alert.email) + ' · ' + esc(alert.frequency) + '</div>' +
+      '</div>' +
+      '<button class="btn-delete" onclick="deleteAlert(' + alert.id + ')">✕ Slett</button>';
+    list.appendChild(div);
+  }
+
+  async function deleteAlert(id) {
+    try {
+      var resp = await fetch("/api/alerts/" + id, { method: "DELETE" });
+      if (!resp.ok) {
+        var err = await resp.json();
+        alert(err.error || "Feil ved sletting");
+        return;
+      }
+      var item = document.querySelector('.alert-row[data-id="' + id + '"]');
+      if (item) item.remove();
+      var list = document.getElementById("alerts-list");
+      if (list && list.children.length === 0) {
+        var d = document.createElement("div");
+        d.className = "empty-alerts";
+        d.id = "empty-state";
+        d.textContent = "Ingen aktive varsler ennå.";
+        list.appendChild(d);
+      }
+    } catch (err) {
+      alert("Nettverksfeil: " + err.message);
+    }
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Watch — News Bulletin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script>
+    window.translations = {{ translations | tojson }};
+    window.t = function(k) { return window.translations[k] || k; };
+  </script>
+
+  <style>
+    :root {
+      --aqua: #0096a0;
+      --aqua-light: #e8f5f6;
+      --deep-blue: #324664;
+      --bg-page: #f5f4ef;
+      --border: #e5e7eb;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-page); color: #111827; }
+
+    .app-outer { min-height: 100vh; display: flex; justify-content: center; background: var(--bg-page); }
+    .app-container { width: 100%; max-width: 1440px; display: flex; min-height: 100vh; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.06); }
+
+    /* ── Sidebar shared styles (needed for _sidebar.html include) ── */
+    .sidebar { width: 240px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 100; }
+    .sidebar-logo { padding: 20px 20px 18px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo .brand-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); font-weight: 500; }
+    .sidebar-logo .brand-name { font-size: 16px; font-weight: 600; color: var(--deep-blue); margin-top: 3px; }
+    .sidebar-logo .brand-name span { color: var(--aqua); }
+    .sidebar-pillar { padding: 16px 20px 4px; }
+    .sidebar-pillar-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
+    .sidebar-group { padding: 8px 0 2px; }
+    .sidebar-group-label { padding: 0 20px 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #b0b8c4; }
+    .sidebar-divider { height: 1px; background: var(--border); margin: 6px 20px; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 20px; font-size: 13px; color: var(--text-secondary); text-decoration: none; border-left: 3px solid transparent; transition: background 0.1s, color 0.1s; }
+    .nav-item:hover { background: #f9fafb; color: #111827; }
+    .nav-item.active { background: var(--aqua-light); color: var(--aqua); border-left-color: var(--aqua); font-weight: 500; }
+    .nav-item svg { flex-shrink: 0; opacity: 0.6; }
+    .nav-count { margin-left: auto; font-size: 10px; color: var(--text-muted); background: #f3f4f6; padding: 1px 6px; border-radius: 10px; }
+    .sidebar-langs { display: flex; gap: 4px; padding: 12px 20px 8px; flex-wrap: wrap; }
+    .sidebar-langs a { font-size: 11px; padding: 3px 8px; border-radius: 4px; text-decoration: none; color: var(--text-secondary); border: 1px solid var(--border); }
+    .sidebar-langs a.active { background: var(--aqua); color: #fff; border-color: var(--aqua); }
+    .sidebar-collapsible-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 7px 20px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); background: none; border: none; cursor: pointer; }
+    .sidebar-collapsible-body { overflow: hidden; }
+    .sidebar-collapsible-body.collapsed { display: none; }
+    .sidebar-search { margin: 12px 16px; }
+    .sidebar-search input { width: 100%; padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; font-family: inherit; outline: none; }
+    .theme-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--aqua); flex-shrink: 0; }
+
+    /* ── Main content ─────────────────────────────────────────── */
+    .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-size: 13px; font-weight: 500; color: #374151; }
+    .content-area { padding: 32px 32px 48px; flex: 1; }
+
+    /* ── Page header ──────────────────────────────────────────── */
+    .page-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .page-header h1 { font-size: 24px; font-weight: 700; color: var(--deep-blue); margin-bottom: 6px; }
+    .page-header p { font-size: 13px; color: var(--text-muted); }
+
+    /* ── Bulletin list ────────────────────────────────────────── */
+    .bulletin-list { display: flex; flex-direction: column; gap: 0; }
+
+    .bulletin-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .bulletin-row:last-child { border-bottom: none; }
+
+    .bulletin-nr {
+      flex-shrink: 0;
+      width: 80px;
+    }
+    .bulletin-nr-num {
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--aqua);
+      line-height: 1;
+    }
+    .bulletin-nr-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-top: 2px;
+    }
+
+    .bulletin-meta {
+      flex-shrink: 0;
+      width: 140px;
+    }
+    .bulletin-date {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--deep-blue);
+    }
+
+    .bulletin-oneliner {
+      flex: 1;
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.5;
+    }
+
+    .bulletin-actions {
+      flex-shrink: 0;
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-open {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      background: var(--aqua);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.12s;
+      white-space: nowrap;
+    }
+    .btn-open:hover { background: #007a83; }
+
+    .btn-pdf {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 14px;
+      background: #fff;
+      color: var(--aqua);
+      border: 1.5px solid var(--aqua);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.12s, color 0.12s;
+      white-space: nowrap;
+    }
+    .btn-pdf:hover { background: var(--aqua-light); }
+
+    /* ── Empty state ──────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* ── Mobile hamburger (required by _sidebar.html) ─────────── */
+    .mobile-menu-toggle { display: none; }
+    .mobile-menu-close { display: none; }
+    .mobile-menu-overlay { display: none; }
+
+    @media (max-width: 1023px) {
+      .sidebar { position: fixed; left: 0; top: 0; height: 100vh; transform: translateX(-100%); transition: transform 0.25s ease; z-index: 200; }
+      .sidebar.mobile-open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,0.12); }
+      .mobile-menu-toggle { display: flex; position: fixed; top: 12px; left: 12px; z-index: 150; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px; cursor: pointer; align-items: center; justify-content: center; }
+      .mobile-menu-close { display: flex; position: absolute; top: 12px; right: 12px; background: none; border: none; cursor: pointer; padding: 6px; }
+      .mobile-menu-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 190; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+      .mobile-menu-overlay.active { opacity: 1; pointer-events: auto; }
+      .bulletin-meta { display: none; }
+      .bulletin-nr { width: 60px; }
+      .bulletin-nr-num { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-outer">
+<div class="app-container">
+
+  {% include '_sidebar.html' %}
+
+  <div class="main-content">
+    <div class="topbar">
+      <span class="topbar-title">News Bulletin — Arkiv</span>
+    </div>
+
+    <div class="content-area">
+      <div class="page-header">
+        <h1>News Bulletin</h1>
+        <p>Cermaq Watch sin ukentlige sammenstilling. Hver fredag morgen.</p>
+      </div>
+
+      {% if bulletins %}
+      <div class="bulletin-list">
+        {% for b in bulletins %}
+        <div class="bulletin-row">
+          <div class="bulletin-nr">
+            <div class="bulletin-nr-num">{{ b.nr }}</div>
+            <div class="bulletin-nr-label">Utgave</div>
+          </div>
+          <div class="bulletin-meta">
+            <div class="bulletin-date">{{ b.dato_display }}</div>
+          </div>
+          <div class="bulletin-oneliner">{{ b.oneliner }}</div>
+          <div class="bulletin-actions">
+            <a href="{{ b.html_url }}" target="_blank" class="btn-open">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+              </svg>
+              Åpne
+            </a>
+            <a href="{{ b.pdf_url }}" target="_blank" class="btn-pdf">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+              </svg>
+              PDF
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">Ingen bulletiner publisert ennå.</div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --aqua: #0096a0;
+      --aqua-light: #e8f5f6;
+      --deep-blue: #324664;
+      --bg-page: #f5f4ef;
+      --border: #e5e7eb;
+      --scale-grey: #d2d2cd;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+    }
+
+    /* ─── Layout ────────────────────────────────────────────── */
+    .app-outer {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      background: var(--bg-page);
+    }
+    .app-container {
+      width: 100%;
+      max-width: 1440px;
+      display: flex;
+      min-height: 100vh;
+      background: #fff;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+    }
+
+    /* ─── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+      z-index: 100;
+    }
+
+    .sidebar-logo {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo .brand-eyebrow {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .sidebar-logo .brand-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--deep-blue);
+      margin-top: 2px;
+    }
+    .sidebar-logo .brand-name span { color: var(--aqua); }
+
+    /* Search in sidebar */
+    .sidebar-search {
+      margin: 12px 16px;
+      position: relative;
+    }
+    .sidebar-search input {
+      width: 100%;
+      padding: 8px 12px 8px 32px;
+      border: 1px solid var(--scale-grey);
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      background: white;
+      box-sizing: border-box;
+    }
+    .sidebar-search input:focus {
+      outline: none;
+      border-color: var(--aqua);
+    }
+    .sidebar-search::before {
+      content: '🔍';
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    /* Lang buttons in sidebar */
+    .sidebar-langs {
+      display: flex;
+      gap: 4px;
+      padding: 0 16px;
+      margin-bottom: 14px;
+    }
+    .sidebar-langs a {
+      flex: 1;
+      text-align: center;
+      padding: 5px 0;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--scale-grey);
+      border-radius: 6px;
+      color: var(--deep-blue);
+      text-decoration: none;
+      background: white;
+      transition: all 0.15s;
+    }
+    .sidebar-langs a:hover { border-color: var(--aqua); }
+    .sidebar-langs a.active {
+      background: var(--aqua);
+      color: white;
+      border-color: var(--aqua);
+    }
+
+    /* Pillar label */
+    .sidebar-pillar { padding: 12px 20px 4px; }
+    .sidebar-pillar-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+    }
+
+    /* Group label */
+    .sidebar-group { padding: 8px 0 2px; }
+    .sidebar-group-label {
+      padding: 0 20px 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #b0b8c4;
+    }
+
+    /* Nav items */
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 7px 20px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      font-family: inherit;
+      transition: background 0.1s, color 0.1s;
+      border-left: 3px solid transparent;
+    }
+    .nav-item:hover { background: #f9fafb; color: var(--text-primary); }
+    .nav-item.active {
+      background: var(--aqua-light);
+      color: var(--aqua);
+      border-left-color: var(--aqua);
+      font-weight: 500;
+    }
+    .nav-item svg { flex-shrink: 0; opacity: 0.6; }
+    .nav-item.active svg { opacity: 1; }
+
+    .nav-count {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-muted);
+      min-width: 20px;
+      text-align: right;
+    }
+    .nav-item.active .nav-count { color: var(--aqua); opacity: 0.8; }
+
+    /* Collapsible TEMA */
+    .sidebar-collapsible-toggle {
+      display: flex;
+      align-items: center;
+      padding: 6px 20px 4px;
+      cursor: pointer;
+      user-select: none;
+      border: none;
+      background: transparent;
+      width: 100%;
+      font-family: inherit;
+    }
+    .sidebar-collapsible-toggle .coll-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #b0b8c4;
+    }
+    .sidebar-collapsible-toggle .coll-arrow {
+      margin-left: auto;
+      font-size: 10px;
+      color: #b0b8c4;
+      transition: transform 0.15s;
+    }
+    .sidebar-collapsible-toggle.collapsed .coll-arrow { transform: rotate(-90deg); }
+    .sidebar-collapsible-body.collapsed { display: none; }
+
+    .sidebar-divider { height: 1px; background: var(--border); margin: 6px 20px; }
+
+    /* FILTRE section */
+    .sidebar-filters {
+      padding: 0 16px;
+      margin-top: 12px;
+      border-top: 1px solid var(--scale-grey);
+      padding-top: 14px;
+    }
+    .sidebar-filters h3 {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--text-muted);
+      margin: 0 0 10px 0;
+    }
+    .sidebar-filter-group { margin-bottom: 10px; }
+    .sidebar-filter-group label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+      font-weight: 500;
+    }
+    .sidebar-filter-group select {
+      width: 100%;
+      padding: 6px 8px;
+      font-size: 12px;
+      border: 1px solid var(--scale-grey);
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      box-sizing: border-box;
+      font-family: inherit;
+      color: var(--text-primary);
+    }
+    .sidebar-filter-group select:focus {
+      outline: none;
+      border-color: var(--aqua);
+    }
+
+    /* Theme tags */
+    .theme-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 3px;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .theme-tag[data-theme="Sjø"]            { background: #e0f2fe; color: #0369a1; }
+    .theme-tag[data-theme="Landbasert"]     { background: #dcfce7; color: #15803d; }
+    .theme-tag[data-theme="Fôr"]            { background: #fef9c3; color: #854d0e; }
+    .theme-tag[data-theme="Fiskehelse"]     { background: #fce7f3; color: #9d174d; }
+    .theme-tag[data-theme="Teknologi"]      { background: #ede9fe; color: #6d28d9; }
+    .theme-tag[data-theme="Digitalisering"] { background: #f1f5f9; color: #475569; }
+    .theme-tag[data-theme="Finans"]         { background: #fff7ed; color: #c2410c; }
+    .theme-tag[data-theme="Marked"]         { background: #fde2d3; color: #a14820; }
+
+    .theme-dot {
+      width: 8px; height: 8px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .theme-dot[data-theme="Sjø"]            { background: #0369a1; }
+    .theme-dot[data-theme="Landbasert"]     { background: #15803d; }
+    .theme-dot[data-theme="Fôr"]            { background: #854d0e; }
+    .theme-dot[data-theme="Fiskehelse"]     { background: #9d174d; }
+    .theme-dot[data-theme="Teknologi"]      { background: #6d28d9; }
+    .theme-dot[data-theme="Digitalisering"] { background: #475569; }
+    .theme-dot[data-theme="Finans"]         { background: #c2410c; }
+    .theme-dot[data-theme="Marked"]         { background: #a14820; }
+
+    /* ─── Main content ───────────────────────────────────────── */
+    .main-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Minimal topbar — avatar only */
+    .topbar {
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      padding: 9px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      min-height: 48px;
+    }
+    .avatar {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--deep-blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* Page header */
+    .page-hd {
+      padding: 18px 24px 0;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .page-hd h1 { font-size: 20px; font-weight: 600; color: var(--deep-blue); }
+    .page-hd-sub { font-size: 13px; color: var(--text-secondary); margin-top: 2px; }
+    .page-hd-date { font-size: 12px; color: var(--text-muted); white-space: nowrap; padding-top: 4px; }
+
+    /* Active filter chip */
+    .active-filter-bar {
+      display: none;
+      padding: 10px 24px 0;
+      align-items: center;
+      gap: 8px;
+    }
+    .active-filter-bar.visible { display: flex; }
+    .active-filter-label { font-size: 12px; color: var(--text-secondary); }
+    .active-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--aqua-light);
+      color: var(--aqua);
+      border: 1px solid #b2dfe3;
+      border-radius: 20px;
+      padding: 3px 10px 3px 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .filter-chip-remove {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--aqua);
+      font-size: 15px;
+      line-height: 1;
+      padding: 0;
+      opacity: 0.7;
+    }
+    .filter-chip-remove:hover { opacity: 1; }
+
+    /* Error banner */
+    .error-banner {
+      margin: 12px 24px 0;
+      background: #fff0f0;
+      border-left: 4px solid #c0392b;
+      padding: 10px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #7b2318;
+    }
+
+    /* Digest card */
+    .digest-wrapper { padding: 16px 24px 0; }
+    .digest-card {
+      background: #f0fafa;
+      border: 1px solid #b2dfe3;
+      border-left: 3px solid var(--aqua);
+      border-radius: 6px;
+      padding: 16px 20px;
+    }
+    .digest-card-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+    }
+    .digest-card-hd-left { display: flex; align-items: center; gap: 8px; }
+    .ai-badge {
+      width: 18px; height: 18px;
+      border-radius: 3px;
+      background: var(--aqua);
+      color: #fff;
+      font-size: 8px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .digest-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--aqua); font-weight: 600; }
+    .digest-timestamp { font-size: 11px; color: var(--text-muted); }
+    .digest-headline { font-size: 15px; font-weight: 600; color: var(--deep-blue); line-height: 1.4; margin: 0 0 12px 0; }
+    .digest-body { font-size: 13px; line-height: 1.65; color: #374151; overflow: hidden; transition: max-height 0.3s ease; }
+    .digest-body.digest-collapsed { position: relative; }
+    .digest-body.digest-collapsed::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 48px; background: linear-gradient(to bottom, transparent, #f0fafa); pointer-events: none; }
+    .digest-section { margin-bottom: 12px; }
+    .digest-section:last-child { margin-bottom: 0; }
+    .digest-section-header { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--aqua); margin: 14px 0 5px 0; padding-bottom: 3px; border-bottom: 1px solid #c8e8ea; }
+    .digest-body a { color: inherit; text-decoration: underline; }
+    .digest-expand-btn { background: transparent; border: none; color: var(--aqua); font-size: 12px; font-weight: 600; cursor: pointer; padding: 6px 0 0 0; display: none; }
+    .digest-expand-btn:hover { text-decoration: underline; }
+    .digest-empty {
+      background: #f9fafb; border: 1px solid var(--border);
+      border-left: 3px solid var(--border); border-radius: 6px;
+      padding: 14px 20px; font-size: 13px; color: var(--text-muted); font-style: italic;
+    }
+
+    /* Result header */
+    .result-hd {
+      padding: 12px 24px 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .result-count { font-size: 13px; color: var(--text-secondary); }
+    .result-actions { display: flex; gap: 8px; }
+    .result-action-btn {
+      padding: 4px 11px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .result-action-btn:hover { border-color: var(--text-muted); background: #f9fafb; }
+
+    /* Article feed */
+    .article-feed {
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .article-row {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr 110px;
+      gap: 16px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: box-shadow 0.1s, border-color 0.1s;
+    }
+    .article-row:hover { box-shadow: 0 1px 6px rgba(0,0,0,0.07); border-color: #d1d5db; }
+
+    .article-meta {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin-bottom: 6px;
+    }
+    .source-favicon {
+      width: 15px; height: 15px;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      font-weight: 700;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .source-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); }
+    .meta-dot { font-size: 10px; color: #d1d5db; }
+    .time-ago { font-size: 11px; color: var(--text-muted); }
+
+    .scope-badge {
+      font-size: 10px; font-weight: 600;
+      padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+    }
+    .scope-cermaq  { background: var(--aqua); color: #fff; }
+    .scope-core    { background: #dbeafe; color: #1e40af; }
+    .scope-global  { background: #f3f4f6; color: #4b5563; }
+    .scope-pending { background: #f3f4f6; color: var(--text-muted); font-style: italic; }
+
+    .tone-badge {
+      font-size: 10px; font-weight: 600;
+      padding: 1px 5px; border-radius: 3px;
+    }
+    .tone-positiv { background: #f0fdf4; color: #15803d; }
+    .tone-noytral { background: #f1f5f9; color: #475569; }
+    .tone-negativ { background: #fef2f2; color: #b91c1c; }
+
+    .relevance-star { font-size: 10px; color: var(--text-muted); }
+
+    .article-title {
+      font-size: 14px; font-weight: 500; color: var(--text-primary);
+      line-height: 1.4; text-decoration: none; display: block; margin-bottom: 5px;
+    }
+    .article-row:hover .article-title { color: var(--aqua); }
+
+    .article-summary {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+    }
+
+    .article-img-wrap { align-self: start; }
+    .article-img-wrap img {
+      width: 110px; height: 74px;
+      object-fit: cover; border-radius: 4px; display: block;
+    }
+    .article-img-placeholder { width: 110px; height: 74px; border-radius: 4px; }
+
+    .empty-feed {
+      text-align: center; padding: 48px 0;
+      font-size: 14px; color: var(--text-muted);
+    }
+
+    /* Load more */
+    .load-more-wrap { padding: 16px 24px 28px; text-align: center; }
+    .load-more-btn {
+      padding: 7px 18px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: #fff;
+      font-family: inherit;
+      font-size: 12px;
+      color: #374151;
+      cursor: pointer;
+    }
+    .load-more-btn:hover { border-color: var(--text-muted); background: #f9fafb; }
+
+    /* Mobile article layout */
+    @media (max-width: 1023px) {
+      .article-row { grid-template-columns: 1fr; }
+      .article-img-wrap { display: none; }
+      .page-hd, .digest-wrapper, .result-hd, .article-feed,
+      .load-more-wrap, .active-filter-bar { padding-left: 16px; padding-right: 16px; }
+    }
+  </style>
+</head>
+<body>
+<script>
+window.translations = {{ translations | tojson | safe }};
+window.lang = '{{ lang }}';
+window.t = function(key, vars) {
+  var s = (window.translations && window.translations[key]) || key;
+  if (vars) { for (var k in vars) { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); } }
+  return s;
+};
+</script>
+
+<div class="app-outer">
+<div class="app-container">
+
+  {% include '_sidebar.html' %}
+
+  <!-- ═══ Main content ══════════════════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- Minimal topbar -->
+    <header class="topbar">
+      <div class="avatar">HM</div>
+    </header>
+
+    <!-- Page header -->
+    <div class="page-hd">
+      <div>
+        <h1>{{ ui_text.page_title }}</h1>
+        <p class="page-hd-sub">{{ ui_text.page_subtitle }}</p>
+      </div>
+      <span class="page-hd-date">{{ today }}</span>
+    </div>
+
+    <!-- Active filter chip -->
+    <div class="active-filter-bar{% if active_region or active_theme %} visible{% endif %}"
+         id="active-filter-bar">
+      <span class="active-filter-label">Filtrerer på:</span>
+      <span class="active-filter-chip">
+        <span id="active-filter-chip-label">
+          {% if active_region %}{{ active_region | title }}{% elif active_theme %}{{ active_theme }}{% endif %}
+        </span>
+        <button class="filter-chip-remove" onclick="clearFilter()"
+                title="Fjern filter">&times;</button>
+      </span>
+    </div>
+
+    {% if error %}
+    <div class="error-banner"><strong>Feil:</strong> {{ error }}</div>
+    {% endif %}
+
+    <!-- Digest -->
+    <div class="digest-wrapper">
+      <div class="digest-card" id="digest-card" style="display:none;">
+        <div class="digest-card-hd">
+          <div class="digest-card-hd-left">
+            <div class="ai-badge">AI</div>
+            <span class="digest-label">{{ ui_text.daily_update }}</span>
+          </div>
+          <span class="digest-timestamp" id="digest-timestamp"></span>
+        </div>
+        <div id="digest-content"></div>
+        <button class="digest-expand-btn" id="digest-expand-btn">Vis mer ↓</button>
+      </div>
+      <div class="digest-empty" id="digest-empty" style="display:none;">{{ ui_text.digest_pending }}</div>
+    </div>
+
+    <!-- Result header -->
+    <div class="result-hd">
+      <span class="result-count" id="result-count"></span>
+      <div class="result-actions">
+        <a href="/alerts?lang={{ lang }}" class="result-action-btn">
+          {{ ui_text.btn_create_alert }}
+        </a>
+      </div>
+    </div>
+
+    <!-- Article feed -->
+    <div class="article-feed" id="article-feed">
+      {% if articles %}
+        {% for a in articles %}
+          {% set r = a.region or "global" %}
+          {% set excerpt = a.content | striptags | truncate(200, True, "...") %}
+          {% set sumno = a.summaries.no or excerpt %}
+          {% set sumen = a.summaries.en or excerpt %}
+          {% set sumes = a.summaries.es or excerpt %}
+          {% set sumja = a.summaries.ja or excerpt %}
+          {% if a.scope == 'cermaq' %}
+            {% set scope_cls = 'scope-cermaq' %}
+            {% set scope_lbl = ui_text.scope_cermaq %}
+          {% elif a.scope == 'industry' and r in ['norge','chile','canada'] %}
+            {% set scope_cls = 'scope-core' %}
+            {% set scope_lbl = ui_text.scope_industry_in_regions %}
+          {% elif a.scope == 'industry' %}
+            {% set scope_cls = 'scope-global' %}
+            {% set scope_lbl = ui_text.scope_industry_general %}
+          {% else %}
+            {% set scope_cls = 'scope-pending' %}
+            {% set scope_lbl = 'Klassifiseres...' %}
+          {% endif %}
+          <a class="article-row"
+             href="{{ a.url }}" target="_blank" rel="noopener"
+             data-region="{{ r }}"
+             data-published-at="{{ a.published_at_iso }}"
+             data-relevance="{{ a.relevance or 1 }}"
+             data-scope="{{ a.scope or '' }}"
+             data-tone="{{ a.tone or '' }}"
+             data-source="{{ a.source_name or '' }}"
+             data-fetch-method="{{ a.fetch_method or 'miniflux' }}"
+             data-title="{{ a.title | lower }}"
+             data-themes="{{ (a.themes or []) | tojson | e }}">
+
+            <div class="article-left">
+              <div class="article-meta">
+                <span class="source-favicon"
+                      data-source-name="{{ a.source_name or 'U' }}">{{ (a.source_name or 'U')[0] | upper }}</span>
+                <span class="source-name">{{ a.source_name or "Ukjent" }}</span>
+                <span class="meta-dot">&middot;</span>
+                <span class="time-ago" data-published="{{ a.published_at_iso }}">{{ a.published_at }}</span>
+                {% if a.scope %}
+                <span class="scope-badge {{ scope_cls }}">{{ scope_lbl }}</span>
+                {% endif %}
+                {% if a.tone == 'positiv' %}
+                  <span class="tone-badge tone-positiv">&#8593; {{ ui_text.tone_positive }}</span>
+                {% elif a.tone in ('kritisk','negativ') %}
+                  <span class="tone-badge tone-negativ">&#8595; {{ ui_text.tone_negative }}</span>
+                {% elif a.tone == 'noytral' %}
+                  <span class="tone-badge tone-noytral">&#8212; {{ ui_text.tone_neutral }}</span>
+                {% endif %}
+                {% if a.relevance %}<span class="relevance-star">&#9733; {{ a.relevance }}</span>{% endif %}
+                {% for theme in (a.themes or []) %}
+                <span class="theme-tag" data-theme="{{ theme }}"
+                      onclick="event.preventDefault();setThemeFilter('{{ theme }}')">{{ theme }}</span>
+                {% endfor %}
+              </div>
+
+              <span class="article-title">
+                {% if a.titles and a.titles.get(lang) %}{{ a.titles[lang] }}{% else %}{{ a.title }}{% endif %}
+              </span>
+
+              <div class="summary-container">
+                <p class="article-summary lang-text" data-lang="no">{{ sumno }}</p>
+                <p class="article-summary lang-text" data-lang="en" style="display:none">{{ sumen }}</p>
+                <p class="article-summary lang-text" data-lang="es" style="display:none">{{ sumes }}</p>
+                <p class="article-summary lang-text" data-lang="ja" style="display:none">{{ sumja }}</p>
+              </div>
+            </div>
+
+            <div class="article-img-wrap">
+              {% if a.image_url %}
+              <img src="{{ a.image_url }}" alt="" loading="lazy" />
+              {% else %}
+              <div class="article-img-placeholder"
+                   data-source-name="{{ a.source_name or '' }}"></div>
+              {% endif %}
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        <div class="empty-feed">Ingen artikler funnet.</div>
+      {% endif %}
+    </div>
+
+    <!-- Load more -->
+    <div class="load-more-wrap" id="load-more-wrap" style="display:none">
+      <button class="load-more-btn" id="load-more">{{ ui_text.load_more }}</button>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app-container -->
+</div><!-- /app-outer -->
+
+<script>
+  /* ─── UI texts ───────────────────────────────────────────── */
+  var UI_TEXTS = {{ ui_text | tojson }};
+
+  /* ─── URL params ─────────────────────────────────────────── */
+  var _urlParams = new URLSearchParams(window.location.search);
+  var activeLang = _urlParams.get("lang") || localStorage.getItem("cermaq_lang") || "no";
+
+  /* ─── Filter state (init from URL) ──────────────────────── */
+  var activeRegion = _urlParams.get("region") || "all";
+  var activeTheme  = _urlParams.get("theme")  || "all";
+  var activeSearch = "";
+  var currentVisible = 25;
+  var PAGE_SIZE = 25;
+
+  /* Bug fix: when theme or region filter is set via URL, default to
+     showing ALL dates so sidebar counts match article list counts. */
+  var DATE_MS = { today: 86400000, week: 604800000, month: 2592000000, all: Infinity };
+
+  /* ─── Source colors ──────────────────────────────────────── */
+  var SRC_COLORS = ['#0096a0','#324664','#1e40af','#7e22ce','#c2410c','#b45309','#0891b2','#065f46'];
+  function srcColor(name) {
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+    return SRC_COLORS[h % SRC_COLORS.length];
+  }
+
+  /* ─── Time-since helper ──────────────────────────────────── */
+  function timeSince(isoStr) {
+    if (!isoStr) return "";
+    var diff = Date.now() - new Date(isoStr).getTime();
+    if (diff < 0) return "";
+    if (diff < 60000) return "Nå";
+    if (diff < 3600000) return (UI_TEXTS.time_ago_minutes || "{n} min siden").replace("{n}", Math.floor(diff / 60000));
+    if (diff < 86400000) return (UI_TEXTS.time_ago_hours || "{n} t siden").replace("{n}", Math.floor(diff / 3600000));
+    return (UI_TEXTS.time_ago_days || "{n} dager siden").replace("{n}", Math.floor(diff / 86400000));
+  }
+
+  /* ─── Source category ────────────────────────────────────── */
+  function getSourceCategory(row) {
+    var src = (row.dataset.source || "").toLowerCase();
+    var social = ["linkedin","twitter","x","facebook","instagram","youtube","tiktok","reddit"];
+    for (var i = 0; i < social.length; i++) { if (src.indexOf(social[i]) > -1) return "some"; }
+    var m = (row.dataset.fetchMethod || "").toLowerCase();
+    if (m === "some" || m === "social") return "some";
+    return "nyheter";
+  }
+
+  /* ─── Get current filter values from selects ─────────────── */
+  function getFilters() {
+    return {
+      scope:  document.getElementById("filter-scope").value,
+      source: document.getElementById("filter-source").value,
+      tone:   document.getElementById("filter-tone").value,
+      date:   document.getElementById("filter-date").value,
+      sort:   document.getElementById("filter-sort").value,
+    };
+  }
+
+  /* ─── URL navigation (sidebar region/theme links) ────────── */
+  function setRegionFilter(region) {
+    var u = new URL(window.location);
+    if (region === "all") { u.searchParams.delete("region"); } else { u.searchParams.set("region", region); }
+    u.searchParams.delete("theme");
+    window.location.href = u.toString();
+  }
+
+  function setThemeFilter(theme) {
+    var u = new URL(window.location);
+    if (theme === "all") { u.searchParams.delete("theme"); } else { u.searchParams.set("theme", theme); }
+    u.searchParams.delete("region");
+    window.location.href = u.toString();
+  }
+
+  function clearFilter() {
+    var u = new URL(window.location);
+    u.searchParams.delete("region");
+    u.searchParams.delete("theme");
+    window.location.href = u.toString();
+  }
+
+  /* ─── Collapsible TEMA ───────────────────────────────────── */
+  function toggleTema() {
+    document.getElementById("tema-toggle").classList.toggle("collapsed");
+    document.getElementById("tema-body").classList.toggle("collapsed");
+  }
+
+  /* ─── Language switch (preserved) ───────────────────────── */
+  function switchLanguage(newLang) {
+    localStorage.setItem("cermaq_lang", newLang);
+    var u = new URL(window.location);
+    u.searchParams.set("lang", newLang);
+    window.location.href = u.toString();
+  }
+
+  /* ─── Apply language display ─────────────────────────────── */
+  function applyLang(lang) {
+    document.querySelectorAll(".lang-text").forEach(function(el) {
+      el.style.display = el.dataset.lang === lang ? "" : "none";
+    });
+  }
+
+  /* ─── Init rows (favicons, placeholders, time-ago) ───────── */
+  function initRows() {
+    document.querySelectorAll(".source-favicon").forEach(function(el) {
+      el.style.background = srcColor(el.dataset.sourceName || "?");
+    });
+    document.querySelectorAll(".article-img-placeholder").forEach(function(el) {
+      el.style.background = srcColor(el.dataset.sourceName || "?") + "22";
+    });
+    document.querySelectorAll(".time-ago[data-published]").forEach(function(el) {
+      var ts = timeSince(el.dataset.published);
+      if (ts) el.textContent = ts;
+    });
+  }
+
+  /* ─── Main filter + sort ─────────────────────────────────── */
+  function applyFilters() {
+    var f = getFilters();
+    var now = Date.now();
+    var maxAge = DATE_MS[f.date] !== undefined ? DATE_MS[f.date] : DATE_MS.all;
+    var searchLc = activeSearch.toLowerCase();
+    var coreRegions = ["norge", "chile", "canada"];
+    var allRows = Array.from(document.querySelectorAll("#article-feed .article-row"));
+
+    var visible = allRows.filter(function(row) {
+      /* Region (URL-based) */
+      if (activeRegion !== "all" && row.dataset.region !== activeRegion) return false;
+
+      /* Theme is filtered server-side — no JS check needed */
+
+      /* Date */
+      var iso = row.dataset.publishedAt;
+      if (iso && isFinite(maxAge)) {
+        var age = now - new Date(iso).getTime();
+        if (age < 0 || age > maxAge) return false;
+      }
+
+      /* Tone */
+      if (f.tone !== "all") {
+        var rowTone = row.dataset.tone === "kritisk" ? "negativ" : row.dataset.tone;
+        if (rowTone !== f.tone) return false;
+      }
+
+      /* Scope */
+      if (f.scope !== "all") {
+        var scope = row.dataset.scope, reg = row.dataset.region;
+        if (f.scope === "cermaq" && scope !== "cermaq") return false;
+        if (f.scope === "industry-core" && !(scope === "industry" && coreRegions.indexOf(reg) > -1)) return false;
+        if (f.scope === "industry-global" && !(scope === "industry" && coreRegions.indexOf(reg) === -1)) return false;
+      }
+
+      /* Source */
+      if (f.source !== "all" && getSourceCategory(row) !== f.source) return false;
+
+      /* Search */
+      if (searchLc) {
+        if ((row.dataset.title || "").toLowerCase().indexOf(searchLc) === -1 &&
+            (row.dataset.source || "").toLowerCase().indexOf(searchLc) === -1) return false;
+      }
+
+      return true;
+    });
+
+    /* Sort */
+    visible.sort(function(a, b) {
+      if (f.sort === "relevance") return (parseInt(b.dataset.relevance) || 1) - (parseInt(a.dataset.relevance) || 1);
+      if (f.sort === "oldest") return new Date(a.dataset.publishedAt || 0) - new Date(b.dataset.publishedAt || 0);
+      if (f.sort === "negative") {
+        var aTone = (a.dataset.tone === "negativ" || a.dataset.tone === "kritisk") ? 0 : 1;
+        var bTone = (b.dataset.tone === "negativ" || b.dataset.tone === "kritisk") ? 0 : 1;
+        if (aTone !== bTone) return aTone - bTone;
+      }
+      /* newest (default) */
+      return new Date(b.dataset.publishedAt || 0) - new Date(a.dataset.publishedAt || 0);
+    });
+
+    /* Render */
+    allRows.forEach(function(r) { r.style.display = "none"; });
+    var feed = document.getElementById("article-feed");
+    visible.slice(0, currentVisible).forEach(function(r) {
+      r.style.display = "";
+      feed.appendChild(r);
+    });
+
+    var loadWrap = document.getElementById("load-more-wrap");
+    loadWrap.style.display = visible.length > currentVisible ? "" : "none";
+
+    /* Update nav count */
+    var navAll = document.getElementById("nav-count-all");
+    if (navAll) navAll.textContent = visible.length;
+
+    /* Result count */
+    var countText = (UI_TEXTS.showing_articles || "Viser {n} av {total} artikler")
+      .replace("{n}", Math.min(currentVisible, visible.length))
+      .replace("{total}", visible.length);
+    document.getElementById("result-count").textContent = countText;
+  }
+
+  /* ─── Event listeners ────────────────────────────────────── */
+  ["filter-scope","filter-source","filter-tone","filter-date","filter-sort"].forEach(function(id) {
+    document.getElementById(id).addEventListener("change", function() {
+      currentVisible = PAGE_SIZE;
+      applyFilters();
+    });
+  });
+
+  document.getElementById("load-more").addEventListener("click", function() {
+    currentVisible += PAGE_SIZE;
+    applyFilters();
+  });
+
+  var _searchTimer;
+  document.getElementById("search-input").addEventListener("input", function() {
+    clearTimeout(_searchTimer);
+    var val = this.value;
+    _searchTimer = setTimeout(function() {
+      activeSearch = val;
+      currentVisible = PAGE_SIZE;
+      applyFilters();
+    }, 200);
+  });
+
+  /* ─── Digest ─────────────────────────────────────────────── */
+  function escapeHtml(text) {
+    if (typeof text !== 'string') return String(text || '');
+    var d = document.createElement('div');
+    d.textContent = text;
+    return d.innerHTML;
+  }
+
+  // Render digest section text: escape HTML then convert [name](url) markdown
+  // links (emitted by the AI prompt) to clickable <a> tags.
+  function renderSectionText(text) {
+    if (typeof text !== 'string') return String(text || '');
+    var escaped = escapeHtml(text);
+    // Match [name](url) — the URL was already safe in the prompt output
+    return escaped.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      function(_, name, url) {
+        return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + name + '</a>';
+      }
+    );
+  }
+
+  function setupExpandButton(collapsedHeight) {
+    var body = document.getElementById('digest-body-inner');
+    var btn  = document.getElementById('digest-expand-btn');
+    if (!body || !btn) return;
+    var fullH = body.scrollHeight;
+    if (fullH > collapsedHeight) {
+      body.style.maxHeight = collapsedHeight + 'px';
+      body.classList.add('digest-collapsed');
+      btn.style.display = 'block';
+      var expanded = false;
+      btn.addEventListener('click', function() {
+        expanded = !expanded;
+        if (expanded) {
+          body.classList.remove('digest-collapsed');
+          body.style.maxHeight = 'none';
+          btn.textContent = 'Vis mindre ↑';
+        } else {
+          body.classList.add('digest-collapsed');
+          body.style.maxHeight = collapsedHeight + 'px';
+          btn.textContent = 'Vis mer ↓';
+        }
+      });
+    }
+  }
+
+  function renderDigest(data) {
+    var card  = document.getElementById('digest-card');
+    var empty = document.getElementById('digest-empty');
+    var cnt   = document.getElementById('digest-content');
+    var ts    = document.getElementById('digest-timestamp');
+
+    if (!data || !data.content) {
+      if (card)  card.style.display  = 'none';
+      if (empty) empty.style.display = 'block';
+      return;
+    }
+
+    var c        = data.content;
+    var sections = c.sections || {};
+    var regionLabels = { norge: 'Norge', chile: 'Chile', canada: 'Canada' };
+    var bodyHtml = '';
+
+    if (sections.global) {
+      bodyHtml += '<div class="digest-section">' + renderSectionText(sections.global) + '</div>';
+    }
+    for (var key in regionLabels) {
+      if (sections[key]) {
+        bodyHtml += '<div class="digest-section">'
+          + '<div class="digest-section-header">' + regionLabels[key] + '</div>'
+          + renderSectionText(sections[key])
+          + '</div>';
+      }
+    }
+
+    cnt.innerHTML = '<h3 class="digest-headline">' + escapeHtml(c.headline || '') + '</h3>'
+      + '<div class="digest-body" id="digest-body-inner">' + bodyHtml + '</div>';
+
+    if (data.generated_at && ts) {
+      var dt = new Date(data.generated_at);
+      ts.textContent = 'Sist oppdatert '
+        + dt.toLocaleDateString('no-NO') + ' kl '
+        + dt.toLocaleTimeString('no-NO', {hour:'2-digit', minute:'2-digit'});
+    }
+
+    if (card)  card.style.display  = 'block';
+    if (empty) empty.style.display = 'none';
+
+    // Setup expand button after layout paint
+    setTimeout(function() { setupExpandButton(110); }, 0);
+  }
+
+  (function loadDigest() {
+    var lang = (new URLSearchParams(window.location.search)).get('lang') || activeLang || 'no';
+    fetch('/api/digest?lang=' + encodeURIComponent(lang))
+      .then(function(r) { return r.json(); })
+      .then(renderDigest)
+      .catch(function() {
+        var empty = document.getElementById('digest-empty');
+        if (empty) empty.style.display = 'block';
+      });
+  })();
+
+  /* ─── Boot ───────────────────────────────────────────────── */
+  initRows();
+  applyLang(activeLang);
+
+  /* Expand TEMA sidebar section if theme filter is active */
+  if (activeTheme !== "all") {
+    var tt = document.getElementById("tema-toggle");
+    var tb = document.getElementById("tema-body");
+    if (tt) tt.classList.remove("collapsed");
+    if (tb) tb.classList.remove("collapsed");
+  }
+
+  /* Set date filter: "all" when region/theme URL param is active (bug fix) */
+  if (activeTheme !== "all" || activeRegion !== "all") {
+    document.getElementById("filter-date").value = "all";
+  }
+
+  applyFilters();
+</script>
+
+</body>
+</html>

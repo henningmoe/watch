@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>News Bulletin — Utgave {{ bulletin.nr }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --aqua: #0096a0;
+      --aqua-light: #e8f5f6;
+      --deep-blue: #324664;
+      --border: #e5e7eb;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f4ef;
+      color: #111827;
+      min-height: 100vh;
+    }
+
+    /* ── Top stripe ───────────────────────────────────────────── */
+    .bulletin-stripe {
+      background: var(--deep-blue);
+      padding: 10px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .bulletin-stripe-brand {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .bulletin-stripe-cermaq {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: rgba(255,255,255,0.55);
+    }
+    .bulletin-stripe-watch {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--aqua);
+    }
+    .bulletin-stripe-right {
+      font-size: 11px;
+      color: rgba(255,255,255,0.5);
+    }
+
+    /* ── Bulletin header ──────────────────────────────────────── */
+    .bulletin-header {
+      background: #fff;
+      border-bottom: 3px solid var(--aqua);
+      padding: 36px 40px 28px;
+    }
+    .bulletin-edition {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--aqua);
+      margin-bottom: 8px;
+    }
+    .bulletin-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--deep-blue);
+      margin-bottom: 6px;
+    }
+    .bulletin-dateline {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    /* ── Main content area ────────────────────────────────────── */
+    .bulletin-body {
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 24px 60px;
+    }
+
+    /* ── Placeholder content ──────────────────────────────────── */
+    .placeholder-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 40px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .placeholder-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+    .placeholder-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--deep-blue);
+      margin-bottom: 8px;
+    }
+    .placeholder-text {
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .placeholder-oneliner {
+      margin-top: 20px;
+      padding: 16px 20px;
+      background: var(--aqua-light);
+      border-left: 3px solid var(--aqua);
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--deep-blue);
+      text-align: left;
+    }
+
+    /* ── Footer stripe ────────────────────────────────────────── */
+    .bulletin-footer {
+      background: var(--deep-blue);
+      padding: 20px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 40px;
+    }
+    .bulletin-footer-brand {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.7);
+    }
+    .bulletin-footer-brand span { color: var(--aqua); }
+    .bulletin-footer-link {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      text-decoration: none;
+    }
+    .bulletin-footer-link:hover { color: rgba(255,255,255,0.7); }
+
+    @media (max-width: 600px) {
+      .bulletin-stripe { padding: 10px 20px; }
+      .bulletin-header { padding: 24px 20px 20px; }
+      .bulletin-title { font-size: 22px; }
+      .bulletin-body { padding: 0 16px 40px; }
+      .bulletin-footer { padding: 16px 20px; flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top stripe -->
+  <div class="bulletin-stripe">
+    <div class="bulletin-stripe-brand">
+      <span class="bulletin-stripe-cermaq">Cermaq</span>
+      <span class="bulletin-stripe-watch">Media Watch</span>
+    </div>
+    <span class="bulletin-stripe-right">news-bulletin.cermaq.com</span>
+  </div>
+
+  <!-- Header -->
+  <div class="bulletin-header">
+    <div class="bulletin-edition">News Bulletin — Utgave {{ bulletin.nr }}</div>
+    <div class="bulletin-title">Cermaq Watch</div>
+    <div class="bulletin-dateline">{{ bulletin.dato_display }}</div>
+  </div>
+
+  <!-- Body -->
+  <div class="bulletin-body">
+    <div class="placeholder-card">
+      <div class="placeholder-icon">📰</div>
+      <div class="placeholder-title">Innhold ikke tilgjengelig ennå</div>
+      <p class="placeholder-text">
+        Denne utgaven av News Bulletin er registrert i arkivet, men
+        innholdet er ennå ikke lastet opp. Kontakt kommunikasjonsteamet
+        for full tilgang til utgaven.
+      </p>
+      <div class="placeholder-oneliner">
+        {{ bulletin.oneliner }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer stripe -->
+  <div class="bulletin-footer">
+    <div class="bulletin-footer-brand">Cermaq <span>Media Watch</span></div>
+    <a href="/bulletin" class="bulletin-footer-link">← Tilbake til arkivet</a>
+  </div>
+
+</body>
+</html>

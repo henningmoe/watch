@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch — Rapport</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --aqua: #0096a0;
+      --aqua-light: #e8f5f6;
+      --deep-blue: #324664;
+      --bg-page: #f5f4ef;
+      --border: #e5e7eb;
+      --text-secondary: #6b7280;
+      --text-muted: #9ca3af;
+      --green: #059669;
+      --red: #dc2626;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body { font-family: 'Inter',-apple-system,BlinkMacSystemFont,sans-serif; background: var(--bg-page); color: #111827; }
+
+    .app-outer { min-height: 100vh; display: flex; justify-content: center; background: var(--bg-page); }
+    .app-container { width: 100%; max-width: 1440px; display: flex; min-height: 100vh; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,0.06); }
+
+    /* Sidebar */
+    .sidebar { width: 240px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 100; }
+    .sidebar-logo { padding: 20px 20px 18px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo .brand-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text-muted); font-weight: 500; }
+    .sidebar-logo .brand-name { font-size: 16px; font-weight: 600; color: var(--deep-blue); margin-top: 3px; }
+    .sidebar-logo .brand-name span { color: var(--aqua); }
+    .sidebar-pillar { padding: 16px 20px 4px; }
+    .sidebar-pillar-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text-muted); }
+    .sidebar-group { padding: 8px 0 2px; }
+    .sidebar-group-label { padding: 0 20px 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #b0b8c4; }
+    .sidebar-divider { height: 1px; background: var(--border); margin: 6px 20px; }
+    .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 20px; font-size: 13px; color: var(--text-secondary); text-decoration: none; border-left: 3px solid transparent; transition: background 0.1s, color 0.1s; }
+    .nav-item:hover { background: #f9fafb; color: #111827; }
+    .nav-item.active { background: var(--aqua-light); color: var(--aqua); border-left-color: var(--aqua); font-weight: 500; }
+    .nav-item svg { flex-shrink: 0; opacity: 0.6; }
+    .lang-switcher { display: flex; gap: 4px; padding: 12px 20px; border-top: 1px solid var(--border); margin-top: auto; flex-wrap: wrap; }
+    .lang-btn { font-size: 11px; padding: 3px 8px; border-radius: 4px; text-decoration: none; color: var(--text-secondary); border: 1px solid var(--border); }
+    .lang-btn.active { background: var(--aqua); color: #fff; border-color: var(--aqua); }
+
+    /* Main */
+    .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .topbar { background: #fff; border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+    .topbar-title { font-size: 14px; font-weight: 500; color: #374151; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .topbar-back { font-size: 12px; color: var(--text-muted); text-decoration: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; }
+    .topbar-back:hover { background: #f9fafb; color: #111827; }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--deep-blue); color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+    .content-area { padding: 28px 24px; flex: 1; }
+
+    /* Report container */
+    .report-container { max-width: 860px; }
+
+    /* Report header */
+    .report-header { border-bottom: 2px solid var(--aqua); padding-bottom: 20px; margin-bottom: 28px; }
+    .report-header-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+    .report-type-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .report-type-badge.weekly { background: #cfe7ee; color: #1f5d6e; }
+    .report-type-badge.monthly { background: #324664; color: #fff; }
+    .report-type-badge.custom { background: #e8e3f4; color: #4a3d7a; }
+    .report-header h1 { font-size: 26px; font-weight: 700; color: var(--deep-blue); margin-bottom: 8px; line-height: 1.3; }
+    .report-period { font-size: 14px; color: var(--text-secondary); }
+
+    /* Executive summary */
+    .exec-summary { background: linear-gradient(135deg, #f0f9ff 0%, #e8f5f6 100%); border: 1px solid #bae6fd; border-left: 4px solid var(--aqua); border-radius: 10px; padding: 24px 28px; margin-bottom: 20px; }
+    .exec-summary-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--aqua); margin-bottom: 10px; }
+    .exec-summary p { font-size: 14.5px; line-height: 1.7; color: #1e3a5f; }
+
+    /* Report sections */
+    .report-section { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 24px 28px; margin-bottom: 16px; }
+    .report-section h2 { font-size: 16px; font-weight: 700; color: var(--deep-blue); margin-bottom: 6px; }
+    .section-headline { font-size: 14px; color: var(--text-secondary); font-weight: 500; margin-bottom: 14px; }
+    .narrative { font-size: 13.5px; line-height: 1.75; color: #374151; }
+    .narrative p { margin-bottom: 10px; }
+    .narrative p:last-child { margin-bottom: 0; }
+
+    /* Highlights */
+    .highlights { margin-top: 16px; background: #fafaf7; border-left: 3px solid var(--aqua); border-radius: 0 6px 6px 0; padding: 14px 18px; }
+    .highlights ul { margin: 0; padding-left: 18px; }
+    .highlights li { font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 6px; }
+    .highlights li:last-child { margin-bottom: 0; }
+
+    /* Theme spotlight */
+    .theme-card { background: #fafaf7; border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; }
+    .theme-card:last-child { margin-bottom: 0; }
+    .theme-tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; background: var(--aqua-light); color: var(--aqua); margin-bottom: 8px; }
+    .theme-card h3 { font-size: 14px; font-weight: 600; color: var(--deep-blue); margin-bottom: 8px; }
+    .theme-card p { font-size: 13px; line-height: 1.65; color: #374151; }
+
+    /* Events */
+    .event-card { background: #fffbeb; border-left: 3px solid #d97706; border-radius: 0 8px 8px 0; padding: 14px 18px; margin-bottom: 12px; }
+    .event-card:last-child { margin-bottom: 0; }
+    .event-card h3 { font-size: 14px; font-weight: 600; color: #92400e; margin-bottom: 6px; }
+    .event-card p { font-size: 13px; line-height: 1.65; color: #374151; }
+
+    /* Watchpoints */
+    .watchpoints { margin-top: 14px; }
+    .watchpoints-label { font-size: 12px; font-weight: 600; color: var(--deep-blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .watchpoints ul { margin: 0; padding-left: 18px; }
+    .watchpoints li { font-size: 13px; line-height: 1.6; color: #374151; margin-bottom: 6px; }
+    .watchpoints li:last-child { margin-bottom: 0; }
+
+    /* Key quotes */
+    .quote-card { background: #f8fafc; border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; border-left: 3px solid #e5e7eb; }
+    .quote-card:last-child { margin-bottom: 0; }
+    .quote-text { font-size: 14px; line-height: 1.6; color: #1f2937; font-style: italic; margin-bottom: 8px; }
+    .quote-text::before { content: '"'; }
+    .quote-text::after { content: '"'; }
+    .quote-source { font-size: 11px; color: var(--text-muted); font-style: normal; }
+
+    /* Statistics */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 16px; }
+    .stat-block { background: #fafaf7; border-radius: 8px; padding: 14px 16px; }
+    .stat-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px; }
+    .stat-value { font-size: 26px; font-weight: 700; color: var(--deep-blue); line-height: 1; }
+    .stat-detail { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+    /* Loading / error */
+    .loading-msg { color: var(--text-muted); font-size: 13px; padding: 40px 0; }
+
+    @media (max-width: 768px) { .main-content { width: 100%; } }
+
+    @media print {
+      .sidebar, .topbar { display: none !important; }
+      .app-outer, .app-container { box-shadow: none; }
+      .content-area { padding: 16px; }
+      .report-section { break-inside: avoid; }
+      body { font-size: 11px; }
+    }
+  </style>
+  <script>
+  window.translations = {{ translations | tojson | safe }};
+  window.lang = '{{ lang }}';
+  window.t = function(key, vars) {
+    var s = (window.translations && window.translations[key]) || key;
+    if (vars) { for (var k in vars) { s = s.replace(new RegExp('\\{' + k + '\\}', 'g'), vars[k]); } }
+    return s;
+  };
+  </script>
+</head>
+<body>
+<div class="app-outer">
+<div class="app-container">
+
+  {% include '_sidebar.html' %}
+
+  <div class="main-content">
+    <header class="topbar">
+      <span class="topbar-title" id="topbar-title">Rapport</span>
+      <div class="topbar-right">
+        <a href="/reports?lang={{ lang }}" class="topbar-back">← Tilbake</a>
+        <div class="avatar">HM</div>
+      </div>
+    </header>
+
+    <div class="content-area">
+      <div class="report-container" id="report-container">
+        <div class="loading-msg">Laster rapport…</div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const REPORT_ID = {{ report_id }};
+const LANG = '{{ lang }}';
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function narrativeHtml(text) {
+  if (!text) return '';
+  return '<p>' + esc(text).replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>') + '</p>';
+}
+
+async function loadReport() {
+  const resp = await fetch(`/api/reports/${REPORT_ID}`);
+  if (!resp.ok) {
+    document.getElementById('report-container').innerHTML =
+      '<div class="loading-msg">Rapport ikke funnet.</div>';
+    return;
+  }
+  const r = await resp.json();
+  renderReport(r);
+}
+
+function renderReport(r) {
+  const c = r.content || {};
+  const stats = r.statistics || {};
+  const TYPE_LABELS = { weekly: 'Ukerapport', monthly: 'Månedsrapport', custom: 'Ad-hoc' };
+
+  const periodStr = `${new Date(r.period_start).toLocaleDateString('no-NO')} – ${new Date(r.period_end).toLocaleDateString('no-NO')}`;
+  const genStr = new Date(r.generated_at).toLocaleDateString('no-NO', {day:'2-digit', month:'long', year:'numeric'});
+
+  document.title = (r.title || 'Rapport') + ' — Cermaq Watch';
+  document.getElementById('topbar-title').textContent = r.title || 'Rapport';
+
+  let html = `<div class="report-header">
+    <div class="report-header-meta">
+      <span class="report-type-badge ${r.type || 'custom'}">${TYPE_LABELS[r.type] || r.type}</span>
+      <span>Generert ${genStr}</span>
+      <span>·</span>
+      <span>${stats.total_articles || 0} artikler</span>
+    </div>
+    <h1>${esc(r.title)}</h1>
+    <div class="report-period">${periodStr}</div>
+  </div>`;
+
+  // Executive summary
+  if (c.executive_summary) {
+    html += `<div class="exec-summary">
+      <div class="exec-summary-label">Sammendrag</div>
+      <p>${esc(c.executive_summary)}</p>
+    </div>`;
+  }
+
+  // Cermaq-specific
+  const cs = c.cermaq_specific;
+  if (cs) {
+    html += `<div class="report-section">
+      <h2>Cermaq-omtaler</h2>
+      ${cs.headline ? `<div class="section-headline">${esc(cs.headline)}</div>` : ''}
+      <div class="narrative">${narrativeHtml(cs.narrative)}</div>
+      ${(cs.highlights && cs.highlights.length) ? `
+        <div class="highlights">
+          <ul>${cs.highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+        </div>` : ''}
+    </div>`;
+  }
+
+  // Industry overview
+  const io = c.industry_overview;
+  if (io) {
+    html += `<div class="report-section">
+      <h2>Bransje-utvikling</h2>
+      ${io.headline ? `<div class="section-headline">${esc(io.headline)}</div>` : ''}
+      <div class="narrative">${narrativeHtml(io.narrative)}</div>
+      ${(io.highlights && io.highlights.length) ? `
+        <div class="highlights">
+          <ul>${io.highlights.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+        </div>` : ''}
+    </div>`;
+  }
+
+  // Theme spotlight
+  if (c.theme_spotlight && c.theme_spotlight.length) {
+    html += `<div class="report-section">
+      <h2>Tema-spotlight</h2>
+      ${c.theme_spotlight.map(ts => `
+        <div class="theme-card">
+          <span class="theme-tag">${esc(ts.theme)}</span>
+          <h3>${esc(ts.headline || '')}</h3>
+          <p>${esc(ts.discussion || '')}</p>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // Events
+  if (c.events && c.events.length) {
+    html += `<div class="report-section">
+      <h2>Hendelser &amp; Konferanser</h2>
+      ${c.events.map(ev => `
+        <div class="event-card">
+          <h3>${esc(ev.name)}</h3>
+          <p>${esc(ev.description || '')}</p>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // Forward looking
+  const fl = c.forward_looking;
+  if (fl) {
+    html += `<div class="report-section">
+      <h2>Fremover</h2>
+      <div class="narrative">${narrativeHtml(fl.narrative)}</div>
+      ${(fl.watchpoints && fl.watchpoints.length) ? `
+        <div class="watchpoints">
+          <div class="watchpoints-label">Punkter ledelsen bør følge</div>
+          <ul>${fl.watchpoints.map(w => `<li>${esc(w)}</li>`).join('')}</ul>
+        </div>` : ''}
+    </div>`;
+  }
+
+  // Key quotes
+  if (c.key_quotes && c.key_quotes.length) {
+    html += `<div class="report-section">
+      <h2>Nøkkelfunn</h2>
+      ${c.key_quotes.map(q => `
+        <div class="quote-card">
+          <div class="quote-text">${esc(q.quote)}</div>
+          <div class="quote-source">${esc(q.source)}${q.context ? ' &nbsp;·&nbsp; ' + esc(q.context) : ''}</div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  // Statistics
+  if (stats.total_articles) {
+    const tones = stats.tones || {};
+    const total = stats.total_articles;
+    const cermaq = stats.cermaq_count || 0;
+    const top_sources = stats.top_sources || [];
+
+    html += `<div class="report-section">
+      <h2>Statistikk</h2>
+      <div class="stats-grid">
+        <div class="stat-block">
+          <div class="stat-label">Totalt artikler</div>
+          <div class="stat-value">${total}</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Cermaq-omtaler</div>
+          <div class="stat-value">${cermaq}</div>
+          <div class="stat-detail">${total > 0 ? Math.round(cermaq/total*100) : 0}% av total</div>
+        </div>
+        <div class="stat-block">
+          <div class="stat-label">Tone</div>
+          <div class="stat-detail">
+            Positiv: ${tones.positiv || 0}<br>
+            Nøytral: ${tones.noytral || 0}<br>
+            Negativ: ${tones.negativ || 0}
+          </div>
+        </div>
+        ${top_sources.length ? `
+          <div class="stat-block" style="grid-column:span 2">
+            <div class="stat-label">Topp 5 kilder</div>
+            <div class="stat-detail">${top_sources.map(s => `${esc(s.name)}: ${s.count}`).join(' &nbsp;·&nbsp; ')}</div>
+          </div>` : ''}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('report-container').innerHTML = html;
+}
+
+loadReport();
+</script>
+</body>
+</html>

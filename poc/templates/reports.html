@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cermaq Media Watch — {{ ui_text.nav_reports }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter','Noto Sans JP',-apple-system,BlinkMacSystemFont,sans-serif; background: #f7f8fa; color: #111827; }
+
+    /* ─── Layout ─────────────────────────────────────────────── */
+    .app-layout { display: block; min-height: 100vh; }
+
+    /* ─── Sidebar ────────────────────────────────────────────── */
+    .sidebar {
+      background: #1a2332;
+      width: 220px;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-logo { padding: 20px; border-bottom: 1px solid #2a3441; }
+    .sidebar-logo .brand-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); }
+    .sidebar-logo .brand-name { font-size: 15px; font-weight: 500; color: #fff; margin-top: 2px; }
+    .nav-section { padding: 18px 0 4px; }
+    .nav-section-label { padding: 0 20px 8px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #6e7884; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px; font-size: 13px; color: #c9d1d9;
+      text-decoration: none; cursor: pointer; border: none;
+      background: transparent; width: 100%; text-align: left;
+      font-family: inherit; transition: background 0.12s; position: relative;
+    }
+    .nav-item:hover { background: #243044; }
+    .nav-item.active { background: rgba(12,74,62,0.25); color: #fff; border-left: 3px solid #0c4a3e; padding-left: 17px; }
+    .nav-item svg { flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active svg { opacity: 1; }
+    .competitor-dot { width: 6px; height: 6px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+
+    /* ─── Main content ───────────────────────────────────────── */
+    .main-content { margin-left: 220px; min-width: 0; display: flex; flex-direction: column; min-height: 100vh; }
+
+    /* ─── Top bar ────────────────────────────────────────────── */
+    .topbar {
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 14px 28px; display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .lang-selector { display: flex; gap: 4px; }
+    .lang-btn {
+      background: #fff; border: 1px solid #e5e7eb; color: #6b7280;
+      font-family: inherit; font-size: 11px; padding: 5px 10px;
+      border-radius: 4px; cursor: pointer; font-weight: 500;
+      transition: background 0.12s, color 0.12s, border-color 0.12s;
+    }
+    .lang-btn.active { background: #d4e4d4; color: #0c4a3e; border-color: #0c4a3e; }
+    .lang-btn:hover:not(.active) { border-color: #9ca3af; }
+    .avatar { width: 32px; height: 32px; border-radius: 50%; background: #0c4a3e; color: #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* ─── Page header ────────────────────────────────────────── */
+    .page-hd { padding: 24px 28px 0; display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+    .page-hd h1 { font-size: 22px; font-weight: 500; color: #111827; }
+    .page-hd-sub { font-size: 13px; color: #6b7280; margin-top: 3px; }
+    .page-hd-date { font-size: 12px; color: #6b7280; white-space: nowrap; padding-top: 4px; }
+
+    /* ─── Report tabs ────────────────────────────────────────── */
+    .report-tabs { display: flex; gap: 8px; padding: 20px 28px 0; flex-wrap: wrap; }
+    .report-tab {
+      padding: 7px 16px; border-radius: 20px; border: 1px solid #e5e7eb;
+      background: #fff; color: #6b7280; font-family: inherit; font-size: 13px;
+      font-weight: 500; cursor: pointer; transition: all 0.12s; position: relative;
+    }
+    .report-tab.active { background: #0c4a3e; color: #fff; border-color: #0c4a3e; }
+    .report-tab.disabled { opacity: 0.45; cursor: not-allowed; }
+    .report-tab.disabled:hover::after {
+      content: attr(data-tooltip);
+      position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+      background: #1a2332; color: #fff; font-size: 11px; padding: 4px 8px;
+      border-radius: 4px; white-space: nowrap; z-index: 10; pointer-events: none;
+    }
+
+    /* ─── Content area ───────────────────────────────────────── */
+    .report-body { padding: 20px 28px 48px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ─── Cards ──────────────────────────────────────────────── */
+    .report-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 22px 24px; }
+    .report-card-title { font-size: 13px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+
+    /* ─── Stat cards ─────────────────────────────────────────── */
+    .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .stat-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 16px 18px; }
+    .stat-card-label { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card-number { font-size: 28px; font-weight: 500; margin-top: 4px; color: #111827; }
+    .stat-card-number.green { color: #0c4a3e; }
+    .stat-card-number.red { color: #b91c1c; }
+    .stat-card-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+    /* ─── AI summary ─────────────────────────────────────────── */
+    .ai-summary-card { border-left: 3px solid #0c4a3e; }
+    .ai-summary-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .ai-badge { width: 22px; height: 22px; border-radius: 4px; background: #d4e4d4; color: #0c4a3e; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .ai-summary-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #0c4a3e; font-weight: 600; }
+    .summary-body { font-size: 14px; line-height: 1.7; color: #374151; white-space: pre-wrap; }
+    .summary-loading { display: flex; align-items: center; gap: 8px; color: #9ca3af; font-size: 13px; }
+    .spinner { width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top-color: #0c4a3e; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── Tone bar chart ─────────────────────────────────────── */
+    .tone-bars { display: flex; flex-direction: column; gap: 10px; }
+    .tone-row { display: flex; align-items: center; gap: 12px; }
+    .tone-label { font-size: 12px; color: #6b7280; width: 70px; flex-shrink: 0; }
+    .tone-bar-wrap { flex: 1; background: #f3f4f6; border-radius: 4px; height: 20px; overflow: hidden; }
+    .tone-bar { height: 100%; border-radius: 4px; transition: width 0.4s ease; display: flex; align-items: center; padding-left: 8px; }
+    .tone-bar .bar-label { font-size: 11px; font-weight: 600; color: #fff; }
+    .tone-positiv .tone-bar { background: #10b981; }
+    .tone-noytral .tone-bar { background: #6b7280; }
+    .tone-negativ .tone-bar { background: #ef4444; }
+    .tone-count { font-size: 12px; color: #6b7280; width: 30px; text-align: right; flex-shrink: 0; }
+
+    /* ─── Top articles ───────────────────────────────────────── */
+    .article-list { display: flex; flex-direction: column; gap: 0; }
+    .article-list-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid #f3f4f6;
+      text-decoration: none; color: inherit;
+      transition: background 0.1s;
+    }
+    .article-list-item:last-child { border-bottom: none; }
+    .article-list-item:hover { background: #f9fafb; margin: 0 -8px; padding-left: 8px; padding-right: 8px; border-radius: 6px; }
+    .article-rank { font-size: 13px; font-weight: 600; color: #9ca3af; width: 20px; flex-shrink: 0; padding-top: 2px; }
+    .article-info { flex: 1; min-width: 0; }
+    .article-title { font-size: 13px; font-weight: 500; color: #111827; line-height: 1.4; margin-bottom: 4px; }
+    .article-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .article-source { font-size: 11px; color: #6b7280; }
+    .article-summary { font-size: 12px; color: #6b7280; margin-top: 4px; line-height: 1.5; }
+    .relevance-star { font-size: 11px; color: #f59e0b; }
+
+    /* ─── Scope / tone badges ────────────────────────────────── */
+    .scope-badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+    span.scope-badge.scope-cermaq { background: #0096a0 !important; color: #fff !important; }
+    .scope-core { background: #dbeafe; color: #1e40af; }
+    .scope-global { background: #f3f4f6; color: #4b5563; }
+    .tone-badge { font-size: 10px; font-weight: 500; padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+    .tone-positiv { background: #f0fdf4; color: #15803d; }
+    .tone-noytral { background: #f1f5f9; color: #475569; }
+    .tone-negativ { background: #fef2f2; color: #b91c1c; }
+
+    /* ─── Export button ──────────────────────────────────────── */
+    .export-row { display: flex; justify-content: flex-end; padding-top: 4px; }
+    .export-btn {
+      padding: 8px 18px; background: #fff; border: 1px solid #e5e7eb;
+      border-radius: 6px; font-family: inherit; font-size: 13px; color: #374151;
+      cursor: pointer; transition: border-color 0.12s;
+    }
+    .export-btn:hover { border-color: #9ca3af; }
+
+    @media print {
+      .sidebar, .topbar, .report-tabs, .export-row { display: none !important; }
+      .main-content { margin-left: 0; }
+      .report-body { padding: 0; }
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; }
+      .stat-cards { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- ═══ Sidebar ═══════════════════════════════════════════════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="brand-sub">Cermaq</div>
+      <div class="brand-name">Media Watch</div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">{{ ui_text.nav_overview }}</div>
+
+      <a href="/?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        {{ ui_text.nav_news }}
+      </a>
+
+      <a href="/uken?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        {{ ui_text.nav_weekly }}
+      </a>
+
+      <a href="/alerts?lang={{ lang }}" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        {{ ui_text.nav_alerts }}
+      </a>
+
+      <a href="#" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        {{ ui_text.nav_search }}
+      </a>
+
+      <a href="/reports?lang={{ lang }}" class="nav-item active">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        {{ ui_text.nav_reports }}
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">{{ ui_text.nav_competitors }}</div>
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Mowi
+        <span class="competitor-dot" style="background:#10b981"></span>
+      </span>
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        SalMar
+        <span class="competitor-dot" style="background:#f59e0b"></span>
+      </span>
+      <span class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+        Grieg Seafood
+        <span class="competitor-dot" style="background:#ef4444"></span>
+      </span>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-label">{{ ui_text.nav_settings }}</div>
+      <a href="/api/sources" target="_blank" class="nav-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+        </svg>
+        {{ ui_text.nav_sources }}
+      </a>
+    </div>
+  </aside>
+
+  <!-- ═══ Main content ══════════════════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div style="flex:1"></div>
+      <div class="topbar-right">
+        <div class="lang-selector">
+          <button class="lang-btn{% if lang == 'no' %} active{% endif %}" onclick="switchLang('no')">NO</button>
+          <button class="lang-btn{% if lang == 'en' %} active{% endif %}" onclick="switchLang('en')">EN</button>
+          <button class="lang-btn{% if lang == 'es' %} active{% endif %}" onclick="switchLang('es')">ES</button>
+          <button class="lang-btn{% if lang == 'ja' %} active{% endif %}" onclick="switchLang('ja')">JA</button>
+        </div>
+        <div class="avatar">HM</div>
+      </div>
+    </header>
+
+    <!-- Page header -->
+    <div class="page-hd">
+      <div>
+        <h1>{{ ui_text.report_weekly_title }}</h1>
+        <p class="page-hd-sub">{{ ui_text.report_weekly_subtitle }}</p>
+      </div>
+      <span class="page-hd-date" id="period-label"></span>
+    </div>
+
+    <!-- Report type tabs -->
+    <div class="report-tabs">
+      <button class="report-tab active">{{ ui_text.nav_reports }} — Ukentlig</button>
+      <button class="report-tab disabled" data-tooltip="{{ ui_text.report_coming_soon }}">{{ ui_text.report_monthly }}</button>
+      <button class="report-tab disabled" data-tooltip="{{ ui_text.report_coming_soon }}">{{ ui_text.report_crisis }}</button>
+      <button class="report-tab disabled" data-tooltip="{{ ui_text.report_coming_soon }}">{{ ui_text.report_theme }}</button>
+    </div>
+
+    <div class="report-body">
+
+      <!-- Stat cards -->
+      <div class="stat-cards" id="stat-cards">
+        <div class="stat-card">
+          <div class="stat-card-label">{{ ui_text.stat_articles }}</div>
+          <div class="stat-card-number" id="stat-total">–</div>
+          <div class="stat-card-sub">{{ ui_text.report_period }}: 7 dager</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">{{ ui_text.stat_cermaq }}</div>
+          <div class="stat-card-number green" id="stat-cermaq">–</div>
+          <div class="stat-card-sub">{{ ui_text.stat_cermaq_subtitle }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">{{ ui_text.stat_negative }}</div>
+          <div class="stat-card-number" id="stat-negative">–</div>
+          <div class="stat-card-sub">{{ ui_text.stat_negative_subtitle }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-label">{{ ui_text.stat_sources }}</div>
+          <div class="stat-card-number" id="stat-sources">–</div>
+          <div class="stat-card-sub">{{ ui_text.stat_articles_subtitle.replace('{n}', '') }}</div>
+        </div>
+      </div>
+
+      <!-- AI summary card -->
+      <div class="report-card ai-summary-card">
+        <div class="ai-summary-hd">
+          <div class="ai-badge">AI</div>
+          <span class="ai-summary-label">{{ ui_text.report_ai_summary }}</span>
+        </div>
+        <div id="summary-loading" class="summary-loading">
+          <div class="spinner"></div>
+          <span>{{ ui_text.report_ai_loading }}</span>
+        </div>
+        <div id="summary-body" class="summary-body" style="display:none"></div>
+      </div>
+
+      <!-- Tone distribution -->
+      <div class="report-card">
+        <div class="report-card-title">{{ ui_text.report_tone_dist }}</div>
+        <div class="tone-bars" id="tone-bars">
+          <div class="tone-row tone-positiv">
+            <span class="tone-label">{{ ui_text.report_positiv }}</span>
+            <div class="tone-bar-wrap"><div class="tone-bar" id="bar-positiv" style="width:0%"><span class="bar-label" id="bar-positiv-pct"></span></div></div>
+            <span class="tone-count" id="count-positiv">–</span>
+          </div>
+          <div class="tone-row tone-noytral">
+            <span class="tone-label">{{ ui_text.report_noytral }}</span>
+            <div class="tone-bar-wrap"><div class="tone-bar" id="bar-noytral" style="width:0%"><span class="bar-label" id="bar-noytral-pct"></span></div></div>
+            <span class="tone-count" id="count-noytral">–</span>
+          </div>
+          <div class="tone-row tone-negativ">
+            <span class="tone-label">{{ ui_text.report_negativ }}</span>
+            <div class="tone-bar-wrap"><div class="tone-bar" id="bar-negativ" style="width:0%"><span class="bar-label" id="bar-negativ-pct"></span></div></div>
+            <span class="tone-count" id="count-negativ">–</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top 10 articles -->
+      <div class="report-card">
+        <div class="report-card-title">{{ ui_text.report_top_articles }}</div>
+        <div class="article-list" id="article-list">
+          <div style="color:#9ca3af;font-size:13px">Laster artikler…</div>
+        </div>
+      </div>
+
+      <!-- Export -->
+      <div class="export-row">
+        <button class="export-btn" onclick="window.print()">🖨 {{ ui_text.report_export }}</button>
+      </div>
+
+    </div><!-- /report-body -->
+  </div><!-- /main-content -->
+</div><!-- /app-layout -->
+
+<script>
+  const LANG = "{{ lang }}";
+  const UI = {{ ui_text | tojson }};
+
+  function switchLang(l) {
+    var u = new URL(window.location);
+    u.searchParams.set("lang", l);
+    window.location.href = u.toString();
+  }
+
+  function scopeClass(scope) {
+    if (scope === "cermaq") return "scope-badge scope-cermaq";
+    if (scope === "industry") return "scope-badge scope-core";
+    return "scope-badge scope-global";
+  }
+
+  function toneClass(tone) {
+    if (tone === "positiv") return "tone-badge tone-positiv";
+    if (tone === "noytral") return "tone-badge tone-noytral";
+    if (tone === "negativ" || tone === "kritisk") return "tone-badge tone-negativ";
+    return "tone-badge tone-noytral";
+  }
+
+  function esc(s) {
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return "";
+    try {
+      return new Date(iso).toLocaleDateString("nb-NO", {day:"numeric", month:"short", year:"numeric"});
+    } catch(e) { return iso.slice(0, 10); }
+  }
+
+  async function loadWeeklyData() {
+    try {
+      var resp = await fetch("/api/reports/weekly");
+      var data = await resp.json();
+
+      // Period label
+      document.getElementById("period-label").textContent =
+        fmtDate(data.period.from) + " – " + fmtDate(data.period.to);
+
+      // Stat cards
+      var stats = data.stats;
+      var total = stats.total || 0;
+      document.getElementById("stat-total").textContent = total;
+      document.getElementById("stat-cermaq").textContent = stats.by_scope.cermaq || 0;
+      var neg = (stats.by_tone.negativ || 0) + (stats.by_tone.kritisk || 0);
+      var negEl = document.getElementById("stat-negative");
+      negEl.textContent = neg;
+      if (neg > 0) negEl.classList.add("red");
+      document.getElementById("stat-sources").textContent = stats.source_count || "–";
+
+      // Tone bars
+      var tones = ["positiv", "noytral", "negativ"];
+      tones.forEach(function(t) {
+        var cnt = (stats.by_tone[t] || 0) + (t === "negativ" ? (stats.by_tone.kritisk || 0) : 0);
+        var pct = total > 0 ? Math.round(cnt / total * 100) : 0;
+        document.getElementById("bar-" + t).style.width = pct + "%";
+        document.getElementById("bar-" + t + "-pct").textContent = pct > 8 ? pct + "%" : "";
+        document.getElementById("count-" + t).textContent = cnt;
+      });
+
+      // Top articles
+      var list = document.getElementById("article-list");
+      if (!data.top_articles || data.top_articles.length === 0) {
+        list.innerHTML = "<div style='color:#9ca3af;font-size:13px'>Ingen artikler funnet.</div>";
+        return;
+      }
+      list.innerHTML = data.top_articles.map(function(a, i) {
+        var tone = a.tone === "kritisk" ? "negativ" : (a.tone || "noytral");
+        var scopeLbl = a.scope === "cermaq" ? UI.scope_cermaq :
+                       a.scope === "industry" ? UI.scope_industry_in_regions : UI.scope_industry_general;
+        return (
+          '<a class="article-list-item" href="' + esc(a.url) + '" target="_blank" rel="noopener">' +
+          '<span class="article-rank">' + (i + 1) + '</span>' +
+          '<div class="article-info">' +
+            '<div class="article-title">' + esc(a.title) + '</div>' +
+            '<div class="article-meta">' +
+              '<span class="article-source">' + esc(a.source_name) + '</span>' +
+              (a.scope ? '<span class="' + scopeClass(a.scope) + '">' + esc(scopeLbl) + '</span>' : '') +
+              (tone ? '<span class="' + toneClass(tone) + '">' + esc(tone) + '</span>' : '') +
+              (a.relevance ? '<span class="relevance-star">★ ' + a.relevance + '</span>' : '') +
+            '</div>' +
+            (a.summary ? '<div class="article-summary">' + esc(a.summary) + '</div>' : '') +
+          '</div>' +
+          '</a>'
+        );
+      }).join("");
+    } catch(e) {
+      console.error("loadWeeklyData:", e);
+    }
+  }
+
+  async function loadSummary() {
+    try {
+      var resp = await fetch("/api/reports/weekly/summary?lang=" + LANG);
+      var data = await resp.json();
+      document.getElementById("summary-loading").style.display = "none";
+      var bodyEl = document.getElementById("summary-body");
+      if (data.summary) {
+        bodyEl.textContent = data.summary;
+        bodyEl.style.display = "";
+      } else {
+        bodyEl.textContent = "Ingen sammendrag tilgjengelig.";
+        bodyEl.style.display = "";
+        bodyEl.style.color = "#9ca3af";
+      }
+    } catch(e) {
+      document.getElementById("summary-loading").innerHTML = "<span style='color:#9ca3af'>Kunne ikke laste sammendrag.</span>";
+    }
+  }
+
+  loadWeeklyData();
+  loadSummary();
+</script>
+</body>
+</html>
